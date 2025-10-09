@@ -203,7 +203,7 @@ Delegation-System/
 
 ## 👨‍💻 المطور
 
-**أحمد ناجي** - [@ahmeddhshan1](https://github.com/ahmeddhshan1)
+**أحمد نجيب** - [@ahmeddhshan1](https://github.com/ahmeddhshan1)
 
 - **الإيميل**: ahmeddhshan1@gmail.com
 - **GitHub**: [https://github.com/ahmeddhshan1](https://github.com/ahmeddhshan1)
