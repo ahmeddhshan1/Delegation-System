@@ -23,14 +23,31 @@ const Home = () => {
                     const events = JSON.parse(savedEvents)
                     const allSubEvents = []
                     
+                    // جلب بيانات الوفود والأعضاء لحساب الإحصائيات
+                    const savedDelegations = localStorage.getItem('delegations')
+                    const savedMembers = localStorage.getItem('members')
+                    const delegations = savedDelegations ? JSON.parse(savedDelegations) : []
+                    const members = savedMembers ? JSON.parse(savedMembers) : []
+                    
                     // جمع جميع الأحداث الفرعية من جميع الأحداث الرئيسية
                     events.forEach(mainEvent => {
                         if (mainEvent.sub_events && mainEvent.sub_events.length > 0) {
                             mainEvent.sub_events.forEach(subEvent => {
+                                // حساب عدد الوفود لهذا الحدث الفرعي
+                                const delegationCount = delegations.filter(d => d.subEventId === subEvent.id).length
+                                
+                                // حساب عدد الأعضاء لهذا الحدث الفرعي
+                                const membersCount = members.filter(m => 
+                                    (m.subEventId === subEvent.id) || 
+                                    (m.delegation && m.delegation.subEventId === subEvent.id)
+                                ).length
+                                
                                 allSubEvents.push({
                                     ...subEvent,
                                     mainEventName: mainEvent.name,
-                                    mainEventIcon: mainEvent.icon
+                                    mainEventIcon: mainEvent.icon,
+                                    delegationCount,
+                                    membersCount
                                 })
                             })
                         }
@@ -75,15 +92,12 @@ const Home = () => {
                 }
             }
             
-            const newStats = {
+            setStats({
                 delegationNum: delegationCount,
                 militaryDelegationNum: militaryCount,
                 civilDelegationNum: civilCount,
                 memebersNum: memberCount
-            }
-            
-            console.log('تحديث الإحصائيات:', newStats)
-            setStats(newStats)
+            })
         }
         
         loadData()
@@ -101,24 +115,13 @@ const Home = () => {
         })
         
         // الاستماع للأحداث المخصصة (لنفس التابة)
-        const eventsToListen = [
-            'memberAdded',
-            'memberUpdated', 
-            'memberDeleted',
-            'delegationAdded',
-            'delegationUpdated',
-            'delegationDeleted',
-            'eventAdded',
-            'eventUpdated',
-            'eventDeleted'
-        ]
-        
-        eventsToListen.forEach(eventName => {
-            window.addEventListener(eventName, handleStorageChange)
-        })
-        
-        // تحديث دوري كل 5 ثواني لضمان البيانات محدثة
-        const intervalId = setInterval(handleStorageChange, 5000)
+        window.addEventListener('memberAdded', handleStorageChange)
+        window.addEventListener('memberUpdated', handleStorageChange)
+        window.addEventListener('memberDeleted', handleStorageChange)
+        window.addEventListener('delegationAdded', handleStorageChange)
+        window.addEventListener('delegationUpdated', handleStorageChange)
+        window.addEventListener('delegationDeleted', handleStorageChange)
+        window.addEventListener('eventUpdated', handleStorageChange)
         
         return () => {
             window.removeEventListener('storage', (event) => {
@@ -126,10 +129,13 @@ const Home = () => {
                     handleStorageChange()
                 }
             })
-            eventsToListen.forEach(eventName => {
-                window.removeEventListener(eventName, handleStorageChange)
-            })
-            clearInterval(intervalId)
+            window.removeEventListener('memberAdded', handleStorageChange)
+            window.removeEventListener('memberUpdated', handleStorageChange)
+            window.removeEventListener('memberDeleted', handleStorageChange)
+            window.removeEventListener('delegationAdded', handleStorageChange)
+            window.removeEventListener('delegationUpdated', handleStorageChange)
+            window.removeEventListener('delegationDeleted', handleStorageChange)
+            window.removeEventListener('eventUpdated', handleStorageChange)
         }
     }, [])
 
