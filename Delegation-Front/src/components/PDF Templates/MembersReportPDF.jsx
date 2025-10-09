@@ -55,15 +55,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-    padding: 5,
+    padding: 8,
     fontSize: 10,
     textAlign: "center",
-    width: '100%'
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
   },
   headerCell: {
     backgroundColor: "#f0f0f0",
     fontSize: 12,
-    fontWeight: "bold"
+    fontWeight: "bold",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  serialCell: {
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    padding: 5,
+    fontSize: 9,
+    textAlign: "center",
+    backgroundColor: "#f0f0f0",
+    width: '8%',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
   }
 });
 
@@ -73,10 +92,13 @@ const cellWidths = ["10%", "10%", "10%", "10%", "10%", "10%", "10%", "10%", "10%
 
 // ✅ Headers in Arabic
 const headers = [
+  "م",
   "الرتبة",
   "الاسم",
   "الوظيفة",
   "حالة العضو",
+  "تاريخ الوصول",
+  "تاريخ المغادرة"
 ];
 
 const MembersReportPDF = ({ data }) => {
@@ -116,23 +138,49 @@ const MembersReportPDF = ({ data }) => {
           {/* Header row */}
           <View style={styles.row}>
             {headers.map((h, i) => (
-              <Text key={i} style={[styles.cell, styles.headerCell, { width: '100%' }]}>
-                {h}
-              </Text>
+              <View key={i} style={[
+                i === 0 ? styles.serialCell : [styles.cell, styles.headerCell],
+                i === 0 ? { width: '8%' } : { width: i === 1 ? '18%' : i === 2 ? '20%' : i === 3 ? '18%' : i === 4 ? '16%' : i === 5 ? '10%' : '10%' }
+              ]}>
+                <Text>{h}</Text>
+              </View>
             ))}
           </View>
 
           {/* Data rows */}
           {data.map((row, i) => (
             <View style={styles.row} key={i}>
-              <Text style={[styles.cell]}>{row.rank}</Text>
-              <Text style={[styles.cell]}>{row.name}</Text>
-              <Text style={[styles.cell]}>{row.role}</Text>
-              <Text style={[styles.cell]}>
-                {row.memberStatus === 'departed' ? 'غادر' :
-                 row.memberStatus === 'not_departed' ? 'لم يغادر' : 
-                 row.memberStatus || 'غير محدد'}
-              </Text>
+              <View style={[styles.serialCell]}>
+                <Text>{i + 1}</Text>
+              </View>
+              <View style={[styles.cell, { width: '18%' }]}>
+                <Text>{row.rank}</Text>
+              </View>
+              <View style={[styles.cell, { width: '20%' }]}>
+                <Text>{row.name}</Text>
+              </View>
+              <View style={[styles.cell, { width: '18%' }]}>
+                <Text>{row.role}</Text>
+              </View>
+              <View style={[styles.cell, { width: '16%' }]}>
+                <Text>
+                  {row.memberStatus === 'departed' ? 'غادر' :
+                   row.memberStatus === 'not_departed' ? 'لم يغادر' : 
+                   'غير محدد'}
+                </Text>
+              </View>
+              <View style={[styles.cell, { width: '10%' }]}>
+                <Text>
+                  {row.arrivalDate ? new Date(row.arrivalDate).toLocaleDateString('en-GB') : 
+                   row.delegation?.arrivalInfo?.arrivalDate ? new Date(row.delegation.arrivalInfo.arrivalDate).toLocaleDateString('en-GB') :
+                   'غير محدد'}
+                </Text>
+              </View>
+              <View style={[styles.cell, { width: '10%' }]}>
+                <Text>
+                  {row.departureDate ? new Date(row.departureDate).toLocaleDateString('en-GB') : 'لم يغادر'}
+                </Text>
+              </View>
             </View>
           ))}
         </View>
