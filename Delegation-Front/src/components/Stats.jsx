@@ -11,7 +11,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     <span className='text-neutral-600'>عدد الوفود</span>
                     <h2 className='text-sky-700 font-bold text-5xl'>{delegationNum}</h2>
                     <span className='text-neutral-400 text-xs'>
-                        اخر تحديث منذ {new Date().toLocaleDateString()}
+                        التاريخ {new Date().toLocaleDateString('ar-EG')}
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-sky-100 grid place-items-center'>
@@ -23,7 +23,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     <span className='text-neutral-600'>عدد الوفود العسكرية</span>
                     <h2 className='text-orange-700 font-bold text-5xl'>{militaryDelegationNum}</h2>
                     <span className='text-neutral-400 text-xs'>
-                        اخر تحديث منذ {new Date().toLocaleDateString()}
+                        التاريخ {new Date().toLocaleDateString('ar-EG')}
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-orange-100 grid place-items-center'>
@@ -35,7 +35,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     <span className='text-neutral-600'>عدد الوفود المدنية</span>
                     <h2 className='text-lime-700 font-bold text-5xl'>{civilDelegationNum}</h2>
                     <span className='text-neutral-400 text-xs'>
-                        اخر تحديث منذ {new Date().toLocaleDateString()}
+                        التاريخ {new Date().toLocaleDateString('ar-EG')}
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-lime-100 grid place-items-center'>
@@ -50,7 +50,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     <span className='text-neutral-600'>عدد الاعضاء</span>
                     <h2 className='text-purple-700 font-bold text-5xl'>{memebersNum}</h2>
                     <span className='text-neutral-400 text-xs'>
-                        اخر تحديث منذ {new Date().toLocaleDateString()}
+                        التاريخ {new Date().toLocaleDateString('ar-EG')}
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-purple-100 grid place-items-center'>

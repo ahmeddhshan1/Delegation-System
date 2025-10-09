@@ -75,12 +75,15 @@ const Home = () => {
                 }
             }
             
-            setStats({
+            const newStats = {
                 delegationNum: delegationCount,
                 militaryDelegationNum: militaryCount,
                 civilDelegationNum: civilCount,
                 memebersNum: memberCount
-            })
+            }
+            
+            console.log('تحديث الإحصائيات:', newStats)
+            setStats(newStats)
         }
         
         loadData()
@@ -98,8 +101,24 @@ const Home = () => {
         })
         
         // الاستماع للأحداث المخصصة (لنفس التابة)
-        window.addEventListener('memberAdded', handleStorageChange)
-        window.addEventListener('eventUpdated', handleStorageChange)
+        const eventsToListen = [
+            'memberAdded',
+            'memberUpdated', 
+            'memberDeleted',
+            'delegationAdded',
+            'delegationUpdated',
+            'delegationDeleted',
+            'eventAdded',
+            'eventUpdated',
+            'eventDeleted'
+        ]
+        
+        eventsToListen.forEach(eventName => {
+            window.addEventListener(eventName, handleStorageChange)
+        })
+        
+        // تحديث دوري كل 5 ثواني لضمان البيانات محدثة
+        const intervalId = setInterval(handleStorageChange, 5000)
         
         return () => {
             window.removeEventListener('storage', (event) => {
@@ -107,8 +126,10 @@ const Home = () => {
                     handleStorageChange()
                 }
             })
-            window.removeEventListener('memberAdded', handleStorageChange)
-            window.removeEventListener('eventUpdated', handleStorageChange)
+            eventsToListen.forEach(eventName => {
+                window.removeEventListener(eventName, handleStorageChange)
+            })
+            clearInterval(intervalId)
         }
     }, [])
 
