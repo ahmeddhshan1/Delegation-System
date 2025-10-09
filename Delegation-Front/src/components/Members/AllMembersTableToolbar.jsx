@@ -6,6 +6,8 @@ import MembersReportExport from "./MembersReportExport"
 import { toast } from "sonner"
 
 const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
+    // الحصول على البيانات المفلترة من الجدول
+    const filteredData = table.getFilteredRowModel().rows.map(row => row.original)
     const cleanupOrphanedMembers = () => {
         try {
             const savedDelegations = localStorage.getItem('delegations')
@@ -181,7 +183,7 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
             />
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <AllMembersFilter table={table} data={data} />
-                <MembersReportExport data={data} />
+                <MembersReportExport data={data} filteredData={filteredData} />
             </div>
         </div>
     )

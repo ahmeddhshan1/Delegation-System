@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import MembersReportPDF from '../PDF Templates/MembersReportPDF'
 
-const MembersReportExport = ({data}) => {
+const MembersReportExport = ({data, filteredData}) => {
     return (
         <DropdownMenu dir='rtl'>
             <DropdownMenuTrigger asChild>
@@ -19,11 +19,11 @@ const MembersReportExport = ({data}) => {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={e => exportToPDF(<MembersReportPDF data={data} />, "EDEX - Members report.pdf")}>
+                <DropdownMenuItem onSelect={e => exportToPDF(<MembersReportPDF data={filteredData || data} />, "EDEX - Members report.pdf")}>
                     <Icon icon={'hugeicons:pdf-02'} className="text-[#ef5350]" />
                     <span>PDF file</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={e => exportMembersToExcel(data)}>
+                <DropdownMenuItem onSelect={e => exportMembersToExcel(filteredData || data)}>
                     <Icon icon={'hugeicons:xls-02'} className="text-[#33c481]" />
                     <span>Excel file</span>
                 </DropdownMenuItem>
