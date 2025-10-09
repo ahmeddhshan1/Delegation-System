@@ -73,33 +73,6 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
                     })
                 }
                 
-                // طباعة تفاصيل الأحداث الحقيقية
-                console.log('تفاصيل الأحداث الحقيقية من mainEvents:')
-                if (savedMainEvents) {
-                    const mainEvents = JSON.parse(savedMainEvents)
-                    mainEvents.forEach(mainEvent => {
-                        console.log(`الحدث الرئيسي: ${mainEvent.name} (ID: ${mainEvent.id})`)
-                        if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events)) {
-                            mainEvent.sub_events.forEach(subEvent => {
-                                console.log(`  - الحدث الفرعي: ${subEvent.name} (ID: ${subEvent.id})`)
-                            })
-                        }
-                    })
-                }
-
-                console.log(`عدد الأعضاء: ${members.length}`)
-                console.log(`عدد الوفود: ${delegations.length}`)
-                console.log(`عدد الأحداث الفرعية: ${subEvents.length}`)
-                
-                // طباعة تفاصيل الأحداث الفرعية الحقيقية
-                if (subEvents.length > 0) {
-                    console.log('الأحداث الفرعية الحقيقية:')
-                    subEvents.forEach(subEvent => {
-                        console.log(`- ${subEvent.name} (ID: ${subEvent.id}) - الحدث الرئيسي: ${subEvent.mainEventName}`)
-                    })
-                } else {
-                    console.log('لا توجد أحداث فرعية حقيقية')
-                }
 
                 let updatedCount = 0
 
@@ -108,34 +81,22 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
                     let updatedMember = { ...member }
                     let needsUpdate = false
 
-                    console.log(`فحص العضو: ${member.name}`)
-                    console.log(`- subEventId في العضو: ${member.subEventId}`)
-                    console.log(`- delegation ID: ${member.delegation?.id}`)
-                    
-                    // البحث عن الحدث الفرعي
-                    const foundSubEvent = subEvents.find(se => se.id == member.subEventId)
-                    console.log(`- الحدث الفرعي المطابق: ${foundSubEvent ? foundSubEvent.name : 'غير موجود'}`)
-
                     // البحث عن معلومات الحدث الرئيسي والفرعي من خلال الوفد
                     let subEventId = member.subEventId // من العضو مباشرة
                     
                     // إذا لم يوجد subEventId في العضو، ابحث في الوفد
                     if (!subEventId && member.delegation && member.delegation.id) {
                         const delegation = delegations.find(d => d.id === member.delegation.id)
-                        console.log(`- الوفد الموجود: ${delegation ? 'موجود' : 'غير موجود'}`)
                         if (delegation) {
-                            console.log(`- subEventId في الوفد: ${delegation.subEventId}`)
                             if (delegation.subEventId) {
                                 subEventId = delegation.subEventId
                                 needsUpdate = true
-                                console.log(`- تم أخذ subEventId من الوفد: ${subEventId}`)
                             }
                         }
                     }
                     
                     if (subEventId) {
                         const subEvent = subEvents.find(se => se.id == subEventId) // استخدام == للتحويل بين string و number
-                        console.log(`- الحدث الفرعي الموجود: ${subEvent ? subEvent.name : 'غير موجود'}`)
                         if (subEvent) {
                             updatedMember.subEvent = {
                                 id: subEvent.id,
@@ -146,7 +107,6 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
                             // البحث عن الحدث الرئيسي
                             if (subEvent.mainEventId) {
                                 const mainEvent = eventCategories.find(me => me.id === subEvent.mainEventId)
-                                console.log(`- الحدث الرئيسي الموجود: ${mainEvent ? mainEvent.name : 'غير موجود'}`)
                                 if (mainEvent) {
                                     updatedMember.subEvent.mainEventName = mainEvent.name
                                 }
@@ -155,11 +115,8 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
                             if (needsUpdate) {
                                 updatedMember.subEventId = subEventId
                                 updatedCount++
-                                console.log(`- تم تحديث العضو: ${member.name}`)
                             }
                         }
-                    } else {
-                        console.log(`- لا يوجد subEventId للعضو: ${member.name}`)
                     }
 
                     return updatedMember
@@ -167,7 +124,6 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
 
                 // إذا لم يتم تحديث أي عضو، جرب إصلاح الـ IDs
                 if (updatedCount === 0 && subEvents.length > 0) {
-                    console.log('محاولة إصلاح الـ IDs...')
                     
                     // تحديث subEventId في الأعضاء لتطابق أول حدث فرعي
                     const firstSubEvent = subEvents[0]

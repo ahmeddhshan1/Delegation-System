@@ -62,17 +62,6 @@ const AllMembersFilter = ({ table, data }) => {
                     })
                 }
                 
-                console.log('=== بيانات الفلتر (الأحداث الحقيقية) ===')
-                console.log('عدد الأحداث الرئيسية:', mainEvents.length)
-                console.log('عدد الأحداث الفرعية:', allSubEvents.length)
-                if (allSubEvents.length > 0) {
-                    console.log('الأحداث الفرعية:')
-                    allSubEvents.forEach((subEvent, index) => {
-                        console.log(`  ${index + 1}. ${subEvent.name} (ID: ${subEvent.id}) - الحدث الرئيسي: ${subEvent.mainEventName}`)
-                    })
-                } else {
-                    console.log('لا توجد أحداث فرعية - يرجى إضافة أحداث فرعية من صفحة إدارة الأحداث')
-                }
                 setSubEvents(allSubEvents)
             } catch (error) {
                 console.error('خطأ في تحميل بيانات الأحداث:', error)
@@ -100,7 +89,6 @@ const AllMembersFilter = ({ table, data }) => {
     }, [])
 
     const applyFilter = (val, fieldName) => {
-        console.log('تطبيق الفلتر:', { val, fieldName })
         
         // إذا تم اختيار حدث رئيسي جديد، امسح فلتر الحدث الفرعي
         if (fieldName === 'mainEvent' && val !== filters.mainEvent) {
