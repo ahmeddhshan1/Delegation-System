@@ -1,5 +1,5 @@
 # 🏛️ منظومة تسجيل الوفود والأعضاء لمعرض إيديكس
-## EDEX Delegation Management System
+## Delegation System - EDEX Management
 
 [![React](https://img.shields.io/badge/React-19.1.1-blue.svg)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-7.1.2-646CFF.svg)](https://vitejs.dev/)
