@@ -4,32 +4,21 @@ import { pdf } from "@react-pdf/renderer";
 
 
 export const exportMembersToExcel = (data, fileName = "EDEX - Members report.xlsx") => {
-    // Create a mapping from English keys → Arabic headers for members
-    const headerMap = {
-        rank: "الرتبة",
-        name: "الاسم",
-        role: "الوظيفة",
-        memberStatus: "حالة العضو",
-    };
-
-    // Convert data keys to Arabic headers
-    const arabicData = data.map((item) => {
-        let newItem = {};
-        for (const key in item) {
-            if (headerMap[key]) {
-                // Convert memberStatus to Arabic text
-                if (key === 'memberStatus') {
-                    const statusMap = {
-                        'departed': 'غادر',
-                        'not_departed': 'لم يغادر'
-                    };
-                    newItem[headerMap[key]] = statusMap[item[key]] || item[key] || 'غير محدد';
-                } else {
-                    newItem[headerMap[key]] = item[key];
-                }
-            }
-        }
-        return newItem;
+    // ترتيب الأعمدة مطابق لـ PDF تماماً
+    const arabicData = data.map((item, index) => {
+        return {
+            "م": index + 1, // الترقيم
+            "الرتبة": item.rank || "",
+            "الاسم": item.name || "",
+            "الوظيفة": item.role || "",
+            "حالة العضو": item.memberStatus === 'departed' ? 'غادر' :
+                         item.memberStatus === 'not_departed' ? 'لم يغادر' : 
+                         'غير محدد',
+            "تاريخ الوصول": item.arrivalDate ? new Date(item.arrivalDate).toLocaleDateString('en-GB') : 
+                            item.delegation?.arrivalInfo?.arrivalDate ? new Date(item.delegation.arrivalInfo.arrivalDate).toLocaleDateString('en-GB') :
+                            'غير محدد',
+            "تاريخ المغادرة": item.departureDate ? new Date(item.departureDate).toLocaleDateString('en-GB') : 'لم يغادر'
+        };
     });
 
     // Generate worksheet
@@ -37,7 +26,7 @@ export const exportMembersToExcel = (data, fileName = "EDEX - Members report.xls
 
     // Generate workbook and append worksheet
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "الجدول");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "تقرير الأعضاء");
 
     // Export to Excel
     XLSX.writeFile(workbook, fileName);
