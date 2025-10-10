@@ -22,12 +22,20 @@ const DelegationMembers = () => {
                     const parsedMembers = JSON.parse(savedMembers)
                     const parsedDelegations = savedDelegations ? JSON.parse(savedDelegations) : []
                     const filteredMembers = parsedMembers.filter(member => 
-                        member.delegation && member.delegation.id === delegationId
+                        member.delegation && (
+                            member.delegation.id == delegationId ||
+                            member.delegation.id === parseInt(delegationId) ||
+                            member.delegation.id === delegationId.toString()
+                        )
                     )
                     
                     // تحديث حالة الأعضاء بناءً على جلسات المغادرة
                     const updatedMembers = filteredMembers.map(member => {
-                        const delegation = parsedDelegations.find(d => d.id === delegationId)
+                        const delegation = parsedDelegations.find(d => 
+                            d.id == delegationId ||
+                            d.id === parseInt(delegationId) ||
+                            d.id === delegationId.toString()
+                        )
                         if (delegation && delegation.departureInfo && delegation.departureInfo.departureSessions) {
                             // البحث عن العضو في جلسات المغادرة
                             let departureDate = null
@@ -71,7 +79,11 @@ const DelegationMembers = () => {
             if (savedDelegations) {
                 try {
                     const parsedDelegations = JSON.parse(savedDelegations)
-                    const delegation = parsedDelegations.find(d => d.id === delegationId)
+                    const delegation = parsedDelegations.find(d => 
+                        d.id == delegationId ||
+                        d.id === parseInt(delegationId) ||
+                        d.id === delegationId.toString()
+                    )
 
 
 
