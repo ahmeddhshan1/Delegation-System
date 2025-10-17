@@ -18,8 +18,8 @@ import {
 const MembersFilter = ({ table, data }) => {
     const [filters, setFilters] = useState({
         rank: '',
-        role: '',
-        equivalentRole: '',
+        job_title: '',
+        equivalent_job_name: '',
     })
 
     const applyFilter = (val, fieldName) => {
@@ -30,8 +30,8 @@ const MembersFilter = ({ table, data }) => {
     const clearFilter = () => {
         setFilters({
             rank: '',
-            role: '',
-            equivalentRole: '',
+            job_title: '',
+            equivalent_job_name: '',
         })
         table.resetColumnFilters()
     }
@@ -56,16 +56,16 @@ const MembersFilter = ({ table, data }) => {
                     <div className="grid gap-2">
                         <div className="grid grid-cols-3 items-center gap-4 w-full">
                             <Label htmlFor="width">الوظيفة</Label>
-                            <Select dir='rtl' value={filters.role} onValueChange={val => applyFilter(val, 'role')}>
+                            <Select dir='rtl' value={filters.job_title} onValueChange={val => applyFilter(val, 'job_title')}>
                                 <SelectTrigger className="w-full !ring-0 col-span-2">
                                     <SelectValue placeholder="الوظيفة" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {
-                                        [...new Set(data.map(el => el[table.getColumn("role").id]))]
-                                            .map((role, index) => (
-                                            <SelectItem key={index} value={role}>
-                                                {role}
+                                        [...new Set(data.map(el => el.job_title).filter(Boolean))]
+                                            .map((jobTitle, index) => (
+                                            <SelectItem key={index} value={jobTitle}>
+                                                {jobTitle}
                                             </SelectItem>
                                         ))
                                     }
@@ -82,7 +82,7 @@ const MembersFilter = ({ table, data }) => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {
-                                        [...new Set(data.map(el => el[table.getColumn("rank").id]))]
+                                        [...new Set(data.map(el => el.rank).filter(Boolean))]
                                             .map((rank, index) => (
                                                 <SelectItem key={index} value={rank}>{rank}</SelectItem>
                                             ))
@@ -94,15 +94,15 @@ const MembersFilter = ({ table, data }) => {
                     <div className="grid gap-2">
                         <div className="grid grid-cols-3 items-center gap-4 w-full">
                             <Label htmlFor="width">الوظيفة المعادلة</Label>
-                            <Select dir='rtl' value={filters.equivalentRole} onValueChange={val => applyFilter(val, 'equivalentRole')}>
+                            <Select dir='rtl' value={filters.equivalent_job_name} onValueChange={val => applyFilter(val, 'equivalent_job_name')}>
                                 <SelectTrigger className="w-full !ring-0 col-span-2">
                                     <SelectValue placeholder="الوظيفة المعادلة" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {
-                                        [...new Set(data.map(el => el.equivalentRole).filter(Boolean))]
-                                            .map((equivalentRole, index) => (
-                                                <SelectItem key={index} value={equivalentRole}>{equivalentRole}</SelectItem>
+                                        [...new Set(data.map(el => el.equivalent_job_name).filter(Boolean))]
+                                            .map((equivalentJobName, index) => (
+                                                <SelectItem key={index} value={equivalentJobName}>{equivalentJobName}</SelectItem>
                                             ))
                                     }
                                 </SelectContent>

@@ -34,48 +34,18 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
 
     // إضافة الـ states للـ dropdown lists المشتركة
     const [selectedAirport, setSelectedAirport] = useState("")
-    const [availableAirports, setAvailableAirports] = useState(() => {
-        const savedAirports = localStorage.getItem('airports')
-        if (savedAirports) {
-            return JSON.parse(savedAirports)
-        }
-        return hallOptions.map(option => option.label)
-    })
+    const [availableAirports, setAvailableAirports] = useState([])
+    const [airportNameToId, setAirportNameToId] = useState({})
     const [airportSearchTerm, setAirportSearchTerm] = useState("")
     
     const [selectedAirline, setSelectedAirline] = useState("")
-    const [availableAirlines, setAvailableAirlines] = useState(() => {
-        const savedAirlines = localStorage.getItem('airlines')
-        if (savedAirlines) {
-            return JSON.parse(savedAirlines)
-        }
-        return [
-            "الخطوط الجوية السعودية", "الخطوط الجوية الإماراتية", "الخطوط الجوية القطرية",
-            "الخطوط الجوية الكويتية", "الخطوط الجوية العمانية", "الخطوط الجوية البحرينية",
-            "الخطوط الجوية المصرية", "الخطوط الجوية الأردنية", "الخطوط الجوية اللبنانية",
-            "الخطوط الجوية السورية", "الخطوط الجوية العراقية", "الخطوط الجوية اليمنية",
-            "الخطوط الجوية التركية", "الخطوط الجوية الإيرانية", "الخطوط الجوية الأفغانية",
-            "الخطوط الجوية الباكستانية", "الخطوط الجوية الهندية", "الخطوط الجوية البنجلاديشية",
-            "الخطوط الجوية السريلانكية", "الخطوط الجوية المالديفية", "الخطوط الجوية النيبالية",
-            "الخطوط الجوية الأمريكية", "الخطوط الجوية الكندية", "الخطوط الجوية الأسترالية"
-        ]
-    })
+    const [availableAirlines, setAvailableAirlines] = useState([])
+    const [airlineNameToId, setAirlineNameToId] = useState({})
     const [airlineSearchTerm, setAirlineSearchTerm] = useState("")
     
     const [selectedDestination, setSelectedDestination] = useState("")
-    const [availableDestinations, setAvailableDestinations] = useState(() => {
-        const savedOrigins = localStorage.getItem('origins')
-        if (savedOrigins) {
-            return JSON.parse(savedOrigins)
-        }
-        return [
-            "الرياض", "جدة", "الدمام", "مكة المكرمة", "المدينة المنورة",
-            "الطائف", "تبوك", "بريدة", "خميس مشيط", "الهفوف",
-            "الجبيل", "ينبع", "النماص", "الخبر", "القطيف",
-            "الأحساء", "حائل", "الباحة", "نجران", "عرعر",
-            "سكاكا", "القريات", "الرس", "عنيزة", "الزلفي"
-        ]
-    })
+    const [availableDestinations, setAvailableDestinations] = useState([])
+    const [cityNameToId, setCityNameToId] = useState({})
     const [destinationSearchTerm, setDestinationSearchTerm] = useState("")
 
     // إضافة الـ states للإضافة والحذف
@@ -116,60 +86,102 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
     }
 
     // إضافة handlers للإضافة
-    const handleAddNewAirport = () => {
-        if (newAirport.trim() && !availableAirports.includes(newAirport.trim())) {
-            const updatedAirports = [...availableAirports, newAirport.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
+    const handleAddNewAirport = async () => {
+        const name = newAirport.trim()
+        if (!name) {
+            toast.error("يرجى إدخال اسم المطار")
+            return
+        }
+        if (availableAirports.includes(name)) {
+            toast.error("هذا المطار موجود بالفعل")
+            return
+        }
+        
+        try {
+            const created = await airportService.createAirport({ name })
+            const updatedAirports = [...availableAirports, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
             setAvailableAirports(updatedAirports)
-            localStorage.setItem('airports', JSON.stringify(updatedAirports))
-            window.dispatchEvent(new CustomEvent('airportsUpdated'))
-            setSelectedAirport(newAirport.trim())
-            setValue('hall', newAirport.trim())
+            
+            // تحديث dictionary
+            setAirportNameToId(prev => ({
+                ...prev,
+                [created.name]: created.id
+            }))
+            
+            setSelectedAirport(created.name)
+            setValue('hall', created.name)
             setNewAirport("")
             setShowAddAirport(false)
             setAirportSearchTerm("")
             toast.success("تم إضافة المطار الجديد بنجاح")
-        } else if (availableAirports.includes(newAirport.trim())) {
-            toast.error("هذا المطار موجود بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم المطار")
+        } catch (error) {
+            toast.error("تعذر إضافة المطار. تأكد أن الاسم غير مكرر")
         }
     }
 
-    const handleAddNewAirline = () => {
-        if (newAirline.trim() && !availableAirlines.includes(newAirline.trim())) {
-            const updatedAirlines = [...availableAirlines, newAirline.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
+    const handleAddNewAirline = async () => {
+        const name = newAirline.trim()
+        if (!name) {
+            toast.error("يرجى إدخال اسم شركة الطيران")
+            return
+        }
+        if (availableAirlines.includes(name)) {
+            toast.error("هذه شركة الطيران موجودة بالفعل")
+            return
+        }
+        
+        try {
+            const created = await airlineService.createAirline({ name })
+            const updatedAirlines = [...availableAirlines, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
             setAvailableAirlines(updatedAirlines)
-            localStorage.setItem('airlines', JSON.stringify(updatedAirlines))
-            window.dispatchEvent(new CustomEvent('airlinesUpdated'))
-            setSelectedAirline(newAirline.trim())
-            setValue('airline', newAirline.trim())
+            
+            // تحديث dictionary
+            setAirlineNameToId(prev => ({
+                ...prev,
+                [created.name]: created.id
+            }))
+            
+            setSelectedAirline(created.name)
+            setValue('airline', created.name)
             setNewAirline("")
             setShowAddAirline(false)
             setAirlineSearchTerm("")
             toast.success("تم إضافة شركة الطيران الجديدة بنجاح")
-        } else if (availableAirlines.includes(newAirline.trim())) {
-            toast.error("هذه شركة الطيران موجودة بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم شركة الطيران")
+        } catch (error) {
+            toast.error("تعذر إضافة شركة الطيران. تأكد أن الاسم غير مكرر")
         }
     }
 
-    const handleAddNewDestination = () => {
-        if (newDestination.trim() && !availableDestinations.includes(newDestination.trim())) {
-            const updatedDestinations = [...availableDestinations, newDestination.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
+    const handleAddNewDestination = async () => {
+        const name = newDestination.trim()
+        if (!name) {
+            toast.error("يرجى إدخال اسم الوجهة")
+            return
+        }
+        if (availableDestinations.includes(name)) {
+            toast.error("هذه الوجهة موجودة بالفعل")
+            return
+        }
+        
+        try {
+            const created = await citiesService.createCity({ city_name: name })
+            const updatedDestinations = [...availableDestinations, created.city_name].sort((a, b) => a.localeCompare(b, 'ar'))
             setAvailableDestinations(updatedDestinations)
-            localStorage.setItem('origins', JSON.stringify(updatedDestinations))
-            window.dispatchEvent(new CustomEvent('originsUpdated'))
-            setSelectedDestination(newDestination.trim())
-            setValue('destination', newDestination.trim())
+            
+            // تحديث dictionary
+            setCityNameToId(prev => ({
+                ...prev,
+                [created.city_name]: created.id
+            }))
+            
+            setSelectedDestination(created.city_name)
+            setValue('destination', created.city_name)
             setNewDestination("")
             setShowAddDestination(false)
             setDestinationSearchTerm("")
             toast.success("تم إضافة الوجهة الجديدة بنجاح")
-        } else if (availableDestinations.includes(newDestination.trim())) {
-            toast.error("هذه الوجهة موجودة بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم الوجهة")
+        } catch (error) {
+            toast.error("تعذر إضافة الوجهة. تأكد أن الاسم غير مكرر")
         }
     }
 
@@ -178,37 +190,31 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         setDeleteItem({
             type: 'airport',
             name: airport,
-            onDelete: () => {
-                // حذف من قائمة المطارات
-                const updatedAirports = availableAirports.filter(a => a !== airport)
-                setAvailableAirports(updatedAirports)
-                localStorage.setItem('airports', JSON.stringify(updatedAirports))
-                
-                // مسح المطار من الوفود التي تستخدمه (بدون تغيير حالة الوفد)
-                const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-                const updatedDelegations = existingDelegations.map(delegation => {
-                    if (delegation.arrivalInfo && delegation.arrivalInfo.arrivalHall === airport) {
-                        return {
-                            ...delegation,
-                            arrivalInfo: {
-                                ...delegation.arrivalInfo,
-                                arrivalHall: "" // مسح المطار فقط
-                            }
-                        }
+            onDelete: async () => {
+                try {
+                    // البحث عن ID المطار
+                    const airportId = airportNameToId[airport]
+                    if (airportId) {
+                        // حذف من قاعدة البيانات
+                        await airportService.deleteAirport(airportId)
                     }
-                    return delegation
-                })
-                localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                
-                window.dispatchEvent(new CustomEvent('airportsUpdated'))
-                window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                
-                if (selectedAirport === airport) {
-                    setSelectedAirport("")
-                    setValue('hall', "")
+                    
+                    // حذف من قائمة المطارات المحلية
+                    const updatedAirports = availableAirports.filter(a => a !== airport)
+                    setAvailableAirports(updatedAirports)
+                    
+                    // مسح المطار المختار إذا كان نفس المطار المحذوف
+                    if (selectedAirport === airport) {
+                        setSelectedAirport("")
+                        setValue('hall', "")
+                    }
+                    
+                    toast.success("تم حذف المطار بنجاح")
+                    setDeleteItem(null)
+                } catch (error) {
+                    toast.error("حدث خطأ في حذف المطار")
+                    setDeleteItem(null)
                 }
-                toast.success("تم حذف المطار بنجاح")
-                setDeleteItem(null)
             }
         })
     }
@@ -217,37 +223,31 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         setDeleteItem({
             type: 'airline',
             name: airline,
-            onDelete: () => {
-                // حذف من قائمة شركات الطيران
-                const updatedAirlines = availableAirlines.filter(a => a !== airline)
-                setAvailableAirlines(updatedAirlines)
-                localStorage.setItem('airlines', JSON.stringify(updatedAirlines))
-                
-                // مسح شركة الطيران من الوفود التي تستخدمها (بدون تغيير حالة الوفد)
-                const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-                const updatedDelegations = existingDelegations.map(delegation => {
-                    if (delegation.arrivalInfo && delegation.arrivalInfo.arrivalAirline === airline) {
-                        return {
-                            ...delegation,
-                            arrivalInfo: {
-                                ...delegation.arrivalInfo,
-                                arrivalAirline: "" // مسح شركة الطيران فقط
-                            }
-                        }
+            onDelete: async () => {
+                try {
+                    // البحث عن ID شركة الطيران
+                    const airlineId = airlineNameToId[airline]
+                    if (airlineId) {
+                        // حذف من قاعدة البيانات
+                        await airlineService.deleteAirline(airlineId)
                     }
-                    return delegation
-                })
-                localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                
-                window.dispatchEvent(new CustomEvent('airlinesUpdated'))
-                window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                
-                if (selectedAirline === airline) {
-                    setSelectedAirline("")
-                    setValue('airline', "")
+                    
+                    // حذف من قائمة شركات الطيران المحلية
+                    const updatedAirlines = availableAirlines.filter(a => a !== airline)
+                    setAvailableAirlines(updatedAirlines)
+                    
+                    // مسح شركة الطيران المختارة إذا كانت نفس الشركة المحذوفة
+                    if (selectedAirline === airline) {
+                        setSelectedAirline("")
+                        setValue('airline', "")
+                    }
+                    
+                    toast.success("تم حذف شركة الطيران بنجاح")
+                    setDeleteItem(null)
+                } catch (error) {
+                    toast.error("حدث خطأ في حذف شركة الطيران")
+                    setDeleteItem(null)
                 }
-                toast.success("تم حذف شركة الطيران بنجاح")
-                setDeleteItem(null)
             }
         })
     }
@@ -256,37 +256,31 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         setDeleteItem({
             type: 'destination',
             name: destination,
-            onDelete: () => {
-                // حذف من قائمة المدن
-                const updatedDestinations = availableDestinations.filter(d => d !== destination)
-                setAvailableDestinations(updatedDestinations)
-                localStorage.setItem('origins', JSON.stringify(updatedDestinations))
-                
-                // مسح المدينة من الوفود التي تستخدمها (بدون تغيير حالة الوفد)
-                const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-                const updatedDelegations = existingDelegations.map(delegation => {
-                    if (delegation.arrivalInfo && delegation.arrivalInfo.arrivalOrigin === destination) {
-                        return {
-                            ...delegation,
-                            arrivalInfo: {
-                                ...delegation.arrivalInfo,
-                                arrivalOrigin: "" // مسح المدينة فقط
-                            }
-                        }
+            onDelete: async () => {
+                try {
+                    // البحث عن ID المدينة
+                    const cityId = cityNameToId[destination]
+                    if (cityId) {
+                        // حذف من قاعدة البيانات
+                        await citiesService.deleteCity(cityId)
                     }
-                    return delegation
-                })
-                localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                
-                window.dispatchEvent(new CustomEvent('originsUpdated'))
-                window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                
-                if (selectedDestination === destination) {
-                    setSelectedDestination("")
-                    setValue('destination', "")
+                    
+                    // حذف من قائمة المدن المحلية
+                    const updatedDestinations = availableDestinations.filter(d => d !== destination)
+                    setAvailableDestinations(updatedDestinations)
+                    
+                    // مسح المدينة المختارة إذا كانت نفس المدينة المحذوفة
+                    if (selectedDestination === destination) {
+                        setSelectedDestination("")
+                        setValue('destination', "")
+                    }
+                    
+                    toast.success("تم حذف الوجهة بنجاح")
+                    setDeleteItem(null)
+                } catch (error) {
+                    toast.error("حدث خطأ في حذف الوجهة")
+                    setDeleteItem(null)
                 }
-                toast.success("تم حذف الوجهة بنجاح")
-                setDeleteItem(null)
             }
         })
     }
@@ -427,6 +421,53 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
             notes: session.notes || "",
         }
     })
+
+    // تحميل البيانات من API عند فتح النموذج
+    useEffect(() => {
+        if (open) {
+            const loadData = async () => {
+                try {
+                    const [airportsData, airlinesData, citiesData] = await Promise.all([
+                        airportService.getAirports(),
+                        airlineService.getAirlines(),
+                        citiesService.getCities()
+                    ])
+                    
+                    // تحديث قوائم البيانات
+                    const airportNames = airportsData.map(airport => airport.name)
+                    const airlineNames = airlinesData.map(airline => airline.name)
+                    const cityNames = citiesData.map(city => city.city_name)
+                    
+                    setAvailableAirports(airportNames)
+                    setAvailableAirlines(airlineNames)
+                    setAvailableDestinations(cityNames)
+                    
+                    // إنشاء dictionaries للربط بين الأسماء والـ IDs
+                    const airportDict = {}
+                    airportsData.forEach(airport => {
+                        airportDict[airport.name] = airport.id
+                    })
+                    setAirportNameToId(airportDict)
+                    
+                    const airlineDict = {}
+                    airlinesData.forEach(airline => {
+                        airlineDict[airline.name] = airline.id
+                    })
+                    setAirlineNameToId(airlineDict)
+                    
+                    const cityDict = {}
+                    citiesData.forEach(city => {
+                        cityDict[city.city_name] = city.id
+                    })
+                    setCityNameToId(cityDict)
+                } catch (error) {
+                    console.error('خطأ في تحميل البيانات:', error)
+                }
+            }
+            
+            loadData()
+        }
+    }, [open])
 
     useEffect(() => {
         if (open && session) {
@@ -980,7 +1021,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                     isolation: 'isolate'
                 }}
             >
-                <div className="absolute inset-0 bg-black/50" onClick={() => setDeleteItem(null)} />
+                <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteItem(null)} />
                 <div 
                     className="relative bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 p-6" 
                     dir="rtl" 
@@ -1026,3 +1067,5 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
 }
 
 export default EditDepartureSession
+
+

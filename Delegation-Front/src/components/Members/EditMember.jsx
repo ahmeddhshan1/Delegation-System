@@ -24,6 +24,7 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import { militaryPositions } from "../../utils/militaryPositions"
+import { memberService, equivalentJobService } from "../../services/api"
 
 const EditMember = ({ member, children }) => {
     const [open, setOpen] = useState(false);
@@ -31,7 +32,7 @@ const EditMember = ({ member, children }) => {
     const [selectedEquivalentPosition, setSelectedEquivalentPosition] = useState("")
     const [showAddPosition, setShowAddPosition] = useState(false)
     const [newPosition, setNewPosition] = useState("")
-    const [availablePositions, setAvailablePositions] = useState(militaryPositions)
+    const [availablePositions, setAvailablePositions] = useState([])
     const [searchTerm, setSearchTerm] = useState("")
     const [deleteItem, setDeleteItem] = useState(null)
 
@@ -57,53 +58,61 @@ const EditMember = ({ member, children }) => {
         setValue('equivalentRole', value)
     }
 
-    const handleAddNewPosition = () => {
-        if (newPosition.trim() && !availablePositions.includes(newPosition.trim())) {
-            const updatedPositions = [...availablePositions, newPosition.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
+    const handleAddNewPosition = async () => {
+        const position = newPosition.trim()
+        if (!position) {
+            toast.error("يرجى إدخال اسم الوظيفة المعادلة")
+            return
+        }
+        if (availablePositions.includes(position)) {
+            toast.error("هذه الوظيفة المعادلة موجودة بالفعل")
+            return
+        }
+        
+        try {
+            const created = await equivalentJobService.createEquivalentJob({ name: position })
+            const updatedPositions = [...availablePositions, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
             setAvailablePositions(updatedPositions)
             
-            // حفظ في localStorage
-            localStorage.setItem('militaryPositions', JSON.stringify(updatedPositions))
-            
-            // إرسال custom event لتحديث الفورمات الأخرى
-            window.dispatchEvent(new CustomEvent('positionsUpdated'))
-            
-            setSelectedEquivalentPosition(newPosition.trim())
-            setValue('equivalentRole', newPosition.trim())
+            setSelectedEquivalentPosition(created.name)
+            setValue('equivalentRole', created.name)
             setNewPosition("")
             setShowAddPosition(false)
-            toast.success("تم إضافة المنصب الجديد بنجاح")
-        } else if (availablePositions.includes(newPosition.trim())) {
-            toast.error("هذا المنصب موجود بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم المنصب")
+            setSearchTerm("")
+            toast.success("تم إضافة الوظيفة المعادلة الجديدة بنجاح")
+        } catch (error) {
+            toast.error("تعذر إضافة الوظيفة المعادلة. تأكد أن الاسم غير مكرر")
         }
     }
 
-    // دالة حذف المنصب العسكري
     const handleDeletePosition = (position) => {
         setDeleteItem({
             type: 'position',
             name: position,
-            onDelete: () => {
-                // حذف من قائمة المناصب
-                const updatedPositions = availablePositions.filter(p => p !== position)
-                setAvailablePositions(updatedPositions)
-                
-                // حفظ في localStorage
-                localStorage.setItem('militaryPositions', JSON.stringify(updatedPositions))
-                
-                // إرسال custom event لتحديث الفورمات الأخرى
-                window.dispatchEvent(new CustomEvent('positionsUpdated'))
-                
-                // إذا كان المنصب المحذوف هو المحدد حالياً، امسح التحديد
-                if (selectedEquivalentPosition === position) {
-                    setSelectedEquivalentPosition("")
-                    setValue('equivalentRole', "")
+            onDelete: async () => {
+                try {
+                    // البحث عن ID الوظيفة المعادلة
+                    const jobs = await equivalentJobService.getEquivalentJobs()
+                    const jobToDelete = jobs.find(job => job.name === position)
+                    
+                    if (jobToDelete) {
+                        await equivalentJobService.deleteEquivalentJob(jobToDelete.id)
+                        const updatedPositions = availablePositions.filter(p => p !== position)
+                        setAvailablePositions(updatedPositions)
+                        
+                        // إذا كانت الوظيفة المحذوفة مختارة، امسح الاختيار
+                        if (selectedEquivalentPosition === position) {
+                            setSelectedEquivalentPosition("")
+                            setValue('equivalentRole', "")
+                        }
+                        
+                        toast.success("تم حذف الوظيفة المعادلة بنجاح")
+                        setDeleteItem(null)
+                    }
+                } catch (error) {
+                    toast.error("تعذر حذف الوظيفة المعادلة")
+                    setDeleteItem(null)
                 }
-                
-                toast.success("تم حذف المنصب العسكري بنجاح")
-                setDeleteItem(null)
             }
         })
     }
@@ -113,56 +122,60 @@ const EditMember = ({ member, children }) => {
         position.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const onSubmit = handleSubmit((data) => {
+    const onSubmit = handleSubmit(async (data) => {
         setLoading(true)
         
         try {
-            // جلب الأعضاء الحاليين من localStorage
-            const savedMembers = localStorage.getItem('members')
-            if (savedMembers) {
-                const members = JSON.parse(savedMembers)
-                const memberIndex = members.findIndex(m => m.id === member.id)
-                
-                if (memberIndex !== -1) {
-                    // تحديث بيانات العضو
-                    members[memberIndex] = {
-                        ...members[memberIndex],
-                        rank: data.rank,
-                        name: data.name,
-                        role: data.role,
-                        equivalentRole: data.equivalentRole,
-                        job: data.equivalentRole, // للتوافق مع النظام الحالي
-                    }
-                    
-                    // حفظ القائمة المحدثة
-                    localStorage.setItem('members', JSON.stringify(members))
-                    
-                    // إرسال event لتحديث الصفحة
-                    window.dispatchEvent(new CustomEvent('memberUpdated'))
-                    window.dispatchEvent(new CustomEvent('localStorageUpdated'))
-                    
-                    toast.success('تم تحديث بيانات العضو بنجاح')
-                }
+            // تحديث بيانات العضو عبر API
+            const payload = {
+                rank: data.rank,
+                name: data.name,
+                job_title: data.role,
+                // equivalent_job_id يمكن إضافته لاحقاً
             }
+            
+            await memberService.updateMember(member.id, payload)
+            
+            // إطلاق إشارة لإعادة تحميل البيانات
+            window.dispatchEvent(new CustomEvent('delegationUpdated'))
+            
+            toast.success('تم تحديث بيانات العضو بنجاح')
+            setOpen(false)
         } catch (error) {
             console.error('خطأ في تحديث العضو:', error)
             toast.error('حدث خطأ أثناء تحديث العضو')
+        } finally {
+            setLoading(false)
+        }
+    })
+
+    // جلب الوظائف المعادلة من API
+    useEffect(() => {
+        const loadEquivalentJobs = async () => {
+            try {
+                const jobs = await equivalentJobService.getEquivalentJobs()
+                const jobNames = jobs.map(job => job.name)
+                setAvailablePositions(jobNames)
+            } catch (error) {
+                console.error('خطأ في جلب الوظائف المعادلة:', error)
+                // fallback إلى البيانات المحلية
+                setAvailablePositions(militaryPositions)
+            }
         }
         
-        setTimeout(() => {
-            setLoading(false)
-            setOpen(false)
-        }, 1500)
-    })
+        if (open) {
+            loadEquivalentJobs()
+        }
+    }, [open])
 
     // تحديث البيانات عند فتح الحوار
     useEffect(() => {
         if (open && member) {
             setValue('rank', member.rank || '')
             setValue('name', member.name || '')
-            setValue('role', member.role || '')
-            setValue('equivalentRole', member.equivalentRole || '')
-            setSelectedEquivalentPosition(member.equivalentRole || '')
+            setValue('role', member.job_title || '')
+            setValue('equivalentRole', member.equivalent_job_name || '')
+            setSelectedEquivalentPosition(member.equivalent_job_name || '')
         }
     }, [open, member, setValue])
 
@@ -428,6 +441,52 @@ const EditMember = ({ member, children }) => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+            )}
+            
+            {/* Confirmation Popup */}
+            {deleteItem && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                    onClick={() => setDeleteItem(null)}
+                    style={{
+                        pointerEvents: 'auto'
+                    }}
+                >
+                    <div
+                        className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            pointerEvents: 'auto',
+                            isolation: 'isolate'
+                        }}
+                    >
+                        <p className="text-gray-700 text-right mb-4">
+                            هل أنت متأكد من حذف الوظيفة المعادلة "{deleteItem.name}"؟
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDeleteItem(null)
+                                }}
+                                className="px-4 py-2 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 font-medium"
+                                style={{ pointerEvents: 'auto' }}
+                            >
+                                إلغاء
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    deleteItem.onDelete()
+                                }}
+                                className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 font-medium"
+                                style={{ pointerEvents: 'auto' }}
+                            >
+                                حذف
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </Dialog>
     )

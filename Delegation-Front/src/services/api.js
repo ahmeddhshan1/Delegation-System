@@ -227,6 +227,32 @@ export const militaryPositionService = {
     },
 }
 
+// خدمة الوظائف المعادلة
+export const equivalentJobService = {
+    // جلب جميع الوظائف المعادلة
+    async getEquivalentJobs() {
+        const response = await api.get('/equivalent-jobs/')
+        return normalizeList(response.data)
+    },
+
+    // إنشاء وظيفة معادلة جديدة
+    async createEquivalentJob(jobData) {
+        const response = await api.post('/equivalent-jobs/', jobData)
+        return response.data
+    },
+
+    // تحديث وظيفة معادلة
+    async updateEquivalentJob(id, jobData) {
+        const response = await api.patch(`/equivalent-jobs/${id}/`, jobData)
+        return response.data
+    },
+
+    // حذف وظيفة معادلة
+    async deleteEquivalentJob(id) {
+        await api.delete(`/equivalent-jobs/${id}/`)
+    },
+}
+
 // خدمة المطارات
 export const airportService = {
     // جلب جميع المطارات

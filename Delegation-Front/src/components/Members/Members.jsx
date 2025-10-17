@@ -22,22 +22,23 @@ import EditMember from "./EditMember"
 import MembersTableToolbar from "./MembersTableToolbar"
 // import { members } from "../../data" // تم إزالة البيانات الوهمية
 import { usePermissions } from "../../store/hooks"
+import { memberService } from "../../services/api"
 
 export const columns = [
     {
-        accessorKey: "memberStatus",
+        accessorKey: "status",
         header: () => <div className="text-center">حالة العضو</div>,
         cell: ({ row }) => {
-            const status = row.getValue("memberStatus")
+            const status = row.getValue("status")
             let statusIcon = ""
             let iconColor = ""
             
             switch(status) {
-                case "departed":
+                case "DEPARTED":
                     statusIcon = "material-symbols:check-circle"
                     iconColor = "text-lime-600"
                     break
-                case "not_departed":
+                case "NOT_DEPARTED":
                     statusIcon = "material-symbols:cancel"
                     iconColor = "text-red-600"
                     break
@@ -56,30 +57,50 @@ export const columns = [
     {
         accessorKey: "rank",
         header: () => <div className="text-center">الرتبة</div>,
+        cell: ({ row }) => {
+            const rank = row.getValue("rank")
+            return (
+                <div className="text-center">
+                    {rank || <span className="text-neutral-400">-</span>}
+                </div>
+            )
+        },
     },
     {
         accessorKey: "name",
         header: () => <div className="text-center">الاسم</div>,
     },
     {
-        accessorKey: "role",
-        header: () => <div className="text-center">الدور</div>,
+        accessorKey: "job_title",
+        header: () => <div className="text-center">الوظيفة</div>,
+        cell: ({ row }) => {
+            const jobTitle = row.getValue("job_title")
+            return (
+                <div className="text-center">
+                    {jobTitle || <span className="text-neutral-400">-</span>}
+                </div>
+            )
+        },
     },
     {
-        accessorKey: "equivalentRole",
+        accessorKey: "equivalent_job_name",
         header: () => <div className="text-center">الوظيفة المعادلة</div>,
+        cell: ({ row }) => {
+            const equivalentJobName = row.getValue("equivalent_job_name")
+            return (
+                <div className="text-center">
+                    {equivalentJobName || <span className="text-neutral-400">-</span>}
+                </div>
+            )
+        },
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue) return true
-            const equivalentRole = row.getValue(columnId)
-            return equivalentRole && equivalentRole.toLowerCase().includes(filterValue.toLowerCase())
+            const equivalentJobName = row.getValue(columnId)
+            return equivalentJobName && equivalentJobName.toLowerCase().includes(filterValue.toLowerCase())
         },
-        enableHiding: false,
-        meta: {
-            isHidden: true
-        }
     },
     {
-        accessorKey: "departureDate",
+        accessorKey: "departure_date",
         header: ({ column }) => {
             return (
                 <div className="text-center">
@@ -95,12 +116,12 @@ export const columns = [
             )
         },
         cell: ({ row }) => {
-            const departureDate = row.getValue("departureDate")
+            const departureDate = row.getValue("departure_date")
             return (
                 <div className="text-center">
                     {departureDate ? (
                         <span className="text-sm text-neutral-600">
-                            {departureDate}
+                            {new Date(departureDate).toLocaleDateString('en-GB')}
                         </span>
                     ) : (
                         <span className="text-sm text-neutral-400">-</span>
@@ -144,7 +165,18 @@ export const columns = [
                             </EditMember>
                         )}
                         {checkPermission('DELETE_MEMBERS') && (
-                            <DeletePopup item={row}>
+                            <DeletePopup 
+                                item={row} 
+                                onDelete={async (memberId) => {
+                                    try {
+                                        await memberService.deleteMember(memberId)
+                                        // إطلاق إشارة لإعادة تحميل البيانات
+                                        window.dispatchEvent(new CustomEvent('delegationUpdated'))
+                                    } catch (error) {
+                                        throw error // سيتم التعامل مع الخطأ في DeletePopup
+                                    }
+                                }}
+                            >
                                 <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
                                     <Icon icon={'material-symbols:delete-outline-rounded'} />
                                     <span>حذف</span>

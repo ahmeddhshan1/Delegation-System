@@ -70,91 +70,9 @@ const DeletePopup = ({item, children, onDelete}) => {
                     return
                 }
             } else if ((item.original && item.original.name) || item.name) {
-                // حذف عضو
-
-                
-                // حذف العضو من members
-                const savedMembers = localStorage.getItem('members')
-                if (savedMembers) {
-                    const members = JSON.parse(savedMembers)
-                    const memberToDelete = members.find(member => member.id === itemId)
-                    const updatedMembers = members.filter(member => member.id !== itemId)
-                    localStorage.setItem('members', JSON.stringify(updatedMembers))
-                    
-
-                    
-                    // حذف العضو من جلسات المغادرة
-                    if (memberToDelete && memberToDelete.delegation) {
-                        const delegationId = memberToDelete.delegation.id
-
-                        
-                        // تحديث جلسات المغادرة في الوفد
-                        const savedDelegations = localStorage.getItem('delegations')
-                        if (savedDelegations) {
-                            const delegations = JSON.parse(savedDelegations)
-                            const delegationIndex = delegations.findIndex(d => d.id === delegationId)
-                            
-                            if (delegationIndex !== -1) {
-                                const delegation = delegations[delegationIndex]
-                                if (delegation.departureInfo && delegation.departureInfo.departureSessions) {
-                                    // تحديث كل جلسة مغادرة
-                                    const updatedSessions = delegation.departureInfo.departureSessions.map(session => {
-                                        // إزالة العضو من الجلسة
-                                        const updatedSessionMembers = session.members.filter(member => {
-                                            // إذا كان member object كامل
-                                            if (typeof member === 'object' && member.id) {
-                                                return member.id !== itemId
-                                            }
-                                            // إذا كان member ID فقط
-                                            return member !== itemId
-                                        })
-                                        
-                                        return {
-                                            ...session,
-                                            members: updatedSessionMembers
-                                        }
-                                    }).filter(session => session.members.length > 0) // إزالة الجلسات الفارغة
-                                    
-                                    // تحديث عدد المغادرين
-                                    const totalDeparted = updatedSessions.reduce((total, session) => 
-                                        total + session.members.length, 0
-                                    )
-                                    
-                                    // تحديث حالة الوفد
-                                    const newStatus = totalDeparted === parseInt(delegation.membersCount) 
-                                        ? 'all_departed' 
-                                        : totalDeparted > 0 
-                                            ? 'partial_departed' 
-                                            : 'not_departed'
-                                    
-                                    // تحديث الوفد
-                                    delegations[delegationIndex] = {
-                                        ...delegation,
-                                        delegationStatus: newStatus,
-                                        departureInfo: {
-                                            ...delegation.departureInfo,
-                                            totalMembers: parseInt(delegation.membersCount),
-                                            departedMembers: totalDeparted,
-                                            departureSessions: updatedSessions
-                                        }
-                                    }
-                                    
-                                    localStorage.setItem('delegations', JSON.stringify(delegations))
-
-                                    
-                                    // إرسال events لتحديث المكونات
-                                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                                }
-                            }
-                        }
-                    }
-                    
-
-                    window.dispatchEvent(new CustomEvent('memberDeleted'))
-                    window.dispatchEvent(new CustomEvent('localStorageUpdated'))
-                    
-                    toast.success('تم حذف العضو من جميع جلسات المغادرة بنجاح')
-                }
+                // حذف عضو - استدعاء API
+                onDelete && onDelete(itemId)
+                toast.success('تم حذف العضو بنجاح')
             } else if ((item.original && item.original.date) || item.date) {
                 // حذف جلسة مغادرة
 
