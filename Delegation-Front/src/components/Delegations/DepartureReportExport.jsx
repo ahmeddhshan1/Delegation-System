@@ -11,9 +11,13 @@ import { Button } from "@/components/ui/button"
 import { pdf } from '@react-pdf/renderer'
 import { saveAs } from "file-saver"
 
-const DepartureReportExport = ({ delegation }) => {
+const DepartureReportExport = ({ delegation, departureSessions = [] }) => {
     const exportDepartureReport = async () => {
-        const blob = await pdf(<DepartureReportPDF delegation={delegation} />).toBlob();
+        const delegationWithSessions = {
+            ...delegation,
+            departureSessions: departureSessions
+        }
+        const blob = await pdf(<DepartureReportPDF delegation={delegationWithSessions} />).toBlob();
         saveAs(blob, `EDEX - تقرير مغادرات الوفد ${delegation.nationality}.pdf`);
     }
 

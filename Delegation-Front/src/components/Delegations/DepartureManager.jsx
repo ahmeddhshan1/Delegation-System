@@ -96,7 +96,7 @@ const DepartureManager = ({ delegation, onUpdate }) => {
                         <span className="font-medium">المتاحون: {availableMembers.length}</span>
                     </div>
                     <PermissionElement permission="EXPORT_REPORTS">
-                        <DepartureReportExport delegation={delegation} />
+                        <DepartureReportExport delegation={delegation} departureSessions={departureSessions} />
                     </PermissionElement>
                     <AddDepartureSession 
                         delegation={delegation}

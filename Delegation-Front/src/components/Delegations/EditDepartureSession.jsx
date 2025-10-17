@@ -509,7 +509,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                 cityId = cities.find(c => c.city_name === data.destination)?.id
             }
         } catch (error) {
-            console.error('خطأ في الحصول على معرفات القوائم:', error)
+            // خطأ في الحصول على معرفات القوائم - نكمل بدونها
         }
 
         const payload = {
@@ -528,15 +528,11 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
 
         setLoading(true)
         try {
-            console.log('Sending payload:', payload)
             const result = await departureSessionService.updateDepartureSession(session.id, payload)
-            console.log('Update result:', result)
             toast.success("تم تحديث جلسة المغادرة بنجاح")
             if (onUpdate) { onUpdate() }
             setOpen(false)
         } catch (error) {
-            console.error('خطأ في تحديث جلسة المغادرة:', error)
-            console.error('Error details:', error.response?.data)
             toast.error(`فشل تحديث جلسة المغادرة: ${error.response?.data?.detail || error.message}`)
         } finally {
             setLoading(false)

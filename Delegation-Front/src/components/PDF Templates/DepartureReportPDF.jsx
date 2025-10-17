@@ -59,12 +59,62 @@ const styles = StyleSheet.create({
     padding: 5,
     fontSize: 10,
     textAlign: "center",
-    width: '12.5%'
+    width: '10%',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
   },
   headerCell: {
     backgroundColor: "#f0f0f0",
     fontSize: 12,
-    fontWeight: "bold"
+    fontWeight: "bold",
+    textAlign: "center",
+    width: '10%',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  serialCell: {
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    padding: 5,
+    fontSize: 9,
+    textAlign: "center",
+    backgroundColor: "#f0f0f0",
+    width: '5%',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  membersCell: {
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    padding: 8,
+    fontSize: 10,
+    textAlign: "center",
+    width: '15%',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  membersHeaderCell: {
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    padding: 8,
+    fontSize: 12,
+    fontWeight: "bold",
+    textAlign: "center",
+    backgroundColor: "#f0f0f0",
+    width: '15%',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
   },
   sessionHeader: {
     fontSize: 16,
@@ -72,7 +122,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
     marginBottom: 10,
     textAlign: "center",
-    backgroundColor: "#e3f2fd",
+    backgroundColor: "#f5f5f5",
     padding: 8,
     borderRadius: 4
   },
@@ -82,11 +132,18 @@ const styles = StyleSheet.create({
     padding: 5,
     backgroundColor: "#f5f5f5",
     borderRadius: 3
+  },
+  noData: {
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 20,
+    color: "#666"
   }
 });
 
 // ✅ Headers in Arabic for departure sessions
 const headers = [
+  "م",
   "التاريخ",
   "سعت",
   "المطار",
@@ -94,7 +151,8 @@ const headers = [
   "رقم الرحلة",
   "الوجهة",
   "المستقبل",
-  "الشحنات"
+  "الشحنات",
+  "الأعضاء المغادرون"
 ];
 
 const DepartureReportPDF = ({ delegation }) => {
@@ -159,62 +217,98 @@ const DepartureReportPDF = ({ delegation }) => {
         </View>
         <Text style={styles.header}>تقرير مغادرات الوفد - {delegation.nationality}</Text>
 
-        {/* Render each departure session */}
-        {departureSessions.map((session, sessionIndex) => (
-          <View key={session.id}>
-            <Text style={styles.sessionHeader}>
-              جلسة مغادرة #{sessionIndex + 1}
-            </Text>
-            
-            <View style={styles.table}>
-              {/* Header row */}
-              <View style={styles.row}>
-                {headers.map((h, i) => (
-                  <Text key={i} style={[styles.cell, styles.headerCell]}>
-                    {h}
-                  </Text>
-                ))}
-              </View>
-
-              {/* Data row for this session */}
-              <View style={styles.row}>
-                <Text style={styles.cell}>{session.date}</Text>
-                <Text style={styles.cell}>{session.time ? session.time.replace(':', '') : ''}</Text>
-                <Text style={styles.cell}>{session.hall}</Text>
-                <Text style={styles.cell}>{session.airline}</Text>
-                <Text style={styles.cell}>{session.flightNumber}</Text>
-                <Text style={styles.cell}>{session.destination}</Text>
-                <Text style={styles.cell}>{session.receptor}</Text>
-                <Text style={styles.cell}>{session.shipments}</Text>
-              </View>
+        {/* Sessions Table */}
+        {departureSessions.length > 0 ? (
+          <View style={styles.table}>
+            {/* Header row */}
+            <View style={styles.row}>
+              {headers.map((h, i) => (
+                <View key={i} style={[
+                  i === 0 ? styles.serialCell : i === headers.length - 1 ? styles.membersHeaderCell : [styles.cell, styles.headerCell]
+                ]}>
+                  <Text>{h}</Text>
+                </View>
+              ))}
             </View>
 
-            {/* Members list */}
-            <View style={styles.membersList}>
-              <Text style={{ fontWeight: 'bold', marginBottom: 3 }}>الأعضاء المغادرون:</Text>
-              {session.members.map(memberId => {
-                const member = delegation.members?.find(m => m.id === memberId);
-                return member ? (
-                  <Text key={memberId} style={{ marginLeft: 10 }}>
-                    • {member.rank} {member.name}
-                  </Text>
-                ) : (
-                  <Text key={memberId} style={{ marginLeft: 10 }}>
-                    • عضو #{memberId}
-                  </Text>
-                );
-              })}
-            </View>
-
-            {/* Notes if any */}
-            {session.notes && (
-              <View style={[styles.membersList, { marginTop: 5 }]}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 3 }}>ملاحظات:</Text>
-                <Text style={{ marginLeft: 10 }}>{session.notes}</Text>
+            {/* Data rows */}
+            {departureSessions.map((session, sessionIndex) => (
+              <View style={styles.row} key={session.id}>
+                {/* Serial number */}
+                <View style={styles.serialCell}>
+                  <Text>{sessionIndex + 1}</Text>
+                </View>
+                
+                {/* Date */}
+                <View style={styles.cell}>
+                  <Text>{session.checkout_date || session.date}</Text>
+                </View>
+                
+                {/* Time */}
+                <View style={styles.cell}>
+                  <Text>{session.checkout_time ? session.checkout_time.replace(/:/g, '') : (session.time ? session.time.replace(':', '') : '')}</Text>
+                </View>
+                
+                {/* Airport */}
+                <View style={styles.cell}>
+                  <Text>{session.airport_name || session.hall}</Text>
+                </View>
+                
+                {/* Airline */}
+                <View style={styles.cell}>
+                  <Text>{session.airline_name || session.airline}</Text>
+                </View>
+                
+                {/* Flight Number */}
+                <View style={styles.cell}>
+                  <Text>{session.flight_number || session.flightNumber}</Text>
+                </View>
+                
+                {/* Destination */}
+                <View style={styles.cell}>
+                  <Text>{session.city_name || session.destination}</Text>
+                </View>
+                
+                {/* Depositor */}
+                <View style={styles.cell}>
+                  <Text>{session.depositor_name || session.receptor}</Text>
+                </View>
+                
+                {/* Goods */}
+                <View style={styles.cell}>
+                  <Text>{session.goods || session.shipments}</Text>
+                </View>
+                
+                {/* Members */}
+                <View style={styles.membersCell}>
+                  <View style={{ textAlign: 'right', direction: 'rtl', alignItems: 'flex-end', width: '100%' }}>
+                    {session.members.map((member, index) => {
+                      // Handle both object and ID formats
+                      if (typeof member === 'object' && member.name) {
+                        return (
+                          <Text key={member.id || index} style={{ marginBottom: 1, textAlign: 'right' }}>
+                            {member.rank || ''} {member.name} •
+                          </Text>
+                        );
+                      } else {
+                        const memberId = typeof member === 'object' ? member.id : member;
+                        const foundMember = delegation.members?.find(m => m.id === memberId);
+                        const memberName = foundMember ? `${foundMember.rank} ${foundMember.name}` : `عضو #${memberId}`;
+                        return (
+                          <Text key={memberId} style={{ marginBottom: 1, textAlign: 'right' }}>
+                            {memberName} •
+                          </Text>
+                        );
+                      }
+                    })}
+                  </View>
+                </View>
               </View>
-            )}
+            ))}
           </View>
-        ))}
+        ) : (
+          <Text style={styles.noData}>لا توجد جلسات مغادرة مسجلة لهذا الوفد</Text>
+        )}
       </Page>
     </Document>
   )
