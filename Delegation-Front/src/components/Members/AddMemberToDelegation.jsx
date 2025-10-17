@@ -109,21 +109,21 @@ const AddMemberToDelegation = () => {
                     
                     if (jobToDelete) {
                         await equivalentJobService.deleteEquivalentJob(jobToDelete.id)
-                        const updatedPositions = availablePositions.filter(p => p !== position)
-                        setAvailablePositions(updatedPositions)
-                        
+                const updatedPositions = availablePositions.filter(p => p !== position)
+                setAvailablePositions(updatedPositions)
+                
                         // إذا كانت الوظيفة المحذوفة مختارة، امسح الاختيار
-                        if (selectedEquivalentPosition === position) {
-                            setSelectedEquivalentPosition("")
-                            setValue('equivalentRole', "")
-                        }
-                        
+                if (selectedEquivalentPosition === position) {
+                    setSelectedEquivalentPosition("")
+                    setValue('equivalentRole', "")
+                }
+                
                         toast.success("تم حذف الوظيفة المعادلة بنجاح")
                         setDeleteItem(null)
                     }
                 } catch (error) {
                     toast.error("تعذر حذف الوظيفة المعادلة")
-                    setDeleteItem(null)
+                setDeleteItem(null)
                 }
             }
         })
@@ -143,13 +143,27 @@ const AddMemberToDelegation = () => {
             return
         }
         
-            // إنشاء العضو عبر API (equivalent_job_id اختياري حالياً)
+            // البحث عن ID الوظيفة المعادلة المختارة
+            let equivalent_job_id = null
+            if (data.equivalentRole) {
+                try {
+                    const jobs = await equivalentJobService.getEquivalentJobs()
+                    const selectedJob = jobs.find(job => job.name === data.equivalentRole)
+                    if (selectedJob) {
+                        equivalent_job_id = selectedJob.id
+                    }
+                } catch (error) {
+                    console.error('خطأ في جلب الوظائف المعادلة:', error)
+                }
+            }
+        
+            // إنشاء العضو عبر API
             const payload = {
                 delegation_id: delegationId,
-            rank: data.rank,
-            name: data.name,
+                rank: data.rank,
+                name: data.name,
                 job_title: data.role,
-                // يمكن ربط equivalent_job_id لاحقاً بقائمة من الـ API
+                equivalent_job_id: equivalent_job_id
             }
             await memberService.createMember(payload)
             toast.success("تم إضافة العضو بنجاح")
@@ -276,6 +290,7 @@ const AddMemberToDelegation = () => {
                     <DialogTitle>إضافة عضو جديد للوفد</DialogTitle>
                     <DialogDescription>
                         يمكنك اضافة عضو جديد للوفد المحدد من هنا, حينما تنتهي من ملئ البيانات قم بضغط اضافة.
+                    </DialogDescription>
                         {memberCountInfo.max > 0 && (
                             <div className={`mt-2 p-2 rounded-lg border ${
                                 memberCountInfo.current >= memberCountInfo.max 
@@ -294,7 +309,6 @@ const AddMemberToDelegation = () => {
                                 </span>
                             </div>
                         )}
-                    </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={(e) => e.preventDefault()}>
                     <div className="grid gap-4">
@@ -458,52 +472,6 @@ const AddMemberToDelegation = () => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-            )}
-            
-            {/* Confirmation Popup */}
-            {deleteItem && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                    onClick={() => setDeleteItem(null)}
-                    style={{
-                        pointerEvents: 'auto'
-                    }}
-                >
-                    <div
-                        className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            pointerEvents: 'auto',
-                            isolation: 'isolate'
-                        }}
-                    >
-                        <p className="text-gray-700 text-right mb-4">
-                            هل أنت متأكد من حذف الوظيفة المعادلة "{deleteItem.name}"؟
-                        </p>
-                        <div className="flex gap-3 justify-end">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setDeleteItem(null)
-                                }}
-                                className="px-4 py-2 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 font-medium"
-                                style={{ pointerEvents: 'auto' }}
-                            >
-                                إلغاء
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    deleteItem.onDelete()
-                                }}
-                                className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 font-medium"
-                                style={{ pointerEvents: 'auto' }}
-                            >
-                                حذف
-                            </button>
-                        </div>
-                    </div>
-                </div>
             )}
         </Dialog>
     )

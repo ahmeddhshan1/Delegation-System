@@ -65,6 +65,14 @@ export const columns = [
                 </div>
             )
         },
+        filterFn: (row, columnId, filterValue) => {
+            if (!filterValue) return true
+            const rank = row.getValue(columnId)
+            if (filterValue === "empty") {
+                return !rank || rank === ""
+            }
+            return rank && rank.toLowerCase().includes(filterValue.toLowerCase())
+        },
     },
     {
         accessorKey: "name",
@@ -81,6 +89,14 @@ export const columns = [
                 </div>
             )
         },
+        filterFn: (row, columnId, filterValue) => {
+            if (!filterValue) return true
+            const jobTitle = row.getValue(columnId)
+            if (filterValue === "empty") {
+                return !jobTitle || jobTitle === ""
+            }
+            return jobTitle && jobTitle.toLowerCase().includes(filterValue.toLowerCase())
+        },
     },
     {
         accessorKey: "equivalent_job_name",
@@ -96,6 +112,9 @@ export const columns = [
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue) return true
             const equivalentJobName = row.getValue(columnId)
+            if (filterValue === "empty") {
+                return !equivalentJobName || equivalentJobName === ""
+            }
             return equivalentJobName && equivalentJobName.toLowerCase().includes(filterValue.toLowerCase())
         },
     },

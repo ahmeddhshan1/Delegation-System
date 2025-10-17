@@ -154,31 +154,29 @@ const MembersReportPDF = ({ data }) => {
                 <Text>{i + 1}</Text>
               </View>
               <View style={[styles.cell, { width: '18%' }]}>
-                <Text>{row.rank}</Text>
+                <Text>{row.rank || '-'}</Text>
               </View>
               <View style={[styles.cell, { width: '20%' }]}>
-                <Text>{row.name}</Text>
+                <Text>{row.name || '-'}</Text>
               </View>
               <View style={[styles.cell, { width: '18%' }]}>
-                <Text>{row.role}</Text>
+                <Text>{row.job_title || '-'}</Text>
               </View>
               <View style={[styles.cell, { width: '16%' }]}>
                 <Text>
-                  {row.memberStatus === 'departed' ? 'غادر' :
-                   row.memberStatus === 'not_departed' ? 'لم يغادر' : 
+                  {row.status === 'DEPARTED' ? 'غادر' :
+                   row.status === 'NOT_DEPARTED' ? 'لم يغادر' : 
                    'غير محدد'}
                 </Text>
               </View>
               <View style={[styles.cell, { width: '10%' }]}>
                 <Text>
-                  {row.arrivalDate ? new Date(row.arrivalDate).toLocaleDateString('en-GB') : 
-                   row.delegation?.arrivalInfo?.arrivalDate ? new Date(row.delegation.arrivalInfo.arrivalDate).toLocaleDateString('en-GB') :
-                   'غير محدد'}
+                  {row.delegation?.arrival_date ? new Date(row.delegation.arrival_date).toLocaleDateString('en-GB') : '-'}
                 </Text>
               </View>
               <View style={[styles.cell, { width: '10%' }]}>
                 <Text>
-                  {row.departureDate ? new Date(row.departureDate).toLocaleDateString('en-GB') : 'لم يغادر'}
+                  {row.departure_date ? new Date(row.departure_date).toLocaleDateString('en-GB') : '-'}
                 </Text>
               </View>
             </View>

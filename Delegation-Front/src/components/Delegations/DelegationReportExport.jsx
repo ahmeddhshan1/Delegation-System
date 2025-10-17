@@ -7,10 +7,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-// import { members } from '../../data' // تم إزالة البيانات الوهمية
 import SmartCombinedReportPDF from '../PDF Templates/SmartCombinedReportPDF'
 import { pdf } from '@react-pdf/renderer'
-import { saveAs } from "file-saver";
+import { saveAs } from "file-saver"
+import { memberService } from '../../services/api'
 
 const DelegationReportExport = ({data}) => {
     
@@ -18,12 +18,12 @@ const DelegationReportExport = ({data}) => {
 
     const exportCombinedReport = async () => {
         try {
-            // جلب الأعضاء من localStorage بدلاً من البيانات الوهمية
-            const savedMembers = localStorage.getItem('members')
-            const members = savedMembers ? JSON.parse(savedMembers) : []
+            // جلب الأعضاء من API بدلاً من localStorage
+            const allMembers = await memberService.getMembers()
+            const members = Array.isArray(allMembers?.results) ? allMembers.results : Array.isArray(allMembers) ? allMembers : []
             
             const filteredMembers = members.filter(member => 
-                data.some(d => d.id === member.delegation?.id)
+                data.some(d => d.id === member.delegation_id)
             );
             
             // 1. طباعة التقرير الشامل

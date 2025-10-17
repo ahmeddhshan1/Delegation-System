@@ -200,17 +200,17 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                     }
                     
                     // حذف من قائمة المطارات المحلية
-                    const updatedAirports = availableAirports.filter(a => a !== airport)
-                    setAvailableAirports(updatedAirports)
+                const updatedAirports = availableAirports.filter(a => a !== airport)
+                setAvailableAirports(updatedAirports)
                     
                     // مسح المطار المختار إذا كان نفس المطار المحذوف
-                    if (selectedAirport === airport) {
-                        setSelectedAirport("")
-                        setValue('hall', "")
-                    }
+                if (selectedAirport === airport) {
+                    setSelectedAirport("")
+                    setValue('hall', "")
+                }
                     
-                    toast.success("تم حذف المطار بنجاح")
-                    setDeleteItem(null)
+                toast.success("تم حذف المطار بنجاح")
+                setDeleteItem(null)
                 } catch (error) {
                     toast.error("حدث خطأ في حذف المطار")
                     setDeleteItem(null)
@@ -233,17 +233,17 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                     }
                     
                     // حذف من قائمة شركات الطيران المحلية
-                    const updatedAirlines = availableAirlines.filter(a => a !== airline)
-                    setAvailableAirlines(updatedAirlines)
+                const updatedAirlines = availableAirlines.filter(a => a !== airline)
+                setAvailableAirlines(updatedAirlines)
                     
                     // مسح شركة الطيران المختارة إذا كانت نفس الشركة المحذوفة
-                    if (selectedAirline === airline) {
-                        setSelectedAirline("")
-                        setValue('airline', "")
-                    }
+                if (selectedAirline === airline) {
+                    setSelectedAirline("")
+                    setValue('airline', "")
+                }
                     
-                    toast.success("تم حذف شركة الطيران بنجاح")
-                    setDeleteItem(null)
+                toast.success("تم حذف شركة الطيران بنجاح")
+                setDeleteItem(null)
                 } catch (error) {
                     toast.error("حدث خطأ في حذف شركة الطيران")
                     setDeleteItem(null)
@@ -266,17 +266,17 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                     }
                     
                     // حذف من قائمة المدن المحلية
-                    const updatedDestinations = availableDestinations.filter(d => d !== destination)
-                    setAvailableDestinations(updatedDestinations)
+                const updatedDestinations = availableDestinations.filter(d => d !== destination)
+                setAvailableDestinations(updatedDestinations)
                     
                     // مسح المدينة المختارة إذا كانت نفس المدينة المحذوفة
-                    if (selectedDestination === destination) {
-                        setSelectedDestination("")
-                        setValue('destination', "")
-                    }
+                if (selectedDestination === destination) {
+                    setSelectedDestination("")
+                    setValue('destination', "")
+                }
                     
-                    toast.success("تم حذف الوجهة بنجاح")
-                    setDeleteItem(null)
+                toast.success("تم حذف الوجهة بنجاح")
+                setDeleteItem(null)
                 } catch (error) {
                     toast.error("حدث خطأ في حذف الوجهة")
                     setDeleteItem(null)
@@ -1021,7 +1021,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                     isolation: 'isolate'
                 }}
             >
-                <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteItem(null)} />
+                <div className="absolute inset-0 bg-black/50" onClick={() => setDeleteItem(null)} />
                 <div 
                     className="relative bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 p-6" 
                     dir="rtl" 

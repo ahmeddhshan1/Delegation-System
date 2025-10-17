@@ -13,6 +13,8 @@ const DelegationMembers = () => {
     // تحميل البيانات الحقيقية
     useEffect(() => {
         const loadData = async () => {
+            let mappedDelegation = null
+            
             try {
                 // جلب تفاصيل الوفد من API
                 const delResp = await delegationService.getDelegation(delegationId)
@@ -22,13 +24,18 @@ const DelegationMembers = () => {
                     const s = String(timeStr).replace(/:/g, '')
                     return s.slice(0, 4)
                 }
-                const mappedDelegation = d ? {
+                mappedDelegation = d ? {
                     id: d.id,
                     type: d.type,
                     delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
                     nationality: d.nationality_name || '',
                     delegationHead: d.delegation_leader_name || '',
                     membersCount: d.member_count || 0,
+                    arrival_date: d.arrive_date || '',
+                    arrival_time: d.arrive_time || '',
+                    arrival_destination: d.city_name || '',
+                    arrival_flight_number: d.flight_number || '',
+                    arrival_airline: d.airline_name || '',
                     arrivalInfo: {
                         arrivalHall: d.airport_name || '',
                         arrivalAirline: d.airline_name || '',
@@ -50,7 +57,14 @@ const DelegationMembers = () => {
                 // جلب أعضاء الوفد من API
                 const memResp = await memberService.getMembers({ delegation_id: delegationId })
                 const list = Array.isArray(memResp?.results) ? memResp.results : Array.isArray(memResp) ? memResp : []
-                setDelegationMembers(list)
+                
+                // إضافة بيانات الوفد لكل عضو
+                const enrichedMembers = list.map(member => ({
+                    ...member,
+                    delegation: mappedDelegation
+                }))
+                
+                setDelegationMembers(enrichedMembers)
             } catch (e) {
                 setDelegationMembers([])
             }

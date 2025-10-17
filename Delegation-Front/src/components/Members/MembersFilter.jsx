@@ -61,6 +61,9 @@ const MembersFilter = ({ table, data }) => {
                                     <SelectValue placeholder="الوظيفة" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    {data.some(el => !el.job_title || el.job_title === "") && (
+                                        <SelectItem value="empty">فارغ</SelectItem>
+                                    )}
                                     {
                                         [...new Set(data.map(el => el.job_title).filter(Boolean))]
                                             .map((jobTitle, index) => (
@@ -81,6 +84,9 @@ const MembersFilter = ({ table, data }) => {
                                     <SelectValue placeholder="الرتبة" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    {data.some(el => !el.rank || el.rank === "") && (
+                                        <SelectItem value="empty">فارغ</SelectItem>
+                                    )}
                                     {
                                         [...new Set(data.map(el => el.rank).filter(Boolean))]
                                             .map((rank, index) => (
@@ -99,6 +105,9 @@ const MembersFilter = ({ table, data }) => {
                                     <SelectValue placeholder="الوظيفة المعادلة" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    {data.some(el => !el.equivalent_job_name || el.equivalent_job_name === "") && (
+                                        <SelectItem value="empty">فارغ</SelectItem>
+                                    )}
                                     {
                                         [...new Set(data.map(el => el.equivalent_job_name).filter(Boolean))]
                                             .map((equivalentJobName, index) => (

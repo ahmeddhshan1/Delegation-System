@@ -10,14 +10,12 @@ export const exportMembersToExcel = (data, fileName = "EDEX - Members report.xls
             "م": index + 1, // الترقيم
             "الرتبة": item.rank || "",
             "الاسم": item.name || "",
-            "الوظيفة": item.role || "",
-            "حالة العضو": item.memberStatus === 'departed' ? 'غادر' :
-                         item.memberStatus === 'not_departed' ? 'لم يغادر' : 
+            "الوظيفة": item.job_title || "",
+            "حالة العضو": item.status === 'DEPARTED' ? 'غادر' :
+                         item.status === 'NOT_DEPARTED' ? 'لم يغادر' : 
                          'غير محدد',
-            "تاريخ الوصول": item.arrivalDate ? new Date(item.arrivalDate).toLocaleDateString('en-GB') : 
-                            item.delegation?.arrivalInfo?.arrivalDate ? new Date(item.delegation.arrivalInfo.arrivalDate).toLocaleDateString('en-GB') :
-                            'غير محدد',
-            "تاريخ المغادرة": item.departureDate ? new Date(item.departureDate).toLocaleDateString('en-GB') : 'لم يغادر'
+            "تاريخ الوصول": item.delegation?.arrival_date ? new Date(item.delegation.arrival_date).toLocaleDateString('en-GB') : '-',
+            "تاريخ المغادرة": item.departure_date ? new Date(item.departure_date).toLocaleDateString('en-GB') : '-'
         };
     });
 

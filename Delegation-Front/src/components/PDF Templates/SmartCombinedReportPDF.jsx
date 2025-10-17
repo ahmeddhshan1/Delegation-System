@@ -251,40 +251,39 @@ const SmartCombinedReportPDF = ({
 
                       {delegationMembers.map((member, i) => (
                         <View style={styles.row} key={i}>
-                          <Text style={styles.cell}>{member.rank}</Text>
-                          <Text style={styles.cell}>{member.name}</Text>
-                          <Text style={styles.cell}>{member.role}</Text>
+                          <Text style={styles.cell}>{member.rank || '-'}</Text>
+                          <Text style={styles.cell}>{member.name || '-'}</Text>
+                          <Text style={styles.cell}>{member.job_title || '-'}</Text>
                           <Text style={styles.cell}>
-                            {member.memberStatus === 'departed' ? 'غادر' :
-                             member.memberStatus === 'not_departed' ? 'لم يغادر' : 'غير محدد'}
+                            {member.status === 'DEPARTED' ? 'غادر' :
+                             member.status === 'NOT_DEPARTED' ? 'لم يغادر' : 'غير محدد'}
                           </Text>
-                          <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalDestination}</Text>
-                          <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalDate}</Text>
-                          <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalTime ? member.delegation.arrivalInfo.arrivalTime.replace(':', '') : ''}</Text>
-                          <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalFlightNumber}</Text>
-                          <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalAirline}</Text>
+                          <Text style={styles.cell}>{member.delegation?.arrival_destination || '-'}</Text>
+                          <Text style={styles.cell}>{member.delegation?.arrival_date || '-'}</Text>
+                          <Text style={styles.cell}>{member.delegation?.arrival_time ? member.delegation.arrival_time.replace(':', '') : '-'}</Text>
+                          <Text style={styles.cell}>{member.delegation?.arrival_flight_number || '-'}</Text>
+                          <Text style={styles.cell}>{member.delegation?.arrival_airline || '-'}</Text>
                           
                           {/* معلومات المغادرة - تظهر فقط للشخص الغادر */}
                           <Text style={styles.cell}>
-                            {member.memberStatus === 'departed' ? 
-                             (member.delegation?.departureInfo?.departureSessions?.[0]?.destination || '-') : '-'}
+                            {member.status === 'DEPARTED' ? 
+                             (member.departure_date || '-') : '-'}
                           </Text>
                           <Text style={styles.cell}>
-                            {member.memberStatus === 'departed' ? 
-                             (member.delegation?.departureInfo?.departureSessions?.[0]?.date || '-') : '-'}
+                            {member.status === 'DEPARTED' ? 
+                             (member.departure_date || '-') : '-'}
                           </Text>
                           <Text style={styles.cell}>
-                            {member.memberStatus === 'departed' ? 
-                             (member.delegation?.departureInfo?.departureSessions?.[0]?.time ? 
-                              member.delegation.departureInfo.departureSessions[0].time.replace(':', '') : '-') : '-'}
+                            {member.status === 'DEPARTED' ? 
+                             (member.departure_date || '-') : '-'}
                           </Text>
                           <Text style={styles.cell}>
-                            {member.memberStatus === 'departed' ? 
-                             (member.delegation?.departureInfo?.departureSessions?.[0]?.flightNumber || '-') : '-'}
+                            {member.status === 'DEPARTED' ? 
+                             (member.departure_date || '-') : '-'}
                           </Text>
                           <Text style={styles.cell}>
-                            {member.memberStatus === 'departed' ? 
-                             (member.delegation?.departureInfo?.departureSessions?.[0]?.airline || '-') : '-'}
+                            {member.status === 'DEPARTED' ? 
+                             (member.departure_date || '-') : '-'}
                           </Text>
                         </View>
                       ))}
@@ -323,40 +322,39 @@ const SmartCombinedReportPDF = ({
 
                     {delegationMembers.map((member, i) => (
                       <View style={styles.row} key={i}>
-                        <Text style={styles.cell}>{member.rank}</Text>
-                        <Text style={styles.cell}>{member.name}</Text>
-                        <Text style={styles.cell}>{member.role}</Text>
+                        <Text style={styles.cell}>{member.rank || '-'}</Text>
+                        <Text style={styles.cell}>{member.name || '-'}</Text>
+                        <Text style={styles.cell}>{member.job_title || '-'}</Text>
                         <Text style={styles.cell}>
-                          {member.memberStatus === 'departed' ? 'غادر' :
-                           member.memberStatus === 'not_departed' ? 'لم يغادر' : 'غير محدد'}
+                          {member.status === 'DEPARTED' ? 'غادر' :
+                           member.status === 'NOT_DEPARTED' ? 'لم يغادر' : 'غير محدد'}
                         </Text>
-                        <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalDestination}</Text>
-                        <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalDate}</Text>
-                        <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalTime ? member.delegation.arrivalInfo.arrivalTime.replace(':', '') : ''}</Text>
-                        <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalFlightNumber}</Text>
-                        <Text style={styles.cell}>{member.delegation?.arrivalInfo?.arrivalAirline}</Text>
+                        <Text style={styles.cell}>{member.delegation?.arrival_destination || '-'}</Text>
+                        <Text style={styles.cell}>{member.delegation?.arrival_date || '-'}</Text>
+                        <Text style={styles.cell}>{member.delegation?.arrival_time ? member.delegation.arrival_time.replace(':', '') : '-'}</Text>
+                        <Text style={styles.cell}>{member.delegation?.arrival_flight_number || '-'}</Text>
+                        <Text style={styles.cell}>{member.delegation?.arrival_airline || '-'}</Text>
                         
                         {/* معلومات المغادرة - تظهر فقط للشخص الغادر */}
                         <Text style={styles.cell}>
-                          {member.memberStatus === 'departed' ? 
-                           (member.delegation?.departureInfo?.departureSessions?.[0]?.destination || '-') : '-'}
+                          {member.status === 'DEPARTED' ? 
+                           (member.departure_date || '-') : '-'}
                         </Text>
                         <Text style={styles.cell}>
-                          {member.memberStatus === 'departed' ? 
-                           (member.delegation?.departureInfo?.departureSessions?.[0]?.date || '-') : '-'}
+                          {member.status === 'DEPARTED' ? 
+                           (member.departure_date || '-') : '-'}
                         </Text>
                         <Text style={styles.cell}>
-                          {member.memberStatus === 'departed' ? 
-                           (member.delegation?.departureInfo?.departureSessions?.[0]?.time ? 
-                            member.delegation.departureInfo.departureSessions[0].time.replace(':', '') : '-') : '-'}
+                          {member.status === 'DEPARTED' ? 
+                           (member.departure_date || '-') : '-'}
                         </Text>
                         <Text style={styles.cell}>
-                          {member.memberStatus === 'departed' ? 
-                           (member.delegation?.departureInfo?.departureSessions?.[0]?.flightNumber || '-') : '-'}
+                          {member.status === 'DEPARTED' ? 
+                           (member.departure_date || '-') : '-'}
                         </Text>
                         <Text style={styles.cell}>
-                          {member.memberStatus === 'departed' ? 
-                           (member.delegation?.departureInfo?.departureSessions?.[0]?.airline || '-') : '-'}
+                          {member.status === 'DEPARTED' ? 
+                           (member.departure_date || '-') : '-'}
                         </Text>
                       </View>
                     ))}

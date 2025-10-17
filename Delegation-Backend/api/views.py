@@ -198,6 +198,34 @@ class MemberViewSet(viewsets.ModelViewSet):
         instance = serializer.save(updated_by=self.request.user)
     
     def perform_destroy(self, instance):
+        # Before deleting the member, handle checkout sessions
+        try:
+            # Find all checkout sessions that contain this member
+            checkout_sessions = CheckOut.objects.filter(
+                delegation_id=instance.delegation_id,
+                members__contains=[str(instance.id)]
+            )
+            
+            for session in checkout_sessions:
+                # Remove the member from the session
+                try:
+                    current_members = session.members or []
+                    updated_members = [m for m in current_members if str(m) != str(instance.id)]
+                    
+                    if not updated_members:
+                        # If no members left, delete the entire session
+                        session.delete()
+                    else:
+                        # Update the session with remaining members
+                        session.members = updated_members
+                        session.save()
+                except Exception as e:
+                    # If there's an error updating the session, continue with deletion
+                    pass
+        except Exception as e:
+            # If there's an error handling checkout sessions, continue with deletion
+            pass
+            
         instance.delete()
 
 

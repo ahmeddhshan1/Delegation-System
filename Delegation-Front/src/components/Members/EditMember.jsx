@@ -126,12 +126,26 @@ const EditMember = ({ member, children }) => {
         setLoading(true)
         
         try {
+            // البحث عن ID الوظيفة المعادلة المختارة
+            let equivalent_job_id = null
+            if (data.equivalentRole) {
+                try {
+                    const jobs = await equivalentJobService.getEquivalentJobs()
+                    const selectedJob = jobs.find(job => job.name === data.equivalentRole)
+                    if (selectedJob) {
+                        equivalent_job_id = selectedJob.id
+                    }
+                } catch (error) {
+                    console.error('خطأ في جلب الوظائف المعادلة:', error)
+                }
+            }
+            
             // تحديث بيانات العضو عبر API
             const payload = {
                 rank: data.rank,
                 name: data.name,
                 job_title: data.role,
-                // equivalent_job_id يمكن إضافته لاحقاً
+                equivalent_job_id: equivalent_job_id
             }
             
             await memberService.updateMember(member.id, payload)
@@ -441,52 +455,6 @@ const EditMember = ({ member, children }) => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-            )}
-            
-            {/* Confirmation Popup */}
-            {deleteItem && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                    onClick={() => setDeleteItem(null)}
-                    style={{
-                        pointerEvents: 'auto'
-                    }}
-                >
-                    <div
-                        className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            pointerEvents: 'auto',
-                            isolation: 'isolate'
-                        }}
-                    >
-                        <p className="text-gray-700 text-right mb-4">
-                            هل أنت متأكد من حذف الوظيفة المعادلة "{deleteItem.name}"؟
-                        </p>
-                        <div className="flex gap-3 justify-end">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setDeleteItem(null)
-                                }}
-                                className="px-4 py-2 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 font-medium"
-                                style={{ pointerEvents: 'auto' }}
-                            >
-                                إلغاء
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    deleteItem.onDelete()
-                                }}
-                                className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 font-medium"
-                                style={{ pointerEvents: 'auto' }}
-                            >
-                                حذف
-                            </button>
-                        </div>
-                    </div>
-                </div>
             )}
         </Dialog>
     )

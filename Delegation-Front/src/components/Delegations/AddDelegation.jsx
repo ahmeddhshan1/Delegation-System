@@ -1322,7 +1322,7 @@ const AddDelegation = ({ subEventId }) => {
                     isolation: 'isolate'
                 }}
             >
-                <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteItem(null)} />
+                <div className="absolute inset-0 bg-black/50" onClick={() => setDeleteItem(null)} />
                 <div 
                     className="relative bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 p-6" 
                     dir="rtl" 
