@@ -1,8 +1,9 @@
-// خدمة المصادقة - محاكاة للباك إند
+// خدمة المصادقة - متصلة بالباك إند
 import { toast } from "sonner"
+import axios from 'axios'
 
-// محاكاة API للمصادقة
-const API_BASE_URL = 'http://localhost:8000/api' // سيتم تغييرها عند ربط الباك إند
+// API للمصادقة
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 // محاكاة بيانات المستخدمين
 const mockUsers = [
@@ -37,80 +38,156 @@ export const authService = {
     // تسجيل الدخول
     async login(credentials) {
         try {
-            // محاكاة تأخير الشبكة
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const response = await axios.post(`${API_BASE_URL}/auth/login/`, {
+                username: credentials.username,
+                password: credentials.password,
+                device_info: {
+                    user_agent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language
+                }
+            }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                timeout: 10000
+            })
             
-            const { username, password } = credentials
+            const { token, user } = response.data
             
-            // البحث عن المستخدم
-            const user = mockUsers.find(u => 
-                u.username === username && u.password === password && u.is_active
-            )
+            // تحديد التخزين حسب خيار تذكرني
+            const storage = credentials.rememberMe ? window.localStorage : window.sessionStorage
+            const otherStorage = credentials.rememberMe ? window.sessionStorage : window.localStorage
             
-            if (!user) {
-                throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة')
+            // مسح أي أثر قديم في التخزين الآخر
+            otherStorage.removeItem('authToken')
+            otherStorage.removeItem('userRole')
+            otherStorage.removeItem('userId')
+            otherStorage.removeItem('userName')
+            otherStorage.removeItem('isSuperAdmin')
+            otherStorage.removeItem('isAdmin')
+            
+            // حفظ بيانات المستخدم في التخزين المختار
+            storage.setItem('authToken', token)
+            storage.setItem('userRole', user.role)
+            storage.setItem('userId', String(user.id))
+            storage.setItem('userName', user.full_name)
+            storage.setItem('isSuperAdmin', String(user.is_super_admin))
+            storage.setItem('isAdmin', String(user.is_admin))
+            
+            // إذا كان المستخدم Super Admin، أنشئ session للـ Django Admin
+            if (user.is_super_admin) {
+                try {
+                    const adminSessionResponse = await axios.post(`${API_BASE_URL}/auth/create_admin_session/`, {}, {
+                        headers: {
+                            'Authorization': `Token ${token}`,
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    
+                    // حفظ معلومات الـ admin session
+                    localStorage.setItem('adminSessionKey', adminSessionResponse.data.session_key)
+                    localStorage.setItem('adminCSRFToken', adminSessionResponse.data.csrf_token)
+                    localStorage.setItem('adminUrl', adminSessionResponse.data.admin_url)
+                    localStorage.setItem('adminToken', adminSessionResponse.data.admin_token)
+                } catch (adminError) {
+                    console.warn('Failed to create admin session:', adminError)
+                    // لا نوقف عملية تسجيل الدخول إذا فشل إنشاء admin session
+                }
             }
-            
-            // إنشاء رمز الوصول (محاكاة)
-            const token = `mock_token_${user.id}_${Date.now()}`
-            
-            // حفظ بيانات المستخدم في localStorage
-            localStorage.setItem('authToken', token)
-            localStorage.setItem('userRole', user.role)
-            localStorage.setItem('userId', user.id.toString())
-            localStorage.setItem('userName', user.full_name)
             
             return {
                 success: true,
                 token,
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    full_name: user.full_name,
-                    role: user.role
-                }
+                user
             }
         } catch (error) {
-            throw new Error(error.message || 'حدث خطأ في تسجيل الدخول')
+            console.error('Login error details:', error)
+            let message = 'حدث خطأ في تسجيل الدخول'
+            
+            if (error.code === 'ECONNABORTED') {
+                message = 'انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى'
+            } else if (error.code === 'ERR_NETWORK') {
+                message = 'خطأ في الشبكة. تأكد من أن الخادم يعمل'
+            } else if (error.response?.status === 401) {
+                message = 'اسم المستخدم أو كلمة المرور غير صحيحة'
+            } else if (error.response?.status === 400) {
+                message = 'بيانات غير صحيحة'
+            } else if (error.response?.data?.error) {
+                message = error.response.data.error
+            } else if (error.response?.data?.detail) {
+                message = error.response.data.detail
+            } else if (error.response?.data?.non_field_errors) {
+                message = error.response.data.non_field_errors[0]
+            } else if (error.message) {
+                message = error.message
+            }
+            
+            throw new Error(message)
         }
     },
     
     // تسجيل الخروج
     async logout() {
         try {
-            // محاكاة تأخير الشبكة
-            await new Promise(resolve => setTimeout(resolve, 500))
+            const token = localStorage.getItem('authToken')
+            if (token) {
+                await axios.post(`${API_BASE_URL}/auth/logout/`, {}, {
+                    headers: {
+                        'Authorization': `Token ${token}`
+                    }
+                })
+            }
             
             // حذف بيانات المستخدم من localStorage
             localStorage.removeItem('authToken')
             localStorage.removeItem('userRole')
             localStorage.removeItem('userId')
             localStorage.removeItem('userName')
+            localStorage.removeItem('isSuperAdmin')
+            localStorage.removeItem('isAdmin')
+            
+            // حذف بيانات Django Admin
+            localStorage.removeItem('adminSessionKey')
+            localStorage.removeItem('adminCSRFToken')
+            localStorage.removeItem('adminUrl')
+            localStorage.removeItem('adminToken')
             
             return { success: true }
         } catch (error) {
-            throw new Error('حدث خطأ في تسجيل الخروج')
+            // حتى لو فشل الطلب، نمسح البيانات المحلية
+            localStorage.removeItem('authToken')
+            localStorage.removeItem('userRole')
+            localStorage.removeItem('userId')
+            localStorage.removeItem('userName')
+            localStorage.removeItem('isSuperAdmin')
+            localStorage.removeItem('isAdmin')
+            
+            // حذف بيانات Django Admin
+            localStorage.removeItem('adminSessionKey')
+            localStorage.removeItem('adminCSRFToken')
+            localStorage.removeItem('adminUrl')
+            localStorage.removeItem('adminToken')
+            
+            return { success: true }
         }
     },
     
     // التحقق من صحة الرمز
     async verifyToken(token) {
         try {
-            // محاكاة تأخير الشبكة
-            await new Promise(resolve => setTimeout(resolve, 300))
-            
             if (!token) {
                 throw new Error('رمز الوصول غير موجود')
             }
             
-            // محاكاة التحقق من الرمز
-            const isValid = token.startsWith('mock_token_')
+            // التحقق من الرمز عبر API
+            const response = await axios.get(`${API_BASE_URL}/auth/me/`, {
+                headers: {
+                    'Authorization': `Token ${token}`
+                }
+            })
             
-            if (!isValid) {
-                throw new Error('رمز الوصول غير صالح')
-            }
-            
-            return { success: true, valid: true }
+            return { success: true, valid: true, user: response.data }
         } catch (error) {
             return { success: false, valid: false, error: error.message }
         }
@@ -120,7 +197,7 @@ export const authService = {
     getCurrentUser() {
         try {
             const token = localStorage.getItem('authToken')
-            const role = localStorage.getItem('userRole') || 'admin'
+            const role = localStorage.getItem('userRole') || 'ADMIN'
             const userId = localStorage.getItem('userId')
             const userName = localStorage.getItem('userName')
             
@@ -142,67 +219,93 @@ export const authService = {
     
     // التحقق من حالة تسجيل الدخول
     isAuthenticated() {
-        const token = localStorage.getItem('authToken')
-        const role = localStorage.getItem('userRole')
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+        const role = localStorage.getItem('userRole') || sessionStorage.getItem('userRole')
         
         return !!(token && role)
     },
     
     // الحصول على رمز الوصول
     getToken() {
-        return localStorage.getItem('authToken')
+        return localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
     },
     
     // الحصول على دور المستخدم
     getUserRole() {
-        return localStorage.getItem('userRole')
+        return localStorage.getItem('userRole') || sessionStorage.getItem('userRole')
     },
     
     // تحديث كلمة المرور
     async changePassword(currentPassword, newPassword) {
         try {
-            // محاكاة تأخير الشبكة
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            
-            const currentUser = this.getCurrentUser()
-            if (!currentUser) {
+            const token = localStorage.getItem('authToken')
+            if (!token) {
                 throw new Error('المستخدم غير مسجل الدخول')
             }
             
-            // محاكاة التحقق من كلمة المرور الحالية
-            const user = mockUsers.find(u => u.id === currentUser.id)
-            if (!user || user.password !== currentPassword) {
-                throw new Error('كلمة المرور الحالية غير صحيحة')
-            }
-            
-            // محاكاة تحديث كلمة المرور
-            user.password = newPassword
+            // إرسال طلب تحديث كلمة المرور للـ API
+            const response = await axios.post(`${API_BASE_URL}/auth/change-password/`, {
+                current_password: currentPassword,
+                new_password: newPassword
+            }, {
+                headers: {
+                    'Authorization': `Token ${token}`
+                }
+            })
             
             return { success: true, message: 'تم تحديث كلمة المرور بنجاح' }
         } catch (error) {
-            throw new Error(error.message || 'حدث خطأ في تحديث كلمة المرور')
+            const message = error.response?.data?.error || 'حدث خطأ في تحديث كلمة المرور'
+            throw new Error(message)
         }
     },
     
     // إعادة تعيين كلمة المرور
     async resetPassword(username) {
         try {
-            // محاكاة تأخير الشبكة
-            await new Promise(resolve => setTimeout(resolve, 1500))
+            // إرسال طلب إعادة تعيين كلمة المرور للـ API
+            const response = await axios.post(`${API_BASE_URL}/auth/reset-password/`, {
+                username: username
+            })
             
-            const user = mockUsers.find(u => u.username === username)
-            if (!user) {
-                throw new Error('اسم المستخدم غير موجود')
-            }
-            
-            // محاكاة إرسال رابط إعادة التعيين
             return { 
                 success: true, 
-                message: 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني' 
+                message: response.data.message || 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'
             }
         } catch (error) {
-            throw new Error(error.message || 'حدث خطأ في إعادة تعيين كلمة المرور')
+            const message = error.response?.data?.error || 'حدث خطأ في إعادة تعيين كلمة المرور'
+            throw new Error(message)
         }
+    },
+    
+    // فتح Django Admin Dashboard
+    openAdminDashboard() {
+        try {
+            const adminUrl = localStorage.getItem('adminUrl')
+            const adminToken = localStorage.getItem('adminToken')
+            
+            if (!adminToken) {
+                throw new Error('Admin session not found. Please login again.')
+            }
+            
+            // استخدام الـ admin URL الذي يحتوي على الـ token
+            const adminFullUrl = `http://localhost:8000${adminUrl}`
+            
+            // فتح في تبويب جديد مباشرة
+            window.open(adminFullUrl, '_blank')
+            
+            return { success: true, url: adminFullUrl }
+        } catch (error) {
+            console.error('Error opening admin dashboard:', error)
+            throw new Error(error.message)
+        }
+    },
+    
+    // التحقق من وجود admin session
+    hasAdminSession() {
+        const adminToken = localStorage.getItem('adminToken')
+        const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true'
+        return !!(adminToken && isSuperAdmin)
     }
 }
 

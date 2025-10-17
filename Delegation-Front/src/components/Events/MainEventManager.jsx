@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { availableEmojis } from "../../utils/eventCategories"
 import { deleteMainEventData } from "../../utils/cascadeDelete"
 import DeletePopup from "../DeletePopup"
+import { eventService } from "../../services/api"
 
 const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDeleted, onEventSelected, selectedEvent }) => {
     const [open, setOpen] = useState(false)
@@ -107,10 +108,10 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
         }
     }, [])
 
-    const onSubmit = handleSubmit((data) => {
+    const onSubmit = handleSubmit(async (data) => {
         // التحقق الإضافي من التكرار قبل الحفظ
         const existingEvent = mainEvents.find(event => 
-            event.englishName?.toLowerCase() === data.englishName.toLowerCase() && 
+            event.event_link?.toLowerCase() === data.englishName.toLowerCase() && 
             (!editingEvent || event.id !== editingEvent.id)
         )
         
@@ -121,99 +122,70 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
         
         setLoading(true)
         
-        setTimeout(() => {
+        try {
             if (editingEvent) {
                 // تحديث حدث موجود
-                const updatedEvents = mainEvents.map(event => 
-                    event.id === editingEvent.id 
-                        ? { ...event, ...data, updated_at: new Date().toISOString() }
-                        : event
-                )
-                setMainEvents(updatedEvents)
+                const updateData = {
+                    event_name: data.name,
+                    event_link: data.englishName,
+                    event_icon: data.icon
+                }
                 
-                // حفظ في localStorage
-                localStorage.setItem('mainEvents', JSON.stringify(updatedEvents))
+                await eventService.updateMainEvent(editingEvent.id, updateData)
                 
                 toast.success("تم تحديث الحدث بنجاح")
-                if (onEventUpdated) onEventUpdated(editingEvent.id, data)
-                
-                // إرسال custom event لتحديث باقي الصفحات في نفس التابة
-                window.dispatchEvent(new CustomEvent('eventUpdated'))
-                
-                // إرسال إشارة للتابات الأخرى عبر localStorage
-                localStorage.setItem('lastEventUpdate', Date.now().toString())
+                if (onEventUpdated) onEventUpdated(editingEvent.id, updateData)
             } else {
                 // إضافة حدث جديد
-                const newEvent = {
-                    id: Date.now(),
-                    name: data.name,
-                    englishName: data.englishName,
-                    icon: data.icon,
-                    created_at: new Date().toISOString(),
-                    sub_events: []
+                const newEventData = {
+                    event_name: data.name,
+                    event_link: data.englishName,
+                    event_icon: data.icon
                 }
-                setMainEvents([...mainEvents, newEvent])
                 
-                // حفظ في localStorage
-                localStorage.setItem('mainEvents', JSON.stringify([...mainEvents, newEvent]))
+                const newEvent = await eventService.createMainEvent(newEventData)
                 
                 toast.success("تم إضافة الحدث بنجاح")
                 if (onEventAdded) onEventAdded(newEvent)
-                
-                // إرسال custom event لتحديث السايد بار
-                window.dispatchEvent(new CustomEvent('eventAdded'))
-                
-                // إرسال إشارة للتابات الأخرى عبر localStorage
-                localStorage.setItem('lastEventUpdate', Date.now().toString())
             }
             
             reset()
             setEditingEvent(null)
             setLoading(false)
             setOpen(false)
-        }, 1500)
+        } catch (error) {
+            console.error('خطأ في حفظ الحدث:', error)
+            toast.error("حدث خطأ أثناء حفظ الحدث")
+            setLoading(false)
+        }
     })
 
     const handleEdit = (event) => {
         setEditingEvent(event)
-        setValue('name', event.name)
-        setValue('englishName', event.englishName || '')
-        setValue('icon', event.icon)
+        setValue('name', event.event_name)
+        setValue('englishName', event.event_link || '')
+        setValue('icon', event.event_icon)
         setOpen(true)
     }
 
-    const handleDelete = (eventId) => {
-        // حذف الحدث الرئيسي من القائمة أولاً
-        const updatedEvents = mainEvents.filter(event => event.id !== eventId)
-        setMainEvents(updatedEvents)
-        
-        // إلغاء تحديد الحدث إذا كان محذوف
-        if (selectedEvent && selectedEvent.id === eventId) {
-            onEventSelected && onEventSelected(null)
+    const handleDelete = async (eventId) => {
+        try {
+            // حذف الحدث من API
+            await eventService.deleteMainEvent(eventId)
+            
+            // إلغاء تحديد الحدث إذا كان محذوف
+            if (selectedEvent && selectedEvent.id === eventId) {
+                onEventSelected && onEventSelected(null)
+            }
+            
+            // استدعاء دالة الحذف في المكون الأب
+            onEventDeleted && onEventDeleted(eventId)
+            
+            toast.success("تم حذف الحدث الرئيسي بنجاح")
+        } catch (error) {
+            console.error('خطأ في حذف الحدث:', error)
+            toast.error("حدث خطأ أثناء حذف الحدث")
         }
-        
-        // حذف جميع البيانات المرتبطة بالحدث الرئيسي (قبل حذف الحدث من localStorage)
-        const deleteResult = deleteMainEventData(eventId)
-        
-        // حفظ في localStorage
-        localStorage.setItem('mainEvents', JSON.stringify(updatedEvents))
-        
-        // استدعاء دالة الحذف في المكون الأب
-        onEventDeleted && onEventDeleted(eventId)
-        
-        if (deleteResult.success) {
-            // رسالة نجاح مفصلة
-            const stats = deleteResult.stats
-            toast.success(`تم حذف الحدث الرئيسي بنجاح (${stats.subEvents} حدث فرعي، ${stats.delegations} وفد، ${stats.members} عضو)`)
-        } else {
-            toast.error(deleteResult.message)
-        }
-        
-        // إرسال custom event لتحديث السايد بار
-        window.dispatchEvent(new CustomEvent('eventDeleted'))
-        
-        // إرسال إشارة للتابات الأخرى عبر localStorage
-        localStorage.setItem('lastEventUpdate', Date.now().toString())
     }
 
     const handleClose = () => {
@@ -360,12 +332,12 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
-                                        <Icon icon={event.icon} fontSize={24} className="text-primary-600" />
+                                        {event.event_icon && <Icon icon={event.event_icon} fontSize={24} className="text-primary-600" />}
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-lg text-neutral-800">{event.name}</h4>
+                                        <h4 className="font-bold text-lg text-neutral-800">{event.event_name}</h4>
                                         <span className="text-sm text-neutral-500">
-                                            {event.sub_events?.length || 0} أحداث فرعية
+                                            {event.sub_events_count || 0} أحداث فرعية
                                         </span>
                                     </div>
                                 </div>

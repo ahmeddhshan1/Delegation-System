@@ -4,9 +4,11 @@ import { formatTime } from "../../utils"
 import DeletePopup from "../DeletePopup"
 import EditDepartureSession from "./EditDepartureSession"
 import { useState, useEffect } from 'react'
+import { usePermissions } from '../../store/hooks'
 
 const DepartureSessionsList = ({ sessions, delegation, onDelete, onUpdate }) => {
     const [updatedSessions, setUpdatedSessions] = useState(sessions)
+    const { checkPermission } = usePermissions()
     
     // تحديث البيانات عند تغيير الأعضاء
     useEffect(() => {
@@ -73,54 +75,59 @@ const DepartureSessionsList = ({ sessions, delegation, onDelete, onUpdate }) => 
                             <span className="text-sm text-muted-foreground">
                                 {session.members.length} عضو
                             </span>
-                            <EditDepartureSession 
-                                session={session}
-                                delegation={delegation}
-                                onUpdate={onUpdate}
-                            />
-                            <DeletePopup 
-                                item={session}
-                                onDelete={() => onDelete(session.id)}
-                            >
-                                <Button variant="outline" size="sm" className="!ring-0">
-                                    <Icon icon="mynaui:trash" />
-                                </Button>
-                            </DeletePopup>
+                            {/* جلب صلاحيات المستخدم من Redux */}
+                            {checkPermission('EDIT_DEPARTURES') && (
+                                <EditDepartureSession 
+                                    session={session}
+                                    delegation={delegation}
+                                    onUpdate={onUpdate}
+                                />
+                            )}
+                            {checkPermission('DELETE_DEPARTURES') && (
+                                <DeletePopup 
+                                    item={session}
+                                    onDelete={() => onDelete(session.id)}
+                                >
+                                    <Button variant="outline" size="sm" className="!ring-0">
+                                        <Icon icon="mynaui:trash" />
+                                    </Button>
+                                </DeletePopup>
+                            )}
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                             <span className="text-muted-foreground">التاريخ:</span>
-                            <p className="font-medium">{session.date}</p>
+                            <p className="font-medium">{session.checkout_date || session.date}</p>
                         </div>
                         <div>
                             <span className="text-muted-foreground">سعت:</span>
-                            <p className="font-medium">{session.time ? session.time.replace(':', '') : ''}</p>
+                            <p className="font-medium">{(session.checkout_time || session.time || '').toString().replace(':', '').slice(0,4)}</p>
                         </div>
                         <div>
                             <span className="text-muted-foreground">المطار:</span>
-                            <p className="font-medium">{session.hall}</p>
+                            <p className="font-medium">{session.airport_name || session.hall}</p>
                         </div>
                         <div>
                             <span className="text-muted-foreground">شركة الطيران:</span>
-                            <p className="font-medium">{session.airline}</p>
+                            <p className="font-medium">{session.airline_name || session.airline}</p>
                         </div>
                         <div>
                             <span className="text-muted-foreground">رقم الرحلة:</span>
-                            <p className="font-medium">{session.flightNumber}</p>
+                            <p className="font-medium">{session.flight_number || session.flightNumber}</p>
                         </div>
                         <div>
                             <span className="text-muted-foreground">مغادر إلى:</span>
-                            <p className="font-medium">{session.destination}</p>
+                            <p className="font-medium">{session.city_name || session.destination}</p>
                         </div>
                         <div>
                             <span className="text-muted-foreground">المودع:</span>
-                            <p className="font-medium">{session.receptor}</p>
+                            <p className="font-medium">{session.depositor_name || session.receptor}</p>
                         </div>
                         <div>
                             <span className="text-muted-foreground">الشحنات:</span>
-                            <p className="font-medium">{session.shipments}</p>
+                            <p className="font-medium">{session.goods || session.shipments}</p>
                         </div>
                     </div>
 
@@ -146,14 +153,30 @@ const DepartureSessionsList = ({ sessions, delegation, onDelete, onUpdate }) => 
                                         </span>
                                     )
                                 }
-                                // إذا كان member ID فقط (للتوافق مع البيانات القديمة)
+                                // إذا كان member ID فقط، نحاول نلاقي الاسم من localStorage
                                 else {
+                                    const memberId = typeof member === 'object' ? member.id : member
+                                    let memberName = `عضو #${memberId}`
+                                    
+                                    try {
+                                        const savedMembers = localStorage.getItem('members')
+                                        if (savedMembers) {
+                                            const members = JSON.parse(savedMembers)
+                                            const foundMember = members.find(m => m.id === memberId)
+                                            if (foundMember && foundMember.name) {
+                                                memberName = `${foundMember.rank || ''} ${foundMember.name}`.trim()
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('خطأ في تحميل بيانات العضو:', error)
+                                    }
+                                    
                                     return (
                                         <span 
-                                            key={member || index}
-                                            className="px-2 py-1 bg-neutral-200 text-neutral-600 rounded-xl text-xs"
+                                            key={memberId || index}
+                                            className="px-2 py-1 bg-primary-100 text-primary-800 rounded-xl text-xs"
                                         >
-                                            عضو #{member}
+                                            {memberName}
                                         </span>
                                     )
                                 }

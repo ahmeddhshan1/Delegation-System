@@ -18,6 +18,7 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import { toast } from "sonner"
 import { deleteSubEventData } from "../../utils/cascadeDelete"
 import DeletePopup from "../DeletePopup"
+import { eventService, delegationService } from "../../services/api"
 
 const SubEventManager = ({ mainEvent, onSubEventAdded, onSubEventUpdated, onSubEventDeleted }) => {
     const navigate = useNavigate()
@@ -38,12 +39,72 @@ const SubEventManager = ({ mainEvent, onSubEventAdded, onSubEventUpdated, onSubE
         }
     })
 
-    // استخدام البيانات الحقيقية من mainEvent
+    // جلب الأحداث الفرعية من API
     useEffect(() => {
-        if (mainEvent && mainEvent.sub_events) {
-            setSubEvents(mainEvent.sub_events)
-        } else {
-            setSubEvents([])
+        let isMounted = true
+        
+        const loadSubEvents = async () => {
+            if (!mainEvent?.id) {
+                setSubEvents([])
+                setSubEventsWithStats([])
+                return
+            }
+            
+            try {
+                const subEventsResponse = await eventService.getSubEvents(mainEvent.id)
+                let validSubEvents = []
+                
+                if (subEventsResponse && subEventsResponse.results && Array.isArray(subEventsResponse.results)) {
+                    validSubEvents = subEventsResponse.results
+                } else if (Array.isArray(subEventsResponse)) {
+                    validSubEvents = subEventsResponse
+                }
+                
+                if (isMounted) {
+                    setSubEvents(validSubEvents)
+                    
+                    // جلب الوفود لحساب الإحصائيات
+                    const delegationsResponse = await delegationService.getDelegations()
+                    let allDelegations = []
+                    
+                    if (delegationsResponse && delegationsResponse.results && Array.isArray(delegationsResponse.results)) {
+                        allDelegations = delegationsResponse.results
+                    } else if (Array.isArray(delegationsResponse)) {
+                        allDelegations = delegationsResponse
+                    }
+                    
+                    // إضافة إحصائيات لكل حدث فرعي
+                    const subEventsWithStats = validSubEvents.map(subEvent => {
+                        const eventDelegations = allDelegations.filter(delegation => 
+                            delegation.sub_event_id === subEvent.id
+                        )
+                        
+                        const totalMembers = eventDelegations.reduce((sum, delegation) => 
+                            sum + (delegation.current_members || 0), 0
+                        )
+                        
+                        return {
+                            ...subEvent,
+                            delegationCount: eventDelegations.length,
+                            membersCount: totalMembers
+                        }
+                    })
+                    
+                    setSubEventsWithStats(subEventsWithStats)
+                }
+            } catch (error) {
+                console.error('خطأ في جلب الأحداث الفرعية:', error)
+                if (isMounted) {
+                    setSubEvents([])
+                    setSubEventsWithStats([])
+                }
+            }
+        }
+        
+        loadSubEvents()
+        
+        return () => {
+            isMounted = false
         }
     }, [mainEvent])
 
@@ -88,225 +149,63 @@ const SubEventManager = ({ mainEvent, onSubEventAdded, onSubEventUpdated, onSubE
         }
     }, [mainEvent])
 
-    // إعادة تحميل البيانات عند حذف الحدث الرئيسي
-    useEffect(() => {
-        const handleMainEventDeleted = () => {
-            // إعادة تحميل البيانات من localStorage
-            const savedEvents = localStorage.getItem('mainEvents')
-            if (savedEvents) {
-                try {
-                    const events = JSON.parse(savedEvents)
-                    const updatedMainEvent = events.find(e => e.id === mainEvent?.id)
-                    if (updatedMainEvent && updatedMainEvent.sub_events) {
-                        setSubEvents(updatedMainEvent.sub_events)
-                    } else {
-                        setSubEvents([])
-                    }
-                } catch (error) {
-                    console.error('خطأ في تحليل بيانات الأحداث:', error)
-                    setSubEvents([])
-                }
-            } else {
-                setSubEvents([])
-            }
-        }
 
-        window.addEventListener('eventDeleted', handleMainEventDeleted)
-        window.addEventListener('eventUpdated', handleMainEventDeleted)
-
-        return () => {
-            window.removeEventListener('eventDeleted', handleMainEventDeleted)
-            window.removeEventListener('eventUpdated', handleMainEventDeleted)
-        }
-    }, [mainEvent?.id])
-
-    // حساب الإحصائيات الحقيقية لكل حدث فرعي
-    useEffect(() => {
-        const calculateStats = () => {
-            const updatedSubEvents = subEvents.map(subEvent => {
-                // جلب الوفود
-                const savedDelegations = localStorage.getItem('delegations')
-                let delegationCount = 0
-                
-                if (savedDelegations) {
-                    try {
-                        const delegations = JSON.parse(savedDelegations)
-                        delegationCount = delegations.filter(d => 
-                            d.subEventId === subEvent.id || d.subEventId === parseInt(subEvent.id)
-                        ).length
-                    } catch (error) {
-                        console.error('خطأ في تحليل بيانات الوفود:', error)
-                    }
-                }
-                
-                // جلب الأعضاء
-                const savedMembers = localStorage.getItem('members')
-                let memberCount = 0
-                
-                if (savedMembers) {
-                    try {
-                        const members = JSON.parse(savedMembers)
-                        memberCount = members.filter(m => 
-                            m.subEventId === subEvent.id || m.subEventId === parseInt(subEvent.id)
-                        ).length
-                    } catch (error) {
-                        console.error('خطأ في تحليل بيانات الأعضاء:', error)
-                    }
-                }
-                
-                return {
-                    ...subEvent,
-                    delegationCount,
-                    membersCount: memberCount
-                }
-            })
-            
-            setSubEventsWithStats(updatedSubEvents)
-        }
-        
-        calculateStats()
-        
-        // الاستماع لتغييرات localStorage
-        const handleStorageChange = () => {
-            calculateStats()
-        }
-        
-        window.addEventListener('storage', handleStorageChange)
-        window.addEventListener('delegationAdded', handleStorageChange)
-        window.addEventListener('delegationDeleted', handleStorageChange)
-        window.addEventListener('memberAdded', handleStorageChange)
-        window.addEventListener('memberDeleted', handleStorageChange)
-        window.addEventListener('eventDeleted', handleStorageChange)
-        window.addEventListener('eventUpdated', handleStorageChange)
-        
-        return () => {
-            window.removeEventListener('storage', handleStorageChange)
-            window.removeEventListener('delegationAdded', handleStorageChange)
-            window.removeEventListener('delegationDeleted', handleStorageChange)
-            window.removeEventListener('memberAdded', handleStorageChange)
-            window.removeEventListener('memberDeleted', handleStorageChange)
-            window.removeEventListener('eventDeleted', handleStorageChange)
-            window.removeEventListener('eventUpdated', handleStorageChange)
-        }
-    }, [subEvents])
-
-    const onSubmit = handleSubmit((data) => {
+    const onSubmit = handleSubmit(async (data) => {
         setLoading(true)
         
-        setTimeout(() => {
+        try {
             if (editingSubEvent) {
                 // تحديث حدث فرعي موجود
-                const updatedSubEvents = subEvents.map(subEvent => 
-                    subEvent.id === editingSubEvent.id 
-                        ? { ...subEvent, ...data, updated_at: new Date().toISOString() }
-                        : subEvent
-                )
-                setSubEvents(updatedSubEvents)
-                
-                // حفظ في localStorage
-                const savedEvents = localStorage.getItem('mainEvents')
-                if (savedEvents) {
-                    try {
-                        const events = JSON.parse(savedEvents)
-                        const updatedEvents = events.map(event => 
-                            event.id === mainEvent.id 
-                                ? { ...event, sub_events: updatedSubEvents }
-                                : event
-                        )
-                        localStorage.setItem('mainEvents', JSON.stringify(updatedEvents))
-                    } catch (error) {
-                        console.error('خطأ في حفظ البيانات:', error)
-                    }
+                const updateData = {
+                    event_name: data.name
                 }
+                
+                await eventService.updateSubEvent(editingSubEvent.id, updateData)
                 
                 toast.success("تم تحديث الحدث الفرعي بنجاح")
-                if (onSubEventUpdated) onSubEventUpdated(mainEvent.id, editingSubEvent.id, data)
-                
-                // إرسال custom event لتحديث باقي الصفحات
-                window.dispatchEvent(new CustomEvent('eventUpdated'))
-                localStorage.setItem('lastEventUpdate', Date.now().toString())
+                if (onSubEventUpdated) onSubEventUpdated(mainEvent.id, editingSubEvent.id, updateData)
             } else {
                 // إضافة حدث فرعي جديد
-                const newSubEvent = {
-                    id: Date.now(),
-                    main_event_id: mainEvent.id,
-                    ...data,
-                    created_at: new Date().toISOString(),
-                    delegationCount: 0,
-                    membersCount: 0
+                const newSubEventData = {
+                    event_name: data.name,
+                    main_event_id: mainEvent.id
                 }
-                setSubEvents([...subEvents, newSubEvent])
                 
-                // حفظ في localStorage
-                const savedEvents = localStorage.getItem('mainEvents')
-                if (savedEvents) {
-                    try {
-                        const events = JSON.parse(savedEvents)
-                        const updatedEvents = events.map(event => 
-                            event.id === mainEvent.id 
-                                ? { ...event, sub_events: [...subEvents, newSubEvent] }
-                                : event
-                        )
-                        localStorage.setItem('mainEvents', JSON.stringify(updatedEvents))
-                    } catch (error) {
-                        console.error('خطأ في حفظ البيانات:', error)
-                    }
-                }
+                const newSubEvent = await eventService.createSubEvent(newSubEventData)
                 
                 toast.success("تم إضافة الحدث الفرعي بنجاح")
                 if (onSubEventAdded) onSubEventAdded(mainEvent.id, newSubEvent)
-                
-                // إرسال custom event لتحديث باقي الصفحات
-                window.dispatchEvent(new CustomEvent('eventUpdated'))
-                localStorage.setItem('lastEventUpdate', Date.now().toString())
             }
             
             reset()
             setEditingSubEvent(null)
             setLoading(false)
             setOpen(false)
-        }, 1500)
+        } catch (error) {
+            console.error('خطأ في حفظ الحدث الفرعي:', error)
+            toast.error("حدث خطأ أثناء حفظ الحدث الفرعي")
+            setLoading(false)
+        }
     })
 
     const handleEdit = (subEvent) => {
         setEditingSubEvent(subEvent)
-        setValue('name', subEvent.name)
+        setValue('name', subEvent.event_name)
         setOpen(true)
     }
 
-    const handleDelete = (subEventId) => {
-        // حذف جميع البيانات المرتبطة بالحدث الفرعي
-        const deleteResult = deleteSubEventData(subEventId)
-        
-        if (deleteResult.success) {
-            // حذف الحدث الفرعي من القائمة
-            const updatedSubEvents = subEvents.filter(subEvent => subEvent.id !== subEventId)
-            setSubEvents(updatedSubEvents)
+    const handleDelete = async (subEventId) => {
+        try {
+            // حذف الحدث الفرعي من API
+            await eventService.deleteSubEvent(subEventId)
             
-            // حفظ في localStorage
-            const savedEvents = localStorage.getItem('mainEvents')
-            if (savedEvents) {
-                try {
-                    const events = JSON.parse(savedEvents)
-                    const updatedEvents = events.map(event => 
-                        event.id === mainEvent.id 
-                            ? { ...event, sub_events: updatedSubEvents }
-                            : event
-                    )
-                    localStorage.setItem('mainEvents', JSON.stringify(updatedEvents))
-                } catch (error) {
-                    console.error('خطأ في حفظ البيانات:', error)
-                }
-            }
-            
+            // استدعاء دالة الحذف في المكون الأب
             onSubEventDeleted && onSubEventDeleted(mainEvent.id, subEventId)
-            toast.success("تم حذف الحدث الفرعي وجميع البيانات المرتبطة به بنجاح")
             
-            // إرسال custom event لتحديث باقي الصفحات
-            window.dispatchEvent(new CustomEvent('eventUpdated'))
-            localStorage.setItem('lastEventUpdate', Date.now().toString())
-        } else {
-            toast.error(deleteResult.message)
+            toast.success("تم حذف الحدث الفرعي بنجاح")
+        } catch (error) {
+            console.error('خطأ في حذف الحدث الفرعي:', error)
+            toast.error("حدث خطأ أثناء حذف الحدث الفرعي")
         }
     }
 
@@ -400,7 +299,7 @@ const SubEventManager = ({ mainEvent, onSubEventAdded, onSubEventUpdated, onSubE
                     <div key={subEvent.id} className="border border-neutral-300 rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between mb-3">
                             <div>
-                                <h4 className="font-medium">{subEvent.name}</h4>
+                                <h4 className="font-medium">{subEvent.event_name}</h4>
                                 <p className="text-sm text-neutral-500">
                                     {new Date(subEvent.created_at).toLocaleDateString('ar-EG')}
                                 </p>
@@ -447,8 +346,13 @@ const SubEventManager = ({ mainEvent, onSubEventAdded, onSubEventUpdated, onSubE
                                 className="w-full"
                                 onClick={() => {
                                     // التنقل إلى صفحة وفود الحدث الفرعي
-                                    // مسار ديناميكي بناءً على اسم الحدث الرئيسي
-                                    const mainEventPath = mainEvent.name?.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '') || 'event'
+                                    // مسار ديناميكي بناءً على event_link أو event_name
+                                    let mainEventPath = ''
+                                    if (mainEvent.event_link && mainEvent.event_link.trim()) {
+                                        mainEventPath = mainEvent.event_link.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
+                                    } else {
+                                        mainEventPath = mainEvent.event_name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
+                                    }
                                     navigate(`/${mainEventPath}/${subEvent.id}`)
                                 }}
                             >

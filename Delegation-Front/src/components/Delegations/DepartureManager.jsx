@@ -4,380 +4,84 @@ import { Button } from "@/components/ui/button"
 import AddDepartureSession from './AddDepartureSession'
 import DepartureSessionsList from './DepartureSessionsList'
 import DepartureReportExport from './DepartureReportExport'
+import { PermissionElement } from '../Permissions/PermissionGuard'
+import { usePermissions } from '../../store/hooks'
+import { departureSessionService, memberService } from '../../services/api'
 
 const DepartureManager = ({ delegation, onUpdate }) => {
-    const [departureSessions, setDepartureSessions] = useState(
-        delegation.departureInfo?.departureSessions || []
-    )
+    const [departureSessions, setDepartureSessions] = useState([])
     const [availableMembers, setAvailableMembers] = useState([])
 
-    // تحميل البيانات من localStorage عند تحميل المكون
+    // تحميل الجلسات والأعضاء المتاحين عبر API
     useEffect(() => {
-        const loadDepartureData = () => {
+        const loadFromApi = async () => {
             try {
-                const savedDelegations = localStorage.getItem('delegations')
-                const savedMembers = localStorage.getItem('members')
-                
-                if (savedDelegations) {
-                    const delegations = JSON.parse(savedDelegations)
-                    const currentDelegation = delegations.find(d => d.id === delegation.id)
-                    
-                    if (currentDelegation && currentDelegation.departureInfo) {
-                        setDepartureSessions(currentDelegation.departureInfo.departureSessions || [])
-
-                    }
-                }
-                
-                // تحميل الأعضاء المتاحين للمغادرة
-                if (savedMembers) {
-                    const members = JSON.parse(savedMembers)
-                    const allDelegationMembers = members.filter(member => 
-                        member.delegation && member.delegation.id === delegation.id
-                    )
-                    const delegationMembers = allDelegationMembers.filter(member => {
-                        // إذا لم يسافر بعد، اظهره
-                        return member.memberStatus !== 'departed'
-                    })
-                    
-                    setAvailableMembers(delegationMembers)
-                }
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات المغادرة:', error)
+                // جلسات المغادرة للوفد
+                const sessionsResp = await departureSessionService.getDepartureSessions({ delegation_id: delegation.id })
+                const sessions = Array.isArray(sessionsResp?.results) ? sessionsResp.results : Array.isArray(sessionsResp) ? sessionsResp : []
+                setDepartureSessions(sessions)
+            } catch (e) {
+                setDepartureSessions([])
+            }
+            try {
+                // الأعضاء المتاحون (غير المغادرين)
+                const membersResp = await memberService.getMembers({ delegation_id: delegation.id, status: 'NOT_DEPARTED' })
+                const members = Array.isArray(membersResp?.results) ? membersResp.results : Array.isArray(membersResp) ? membersResp : []
+                setAvailableMembers(members)
+            } catch (e) {
+                setAvailableMembers([])
             }
         }
-
-        loadDepartureData()
+        loadFromApi()
     }, [delegation.id])
 
-    // تحديث الأعضاء المتاحين عند إضافة جلسة جديدة
-    const updateAvailableMembers = () => {
-
+    const reloadAll = async (notifyOthers = false) => {
         try {
-            const savedMembers = localStorage.getItem('members')
-            if (savedMembers) {
-                const members = JSON.parse(savedMembers)
-
-                const delegationMembers = members.filter(member => {
-                    if (!member.delegation || member.delegation.id !== delegation.id) {
-                        return false
-                    }
-                    // إذا لم يسافر بعد، اظهره
-                    return member.memberStatus !== 'departed'
-                })
-                setAvailableMembers(delegationMembers)
-            }
-        } catch (error) {
-            console.error('خطأ في تحديث الأعضاء المتاحين:', error)
+            const sessionsResp = await departureSessionService.getDepartureSessions({ delegation_id: delegation.id })
+            const sessions = Array.isArray(sessionsResp?.results) ? sessionsResp.results : Array.isArray(sessionsResp) ? sessionsResp : []
+            setDepartureSessions(sessions)
+        } catch { setDepartureSessions([]) }
+        try {
+            const membersResp = await memberService.getMembers({ delegation_id: delegation.id, status: 'NOT_DEPARTED' })
+            const members = Array.isArray(membersResp?.results) ? membersResp.results : Array.isArray(membersResp) ? membersResp : []
+            setAvailableMembers(members)
+        } catch { setAvailableMembers([]) }
+        // إعلام بقية المكونات للتحديث (فقط لو طُلب ذلك)
+        if (notifyOthers) {
+            window.dispatchEvent(new CustomEvent('delegationUpdated'))
         }
     }
 
-    // الاستماع لتغييرات الأعضاء
+    // إعادة تحميل عند إشارات عامة من بقية المكونات (بدون infinite loop)
     useEffect(() => {
-        const handleMemberChange = (event) => {
-            // تحديث جلسات المغادرة من localStorage
-            try {
-                const savedDelegations = localStorage.getItem('delegations')
-                if (savedDelegations) {
-                    const delegations = JSON.parse(savedDelegations)
-                    const currentDelegation = delegations.find(d => d.id === delegation.id)
-                    
-                    if (currentDelegation && currentDelegation.departureInfo) {
-                        const updatedSessions = currentDelegation.departureInfo.departureSessions || []
-
-                        setDepartureSessions(updatedSessions)
-                        
-                        // تحديث الوفد في DelegationMembers
-                        if (onUpdate) {
-                            const totalDeparted = updatedSessions.reduce((total, session) => 
-                                total + session.members.length, 0
-                            )
-                            const newStatus = totalDeparted === parseInt(currentDelegation.membersCount) 
-                                ? 'all_departed' 
-                                : totalDeparted > 0 
-                                    ? 'partial_departed' 
-                                    : 'not_departed'
-                            
-                            onUpdate({
-                                ...currentDelegation,
-                                delegationStatus: newStatus,
-                                departureInfo: {
-                                    ...currentDelegation.departureInfo,
-                                    totalMembers: parseInt(currentDelegation.membersCount),
-                                    departedMembers: totalDeparted,
-                                    departureSessions: updatedSessions
-                                }
-                            })
-
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('خطأ في تحديث جلسات المغادرة:', error)
+        const handler = () => { 
+            // إعادة تحميل بس لو الفورم مش مفتوح
+            if (!document.querySelector('[data-radix-dialog-content]')) {
+                reloadAll(false) // مش هنبعت event تاني
             }
-            
-            // تحديث الأعضاء المتاحين
-            updateAvailableMembers()
         }
-
-        window.addEventListener('memberAdded', handleMemberChange)
-        window.addEventListener('memberDeleted', handleMemberChange)
-        window.addEventListener('memberUpdated', handleMemberChange)
-        window.addEventListener('localStorageUpdated', handleMemberChange)
-
-
-
-        return () => {
-            window.removeEventListener('memberAdded', handleMemberChange)
-            window.removeEventListener('memberDeleted', handleMemberChange)
-            window.removeEventListener('memberUpdated', handleMemberChange)
-            window.removeEventListener('localStorageUpdated', handleMemberChange)
-
-        }
+        window.addEventListener('delegationUpdated', handler)
+        return () => { window.removeEventListener('delegationUpdated', handler) }
     }, [delegation.id])
 
-    const handleAddSession = (newSession) => {
-        const updatedSessions = [...departureSessions, newSession]
-        setDepartureSessions(updatedSessions)
-        
-        // تحديث عدد المغادرين
-        const totalDeparted = updatedSessions.reduce((total, session) => 
-            total + session.members.length, 0
-        )
-        
-        // تحديث حالة الوفد
-        const newStatus = totalDeparted === parseInt(delegation.membersCount) 
-            ? 'all_departed' 
-            : totalDeparted > 0 
-                ? 'partial_departed' 
-                : 'not_departed'
-        
-        // تحديث بيانات الوفد في localStorage
-        try {
-            const savedDelegations = localStorage.getItem('delegations')
-            if (savedDelegations) {
-                const delegations = JSON.parse(savedDelegations)
-                const delegationIndex = delegations.findIndex(d => d.id === delegation.id)
-                
-                if (delegationIndex !== -1) {
-                    delegations[delegationIndex] = {
-                        ...delegations[delegationIndex],
-                        delegationStatus: newStatus,
-                        departureInfo: {
-                            ...delegations[delegationIndex].departureInfo,
-                            totalMembers: parseInt(delegation.membersCount),
-                            departedMembers: totalDeparted,
-                            departureSessions: updatedSessions
-                        }
-                    }
-                    
-                    localStorage.setItem('delegations', JSON.stringify(delegations))
+    const handleAddSession = async () => {
+        await reloadAll(true) // نبعت event للآخرين
+    }
 
-                    
-                    // إرسال event لتحديث الوفد
-                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                }
-            }
-        } catch (error) {
-            console.error('خطأ في تحديث بيانات الوفد:', error)
-        }
-        
-        // تحديث الأعضاء المتاحين
-        updateAvailableMembers()
-        
-        if (onUpdate) {
-            onUpdate({
-                ...delegation,
-                delegationStatus: newStatus,
-                departureInfo: {
-                    ...delegation.departureInfo,
-                    totalMembers: parseInt(delegation.membersCount),
-                    departedMembers: totalDeparted,
-                    departureSessions: updatedSessions
-                }
-            })
+    const handleUpdateSession = async () => {
+        await reloadAll(true) // نبعت event للآخرين
+    }
+
+    const handleDeleteSession = async (sessionId) => {
+        try {
+            await departureSessionService.deleteDepartureSession(sessionId)
+        } finally {
+            await reloadAll(true) // نبعت event للآخرين
         }
     }
 
-    const handleUpdateSession = (updatedSession) => {
-        const updatedSessions = departureSessions.map(session => 
-            session.id === updatedSession.id ? updatedSession : session
-        )
-        setDepartureSessions(updatedSessions)
-        
-        // تحديث عدد المغادرين
-        const totalDeparted = updatedSessions.reduce((total, session) => 
-            total + session.members.length, 0
-        )
-        
-        // تحديث حالة الوفد
-        const newStatus = totalDeparted === parseInt(delegation.membersCount) 
-            ? 'all_departed' 
-            : totalDeparted > 0 
-                ? 'partial_departed' 
-                : 'not_departed'
-        
-        // تحديث بيانات الوفد في localStorage
-        try {
-            const savedDelegations = localStorage.getItem('delegations')
-            if (savedDelegations) {
-                const delegations = JSON.parse(savedDelegations)
-                const delegationIndex = delegations.findIndex(d => d.id === delegation.id)
-                
-                if (delegationIndex !== -1) {
-                    delegations[delegationIndex] = {
-                        ...delegations[delegationIndex],
-                        delegationStatus: newStatus,
-                        departureInfo: {
-                            ...delegations[delegationIndex].departureInfo,
-                            totalMembers: parseInt(delegation.membersCount),
-                            departedMembers: totalDeparted,
-                            departureSessions: updatedSessions
-                        }
-                    }
-                    
-                    localStorage.setItem('delegations', JSON.stringify(delegations))
-
-                    
-                    // إرسال event لتحديث الوفد
-                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                }
-            }
-        } catch (error) {
-            console.error('خطأ في تحديث بيانات الوفد:', error)
-        }
-        
-        // تحديث الأعضاء المتاحين
-        updateAvailableMembers()
-        
-        if (onUpdate) {
-            onUpdate({
-                ...delegation,
-                delegationStatus: newStatus,
-                departureInfo: {
-                    ...delegation.departureInfo,
-                    totalMembers: parseInt(delegation.membersCount),
-                    departedMembers: totalDeparted,
-                    departureSessions: updatedSessions
-                }
-            })
-        }
-    }
-
-    const handleDeleteSession = (sessionId) => {
-        // الحصول على الجلسة المحذوفة
-        const deletedSession = departureSessions.find(session => session.id === sessionId)
-        if (deletedSession) {
-            // إرجاع الأعضاء لحالة "لم يغادر"
-            try {
-                const savedMembers = localStorage.getItem('members')
-                if (savedMembers) {
-                    const members = JSON.parse(savedMembers)
-                    
-                    // الحصول على IDs الأعضاء في الجلسة المحذوفة
-                    const memberIds = deletedSession.members.map(member => {
-                        if (typeof member === 'object' && member.id) {
-                            return member.id
-                        }
-                        return member
-                    })
-                    
-
-                    
-                       const updatedMembers = members.map(member => {
-                           if (memberIds.includes(member.id)) {
-
-                               return { 
-                                   ...member, 
-                                   memberStatus: 'not_departed',
-                                   departureDate: null // إرجاع تاريخ المغادرة لـ null
-                               }
-                           }
-                           return member
-                       })
-                    
-                    localStorage.setItem('members', JSON.stringify(updatedMembers))
-                    
-                    // إرسال events لتحديث المكونات
-                    window.dispatchEvent(new CustomEvent('memberUpdated'))
-                    window.dispatchEvent(new CustomEvent('localStorageUpdated'))
-                }
-            } catch (error) {
-                console.error('خطأ في إرجاع حالة الأعضاء:', error)
-            }
-        }
-        
-        // تحديث الأعضاء المتاحين بعد إرجاع حالة الأعضاء
-        setTimeout(() => {
-            updateAvailableMembers()
-        }, 100)
-        
-        const updatedSessions = departureSessions.filter(session => session.id !== sessionId)
-
-        setDepartureSessions(updatedSessions)
-        
-        // تحديث عدد المغادرين
-        const totalDeparted = updatedSessions.reduce((total, session) => 
-            total + session.members.length, 0
-        )
-        
-        // تحديث حالة الوفد
-        const newStatus = totalDeparted === parseInt(delegation.membersCount) 
-            ? 'all_departed' 
-            : totalDeparted > 0 
-                ? 'partial_departed' 
-                : 'not_departed'
-        
-        // تحديث بيانات الوفد في localStorage
-        try {
-            const savedDelegations = localStorage.getItem('delegations')
-            if (savedDelegations) {
-                const delegations = JSON.parse(savedDelegations)
-                const delegationIndex = delegations.findIndex(d => d.id === delegation.id)
-                
-                if (delegationIndex !== -1) {
-                    delegations[delegationIndex] = {
-                        ...delegations[delegationIndex],
-                        delegationStatus: newStatus,
-                        departureInfo: {
-                            ...delegations[delegationIndex].departureInfo,
-                            totalMembers: parseInt(delegation.membersCount),
-                            departedMembers: totalDeparted,
-                            departureSessions: updatedSessions
-                        }
-                    }
-                    
-                    localStorage.setItem('delegations', JSON.stringify(delegations))
-
-                    
-                    // إرسال event لتحديث الوفد
-                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                }
-            }
-        } catch (error) {
-            console.error('خطأ في تحديث بيانات الوفد:', error)
-        }
-        
-        // تحديث الأعضاء المتاحين
-        updateAvailableMembers()
-        
-        if (onUpdate) {
-            onUpdate({
-                ...delegation,
-                delegationStatus: newStatus,
-                departureInfo: {
-                    ...delegation.departureInfo,
-                    totalMembers: parseInt(delegation.membersCount),
-                    departedMembers: totalDeparted,
-                    departureSessions: updatedSessions
-                }
-            })
-        }
-    }
-
-    const totalDeparted = departureSessions.reduce((total, session) => 
-        total + session.members.length, 0
-    )
-    const remainingMembers = parseInt(delegation.membersCount) - totalDeparted
+    const totalDeparted = departureSessions.reduce((total, session) => total + (Array.isArray(session.members) ? session.members.length : 0), 0)
+    const remainingMembers = (parseInt(delegation.membersCount) || 0) - totalDeparted
 
     return (
         <div className="departure-management bg-white border border-neutral-300 rounded-2xl p-6">
@@ -391,7 +95,9 @@ const DepartureManager = ({ delegation, onUpdate }) => {
                         <span className="mx-2">|</span>
                         <span className="font-medium">المتاحون: {availableMembers.length}</span>
                     </div>
-                    <DepartureReportExport delegation={delegation} />
+                    <PermissionElement permission="EXPORT_REPORTS">
+                        <DepartureReportExport delegation={delegation} />
+                    </PermissionElement>
                     <AddDepartureSession 
                         delegation={delegation}
                         onAdd={handleAddSession}

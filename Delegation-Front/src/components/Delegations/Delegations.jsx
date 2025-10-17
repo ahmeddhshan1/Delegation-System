@@ -22,7 +22,9 @@ import DelegationTableToolbar from "./DelegationTableToolbar"
 import DeletePopup from "../DeletePopup"
 import EditDelegation from "./EditDelegation"
 // import { dateRangeFilter } from "../../utils"
-import { delegations } from "../../data"
+// import { delegations } from "../../data" // تم إزالة البيانات الوهمية
+import { usePermissions } from "../../store/hooks"
+import { delegationService } from "../../services/api"
 
 
 export const columns = [
@@ -253,6 +255,14 @@ export const columns = [
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
+            // جلب صلاحيات المستخدم من Redux
+            const { checkPermission } = usePermissions()
+            
+            // إخفاء أزرار التعديل والحذف عن USER
+            if (!checkPermission('EDIT_DELEGATIONS') && !checkPermission('DELETE_DELEGATIONS')) {
+                return null
+            }
+            
             return (
                 <DropdownMenu dir='rtl'>
                     <DropdownMenuTrigger asChild>
@@ -261,18 +271,22 @@ export const columns = [
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <EditDelegation delegation={row.original}>
-                            <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                <Icon icon={'material-symbols:edit-outline-rounded'} />
-                                <span>تعديل</span>
-                            </DropdownMenuItem>
-                        </EditDelegation>
-                        <DeletePopup item={row}>
-                            <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
-                                <Icon icon={'mynaui:trash'} />
-                                <span>حذف</span>
-                            </DropdownMenuItem>
-                        </DeletePopup>
+                        {checkPermission('EDIT_DELEGATIONS') && (
+                            <EditDelegation delegation={row.original}>
+                                <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                    <Icon icon={'material-symbols:edit-outline-rounded'} />
+                                    <span>تعديل</span>
+                                </DropdownMenuItem>
+                            </EditDelegation>
+                        )}
+                        {checkPermission('DELETE_DELEGATIONS') && (
+                            <DeletePopup item={row}>
+                                <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
+                                    <Icon icon={'mynaui:trash'} />
+                                    <span>حذف</span>
+                                </DropdownMenuItem>
+                            </DeletePopup>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             )
@@ -288,66 +302,94 @@ const Delegations = ({ subEventId }) => {
     const [data, setData] = useState([])
     
     // تحميل البيانات الحقيقية
-    const loadDelegations = () => {
+    const loadDelegations = async () => {
         
-        // إذا تم تمرير subEventId، فلترة الوفود حسب الحدث الفرعي
+        // إذا تم تمرير subEventId، فلترة الوفود حسب الحدث الفرعي عبر API
         if (subEventId) {
-            const savedDelegations = localStorage.getItem('delegations')
-            if (savedDelegations) {
-                try {
-                    const allDelegations = JSON.parse(savedDelegations)
-                    const filtered = allDelegations.filter(delegation => 
-                        delegation.subEventId === subEventId || delegation.subEventId === parseInt(subEventId)
-                    )
-                    setData(filtered)
-                } catch (error) {
-                    console.error('خطأ في تحليل بيانات الوفود:', error)
-                    setData([])
+            try {
+                const response = await delegationService.getDelegations({ sub_event_id: subEventId })
+                let items = []
+                if (response && response.results && Array.isArray(response.results)) {
+                    items = response.results
+                } else if (Array.isArray(response)) {
+                    items = response
                 }
-            } else {
+                // تحويل بيانات API لشكل الأعمدة الحالية
+                const toHHMM = (timeStr) => {
+                    if (!timeStr) return ''
+                    const s = String(timeStr).replace(/:/g, '')
+                    return s.slice(0, 4)
+                }
+                const mapped = items.map(d => ({
+                    id: d.id,
+                    type: d.type,
+                    delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
+                    nationality: d.nationality_name || '',
+                    delegationHead: d.delegation_leader_name || '',
+                    membersCount: d.member_count || 0,
+                    arrivalInfo: {
+                        arrivalHall: d.airport_name || '',
+                        arrivalAirline: d.airline_name || '',
+                        arrivalOrigin: d.going_to || '',
+                        arrivalFlightNumber: d.flight_number || '',
+                        arrivalDate: d.arrive_date || '',
+                        arrivalTime: toHHMM(d.arrive_time),
+                        arrivalReceptor: d.receiver_name || '',
+                        arrivalDestination: d.city_name || '',
+                        arrivalShipments: d.goods || '',
+                    },
+                }))
+                setData(mapped)
+            } catch (e) {
                 setData([])
             }
             return
         }
         
-        // الحالة العادية - تحميل جميع الوفود
-        const savedDelegations = localStorage.getItem('delegations')
-        if (savedDelegations) {
-            try {
-                const parsedDelegations = JSON.parse(savedDelegations)
-                setData(parsedDelegations)
-            } catch (error) {
-                console.error('خطأ في تحليل بيانات الوفود:', error)
-                setData([])
+        // الحالة العادية - تحميل جميع الوفود عبر API
+        try {
+            const response = await delegationService.getDelegations()
+            let items = []
+            if (response && response.results && Array.isArray(response.results)) {
+                items = response.results
+            } else if (Array.isArray(response)) {
+                items = response
             }
-        } else {
+            const toHHMM = (timeStr) => {
+                if (!timeStr) return ''
+                const s = String(timeStr).replace(/:/g, '')
+                return s.slice(0, 4)
+            }
+            const mapped = items.map(d => ({
+                id: d.id,
+                type: d.type,
+                delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
+                nationality: d.nationality_name || '',
+                delegationHead: d.delegation_leader_name || '',
+                membersCount: d.member_count || 0,
+                arrivalInfo: {
+                    arrivalHall: d.airport_name || '',
+                    arrivalAirline: d.airline_name || '',
+                    arrivalOrigin: d.going_to || '',
+                    arrivalFlightNumber: d.flight_number || '',
+                    arrivalDate: d.arrive_date || '',
+                    arrivalTime: toHHMM(d.arrive_time),
+                    arrivalReceptor: d.receiver_name || '',
+                    arrivalDestination: d.city_name || '',
+                    arrivalShipments: d.goods || '',
+                },
+            }))
+            setData(mapped)
+        } catch (e) {
             setData([])
         }
     }
     
-    // الاستماع لتغييرات localStorage
+    // الاستماع لإشارة تحديث عامة لإعادة التحميل
     useEffect(() => {
-        const handleStorageChange = (event) => {
-            loadDelegations()
-        }
-        
-        window.addEventListener('storage', handleStorageChange)
-        window.addEventListener('delegationAdded', handleStorageChange)
-        window.addEventListener('delegationDeleted', handleStorageChange)
-        window.addEventListener('delegationUpdated', handleStorageChange)
-        window.addEventListener('memberAdded', handleStorageChange)
-        window.addEventListener('memberDeleted', handleStorageChange)
-        window.addEventListener('memberUpdated', handleStorageChange)
-        
-        return () => {
-            window.removeEventListener('storage', handleStorageChange)
-            window.removeEventListener('delegationAdded', handleStorageChange)
-            window.removeEventListener('delegationDeleted', handleStorageChange)
-            window.removeEventListener('delegationUpdated', handleStorageChange)
-            window.removeEventListener('memberAdded', handleStorageChange)
-            window.removeEventListener('memberDeleted', handleStorageChange)
-            window.removeEventListener('memberUpdated', handleStorageChange)
-        }
+        const reload = () => { loadDelegations() }
+        window.addEventListener('delegationUpdated', reload)
+        return () => { window.removeEventListener('delegationUpdated', reload) }
     }, [])
     
     // استدعاء loadDelegations عند التحميل الأول

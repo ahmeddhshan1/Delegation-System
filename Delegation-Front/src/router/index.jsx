@@ -8,15 +8,23 @@ import AllMembers from '../pages/AllMembers'
 import EventsManagement from '../pages/Events/EventsManagement'
 import EventPage from '../pages/EventPage/EventPage'
 import SubEventPage from '../pages/SubEvent/SubEventPage'
+import ProtectedRoute from '../components/Auth/ProtectedRoute'
 
 
 const AppRouter = () => {
     return (
         <Routes>
+            {/* صفحات المصادقة - غير محمية */}
             <Route element={<Auth />}>
                 <Route path='login' element={<Login />} />
             </Route>
-            <Route path='/' element={<Dashboard />}>
+            
+            {/* جميع الصفحات الأخرى محمية */}
+            <Route path='/' element={
+                <ProtectedRoute>
+                    <Dashboard />
+                </ProtectedRoute>
+            }>
                 <Route index element={<Home />} />
                 <Route path='/all-members' element={<AllMembers />} />
                 <Route path='/events-management' element={<EventsManagement />} />

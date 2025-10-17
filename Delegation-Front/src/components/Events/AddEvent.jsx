@@ -16,11 +16,23 @@ import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
 import { toast } from "sonner"
 import { useEffect, useState } from "react"
+import { usePermissions } from "../../store/hooks"
+import { useParams } from "react-router"
+import { eventService } from "../../services/api"
 
 
 const AddEvent = ({ onEventAdded }) => {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false)
+    const { eventName } = useParams()
+    
+    // جلب صلاحيات المستخدم من Redux
+    const { checkPermission } = usePermissions()
+    
+    // إخفاء المكون إذا لم يكن المستخدم لديه صلاحية إدارة الأحداث
+    if (!checkPermission('MANAGE_EVENTS')) {
+        return null
+    }
 
     const validationSchema = yup.object({
         name: yup.string().required("هذا الحقل لا يمكن ان يكون فارغا"),
@@ -34,88 +46,47 @@ const AddEvent = ({ onEventAdded }) => {
         }
     })
 
-    const onSubmit = handleSubmit((data) => {
+    const onSubmit = handleSubmit(async (data) => {
         setLoading(true)
-        setTimeout(() => {
-            try {
-                // جلب الأحداث الحالية من localStorage
-                const savedEvents = localStorage.getItem('mainEvents')
-                let events = []
-                
-                if (savedEvents) {
-                    events = JSON.parse(savedEvents)
+        
+        try {
+            // جلب جميع الأحداث الرئيسية من API للعثور على الحدث الصحيح
+            const mainEventsResponse = await eventService.getMainEvents()
+            let mainEvents = []
+            
+            if (mainEventsResponse && mainEventsResponse.results && Array.isArray(mainEventsResponse.results)) {
+                mainEvents = mainEventsResponse.results
+            } else if (Array.isArray(mainEventsResponse)) {
+                mainEvents = mainEventsResponse
+            }
+            
+            // البحث عن الحدث الرئيسي المطابق للـ URL
+            const targetEvent = mainEvents.find(event => {
+                let eventPath = ''
+                if (event.event_link && event.event_link.trim()) {
+                    eventPath = event.event_link.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
+                } else {
+                    eventPath = event.event_name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
                 }
-                
-                // إضافة الحدث الجديد
-                const newSubEvent = {
-                    id: Date.now(),
-                    name: data.name,
-                    created_at: new Date().toISOString(),
-                    delegationCount: 0,
-                    membersCount: 0
-                }
-                
-                // البحث عن الحدث الرئيسي الحالي (من الـ URL أو الـ props)
-                const currentPath = window.location.pathname
-                let mainEventName = ''
-                
-                // تحديد اسم الحدث الرئيسي من الـ URL (ديناميكي)
-                try {
-                    const eventCategories = JSON.parse(localStorage.getItem('eventCategories') || '[]')
-                    const pathSegments = currentPath.split('/').filter(Boolean)
-                    
-                    if (pathSegments.length > 0) {
-                        const pathEventName = pathSegments[0]
-                        
-                        // البحث عن الحدث الرئيسي المطابق للمسار
-                        const matchingCategory = eventCategories.find(category => {
-                            const categoryPath = category.englishName?.toLowerCase().replace(/\s+/g, '') || 
-                                               category.name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
-                            return categoryPath === pathEventName
-                        })
-                        
-                        if (matchingCategory) {
-                            mainEventName = matchingCategory.name
-                        } else {
-                            // للأحداث الجديدة، نحاول استخراج الاسم من الـ URL
-                            const pathSegments = currentPath.split('/').filter(segment => segment)
-                            if (pathSegments.length > 0) {
-                                const eventPath = pathSegments[0]
-                                // البحث في الأحداث المحفوظة
-                                const foundEvent = events.find(e => {
-                                    let eventPathFromName = ''
-                                    if (e.englishName) {
-                                        eventPathFromName = e.englishName.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
-                                    } else {
-                                        eventPathFromName = e.name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
-                                    }
-                                    return eventPathFromName === eventPath
-                                })
-                                if (foundEvent) {
-                                    mainEventName = foundEvent.name
-                                }
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error('خطأ في تحديد اسم الحدث الرئيسي:', error)
-                }
-                
-                // إضافة الحدث الفرعي للحدث الرئيسي
-                const updatedEvents = events.map(event => {
-                    if (event.name === mainEventName) {
-                        return {
-                            ...event,
-                            sub_events: [...(event.sub_events || []), newSubEvent]
-                        }
-                    }
-                    return event
-                })
-                
-                // حفظ الأحداث المحدثة
-                localStorage.setItem('mainEvents', JSON.stringify(updatedEvents))
-                
-                toast.success("تم اضافة حدث جديد")
+                return eventPath === eventName
+            })
+            
+            if (!targetEvent) {
+                toast.error("لم يتم العثور على الحدث الرئيسي")
+                setLoading(false)
+                return
+            }
+            
+            // إنشاء الحدث الفرعي الجديد
+            const newSubEventData = {
+                event_name: data.name,
+                main_event_id: targetEvent.id
+            }
+            
+            // إضافة الحدث الفرعي عبر API
+            const newSubEvent = await eventService.createSubEvent(newSubEventData)
+            
+            toast.success("تم إضافة الحدث الفرعي بنجاح")
                 reset()
                 setLoading(false)
                 setOpen(false)
@@ -125,15 +96,11 @@ const AddEvent = ({ onEventAdded }) => {
                     onEventAdded(newSubEvent)
                 }
                 
-                // إرسال custom event لتحديث السايد بار والصفحات الأخرى
-                window.dispatchEvent(new CustomEvent('eventAdded'))
-                
             } catch (error) {
-                console.error('خطأ في إضافة الحدث:', error)
-                toast.error("حدث خطأ أثناء إضافة الحدث")
+            console.error('خطأ في إضافة الحدث الفرعي:', error)
+            toast.error("حدث خطأ أثناء إضافة الحدث الفرعي")
                 setLoading(false)
             }
-        }, 1500)
     })
 
     useEffect(() => reset(), [open])

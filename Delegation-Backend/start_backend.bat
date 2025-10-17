@@ -29,6 +29,14 @@ REM تثبيت المتطلبات
 echo تثبيت المتطلبات...
 pip install -r requirements.txt
 
+REM اختبار الاتصال
+echo اختبار الاتصال...
+python test_connection.py
+
+REM تحليل الجداول المكررة
+echo تحليل الجداول المكررة...
+python analyze_duplicate_tables.py
+
 REM إنشاء مجلد templates إذا لم يكن موجوداً
 if not exist "templates" (
     echo إنشاء مجلد templates...

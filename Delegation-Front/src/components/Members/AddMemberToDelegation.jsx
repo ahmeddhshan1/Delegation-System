@@ -26,13 +26,11 @@ import { useEffect, useState } from "react"
 import { militaryPositions } from "../../utils/militaryPositions"
 import { useParams } from "react-router"
 import EquivalentPositionSelector from "./EquivalentPositionSelector"
+import { memberService, delegationService } from "../../services/api"
 
 const AddMemberToDelegation = () => {
     const { delegationId } = useParams()
 
-
-
-    
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false)
     const [selectedEquivalentPosition, setSelectedEquivalentPosition] = useState("")
@@ -76,13 +74,8 @@ const AddMemberToDelegation = () => {
         if (newPosition.trim() && !availablePositions.includes(newPosition.trim())) {
             const updatedPositions = [...availablePositions, newPosition.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
             setAvailablePositions(updatedPositions)
-            
-            // حفظ في localStorage
             localStorage.setItem('militaryPositions', JSON.stringify(updatedPositions))
-            
-            // إرسال custom event لتحديث الفورمات الأخرى
             window.dispatchEvent(new CustomEvent('positionsUpdated'))
-            
             setSelectedEquivalentPosition(newPosition.trim())
             setValue('equivalentRole', newPosition.trim())
             setNewPosition("")
@@ -95,338 +88,93 @@ const AddMemberToDelegation = () => {
         }
     }
 
-    // دالة حذف المنصب العسكري
     const handleDeletePosition = (position) => {
         setDeleteItem({
             type: 'position',
             name: position,
             onDelete: () => {
-                // حذف من قائمة المناصب
                 const updatedPositions = availablePositions.filter(p => p !== position)
                 setAvailablePositions(updatedPositions)
-                
-                // حفظ في localStorage
                 localStorage.setItem('militaryPositions', JSON.stringify(updatedPositions))
-                
-                // إرسال custom event لتحديث الفورمات الأخرى
                 window.dispatchEvent(new CustomEvent('positionsUpdated'))
-                
-                // إذا كان المنصب المحذوف هو المحدد حالياً، امسح التحديد
                 if (selectedEquivalentPosition === position) {
                     setSelectedEquivalentPosition("")
                     setValue('equivalentRole', "")
                 }
-                
                 toast.success("تم حذف المنصب العسكري بنجاح")
                 setDeleteItem(null)
             }
         })
     }
 
-    // تصفية المناصب حسب البحث
     const filteredPositions = availablePositions.filter(position =>
         position.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const onSubmit = handleSubmit((data) => {
-
-
+    const onSubmit = handleSubmit(async (data) => {
         setLoading(true)
-        
-        // التحقق من البيانات المطلوبة
-        if (!data.rank || !data.name || !data.role || !data.equivalentRole) {
-            toast.error("يرجى ملء جميع الحقول المطلوبة")
-            setLoading(false)
-            return
-        }
-        
-        // التحقق من عدد الأعضاء المسموح به في الوفد
         try {
-            const savedDelegations = localStorage.getItem('delegations')
-            if (savedDelegations) {
-                const delegations = JSON.parse(savedDelegations)
-                const currentDelegation = delegations.find(d => d.id === delegationId)
-                
-                if (currentDelegation) {
-                    const maxMembers = parseInt(currentDelegation.membersCount)
-                    
-                    // عد الأعضاء الحاليين في هذا الوفد
-                    const savedMembers = localStorage.getItem('members')
-                    if (savedMembers) {
-                        const members = JSON.parse(savedMembers)
-                        const currentMembersCount = members.filter(member => 
-                            member.delegation && member.delegation.id === delegationId
-                        ).length
-                        
-                        if (currentMembersCount >= maxMembers) {
-                            toast.error(`لا يمكن إضافة عضو جديد. الحد الأقصى للوفد هو ${maxMembers} عضو`, {
-                                style: {
-                                    background: 'var(--destructive)',
-                                    color: 'white',
-                                    border: '1px solid var(--destructive)'
-                                }
-                            })
-                            setLoading(false)
-                            return
-                        }
-                    }
-                }
+            // تحقق بسيط قبل الإرسال (يمكن الاعتماد على الـ backend أيضاً)
+            if (!data.rank || !data.name || !data.role) {
+                toast.error("يرجى ملء جميع الحقول المطلوبة")
+                setLoading(false)
+                return
             }
-        } catch (error) {
-            console.error('خطأ في التحقق من عدد الأعضاء:', error)
-            toast.error("خطأ في التحقق من عدد الأعضاء المسموح به", {
-                style: {
-                    background: 'var(--destructive)',
-                    color: 'white',
-                    border: '1px solid var(--destructive)'
-                }
-            })
-            setLoading(false)
-            return
-        }
-        
-        // إنشاء العضو الجديد
-        // جلب بيانات الوفد الحقيقية
 
-        
-        let delegationData = {
-            id: delegationId || "d1",
-            nationality: "مصري", // fallback
-            delegationHead: "رئيس الوفد" // fallback
-        }
-        
-        try {
-            const savedDelegations = localStorage.getItem('delegations')
-
-            
-            if (savedDelegations) {
-                const delegations = JSON.parse(savedDelegations)
-
-
-                
-                const currentDelegation = delegations.find(d => d.id === delegationId)
-
-                
-                if (currentDelegation) {
-                    delegationData = {
-                        id: currentDelegation.id,
-                        nationality: currentDelegation.nationality,
-                        delegationHead: currentDelegation.delegationHead,
-                        delegationType: currentDelegation.delegationType,
-                        membersCount: currentDelegation.membersCount,
-                        subEventId: currentDelegation.subEventId, // إضافة subEventId
-                        arrivalInfo: currentDelegation.arrivalInfo
-                    }
-
-                } else {
-
-                }
-            } else {
-
+            // إنشاء العضو عبر API (equivalent_job_id اختياري حالياً)
+            const payload = {
+                delegation_id: delegationId,
+                rank: data.rank,
+                name: data.name,
+                job_title: data.role,
+                // يمكن ربط equivalent_job_id لاحقاً بقائمة من الـ API
             }
-        } catch (error) {
-            console.error('خطأ في جلب بيانات الوفد:', error)
+            await memberService.createMember(payload)
+            toast.success("تم إضافة العضو بنجاح")
 
-        }
+            // إطلاق إشارة عامة لإعادة التحميل لباقي المكونات
+            window.dispatchEvent(new CustomEvent('delegationUpdated'))
 
-        // تحديد تاريخ الوصول - استخدم تاريخ وصول الوفد إذا كان موجوداً
-        let arrivalDate = null
-        if (delegationData.arrivalInfo && delegationData.arrivalInfo.arrivalDate) {
-            arrivalDate = delegationData.arrivalInfo.arrivalDate
-        } else {
-            // إذا لم يوجد تاريخ وصول للوفد، استخدم التاريخ الحالي
-            arrivalDate = new Date().toISOString().split('T')[0]
-        }
-
-        const newMember = {
-            id: `mem_${Date.now()}`,
-            rank: data.rank,
-            name: data.name,
-            role: data.role, // الوظيفة
-            equivalentRole: data.equivalentRole, // المنصب العسكري المعادل
-            job: data.equivalentRole, // للتوافق مع النظام الحالي
-            memberStatus: "not_departed",
-            nationality: delegationData.nationality, // استخدام الجنسية الحقيقية للوفد
-            arrivalDate: arrivalDate, // استخدام تاريخ وصول الوفد
-            departureDate: null,
-            subEventId: delegationData.subEventId, // إضافة subEventId للعضو
-            delegation: delegationData // استخدام بيانات الوفد الحقيقية
-        }
-
-        // جلب الأعضاء الحاليين من localStorage
-        const existingMembers = JSON.parse(localStorage.getItem('members') || '[]')
-
-        
-        // إضافة العضو الجديد
-        const updatedMembers = [...existingMembers, newMember]
-
-        
-        // حفظ في localStorage
-        try {
-            localStorage.setItem('members', JSON.stringify(updatedMembers))
-            
-            // إرسال events فوراً بعد الحفظ
-            window.dispatchEvent(new CustomEvent('memberAdded'))
-            window.dispatchEvent(new CustomEvent('localStorageUpdated'))
-
-        } catch (error) {
-            console.error('خطأ في حفظ البيانات:', error)
-            toast.error("خطأ في حفظ البيانات", {
-                style: {
-                    background: 'var(--destructive)',
-                    color: 'white',
-                    border: '1px solid var(--destructive)'
-                }
-            })
-            setLoading(false)
-            return
-        }
-        
-        // التحقق من الحفظ
-        const savedData = localStorage.getItem('members')
-
-        
-        // التحقق من أن البيانات محفوظة بشكل صحيح
-        try {
-            const parsedSavedData = JSON.parse(savedData)
-
-
-        } catch (error) {
-            console.error('خطأ في تحليل البيانات المحفوظة:', error)
-        }
-        
-
-
-        
-        setTimeout(() => {
-            // حساب عدد الأعضاء المتبقيين
-            try {
-                const savedDelegations = localStorage.getItem('delegations')
-                const savedMembers = localStorage.getItem('members')
-                
-                if (savedDelegations && savedMembers) {
-                    const delegations = JSON.parse(savedDelegations)
-                    const members = JSON.parse(savedMembers)
-                    const currentDelegation = delegations.find(d => d.id === delegationId)
-                    
-                    if (currentDelegation) {
-                        const maxMembers = parseInt(currentDelegation.membersCount)
-                        const currentMembersCount = members.filter(member => 
-                            member.delegation && member.delegation.id === delegationId
-                        ).length
-                        const remainingMembers = maxMembers - currentMembersCount
-                        
-                        if (remainingMembers > 0) {
-                            toast.success(`تم إضافة عضو جديد للوفد. متبقي ${remainingMembers} عضو`, {
-                                style: {
-                                    background: 'var(--primary)',
-                                    color: 'var(--primary-foreground)',
-                                    border: '1px solid var(--primary)'
-                                }
-                            })
-                        } else {
-                            toast.success(`تم إضافة عضو جديد للوفد. الوفد مكتمل`, {
-                                style: {
-                                    background: 'var(--primary)',
-                                    color: 'var(--primary-foreground)',
-                                    border: '1px solid var(--primary)'
-                                }
-                            })
-                        }
-                    } else {
-                        toast.success(`تم اضافة عضو جديد للوفد`, {
-                            style: {
-                                background: 'var(--primary)',
-                                color: 'var(--primary-foreground)',
-                                border: '1px solid var(--primary)'
-                            }
-                        })
-                    }
-                } else {
-                    toast.success(`تم اضافة عضو جديد للوفد`, {
-                        style: {
-                            background: 'var(--primary)',
-                            color: 'var(--primary-foreground)',
-                            border: '1px solid var(--primary)'
-                        }
-                    })
-                }
-            } catch (error) {
-                toast.success(`تم اضافة عضو جديد للوفد`, {
-                    style: {
-                        background: 'var(--primary)',
-                        color: 'var(--primary-foreground)',
-                        border: '1px solid var(--primary)'
-                    }
-                })
-            }
-            
             reset()
             setSelectedEquivalentPosition("")
             setSelectedPosition("")
             setSearchTerm("")
-            setLoading(false)
             setOpen(false)
-        }, 1500)
+        } catch (e) {
+            toast.error("فشل إضافة العضو")
+        } finally {
+            setLoading(false)
+        }
     })
 
-    // دالة تحديث معلومات عدد الأعضاء
-    const updateMemberCountInfo = () => {
-
-        if (delegationId) {
-            try {
-                const savedDelegations = localStorage.getItem('delegations')
-                const savedMembers = localStorage.getItem('members')
-                
-
-
-                
-                if (savedDelegations && savedMembers) {
-                    const delegations = JSON.parse(savedDelegations)
-                    const members = JSON.parse(savedMembers)
-
-
-                    
-                    const currentDelegation = delegations.find(d => d.id === delegationId)
-
-                    
-                    if (currentDelegation) {
-                        const maxMembers = parseInt(currentDelegation.membersCount)
-                        const currentMembersCount = members.filter(member => 
-                            member.delegation && member.delegation.id === delegationId
-                        ).length
-                        
-
-                        setMemberCountInfo({ current: currentMembersCount, max: maxMembers })
-                    } else {
-
-                    }
-                } else {
-
-                }
-            } catch (error) {
-                console.error('خطأ في تحديث معلومات عدد الأعضاء:', error)
-            }
+    // تحديث معلومات عدد الأعضاء عبر API
+    const updateMemberCountInfo = async () => {
+        if (!delegationId) return
+        try {
+            const [delegation, members] = await Promise.all([
+                delegationService.getDelegation(delegationId),
+                memberService.getMembers({ delegation_id: delegationId })
+            ])
+            const list = Array.isArray(members) ? members : []
+            const max = delegation?.member_count || 0
+            setMemberCountInfo({ current: list.length, max })
+        } catch (e) {
+            setMemberCountInfo({ current: 0, max: 0 })
         }
     }
 
     useEffect(() => {
-
         reset()
         setSelectedEquivalentPosition("")
         setSelectedPosition("")
         setShowAddPosition(false)
         setNewPosition("")
         setSearchTerm("")
-        
-        // تحديث معلومات عدد الأعضاء عند فتح النموذج
         if (open) {
-
             updateMemberCountInfo()
         }
     }, [open, delegationId])
 
-    // تحميل المناصب العسكرية من localStorage في البداية
     useEffect(() => {
         const savedPositions = localStorage.getItem('militaryPositions')
         if (savedPositions) {
@@ -434,73 +182,35 @@ const AddMemberToDelegation = () => {
                 const positions = JSON.parse(savedPositions)
                 setAvailablePositions(positions)
             } catch (error) {
-                console.error('خطأ في تحليل المناصب العسكرية:', error)
-                // استخدام المناصب الافتراضية في حالة الخطأ
                 setAvailablePositions(militaryPositions)
             }
         } else {
-            // إذا لم توجد مناصب محفوظة، استخدم الافتراضية
             setAvailablePositions(militaryPositions)
         }
     }, [])
 
-    // الاستماع لتغييرات الأعضاء (حذف، إضافة، تحديث)
     useEffect(() => {
-        const handleMemberChange = () => {
-            updateMemberCountInfo()
-        }
-
+        const handleMemberChange = () => { updateMemberCountInfo() }
         const handlePositionsUpdated = () => {
             const savedPositions = localStorage.getItem('militaryPositions')
             if (savedPositions) {
                 try {
                     const positions = JSON.parse(savedPositions)
                     setAvailablePositions(positions)
-                } catch (error) {
-                    console.error('خطأ في تحليل المناصب العسكرية:', error)
-                }
+                } catch {}
             }
         }
-
-        // الاستماع لتغييرات localStorage مباشرة
-        const handleStorageChange = (e) => {
-            if (e.key === 'militaryPositions' && e.newValue) {
-                try {
-                    const positions = JSON.parse(e.newValue)
-                    setAvailablePositions(positions)
-                } catch (error) {
-                    console.error('خطأ في تحليل المناصب العسكرية:', error)
-                }
-            }
-        }
-
-        // إضافة event listeners للتغييرات
-        window.addEventListener('memberDeleted', handleMemberChange)
-        window.addEventListener('memberAdded', handleMemberChange)
-        window.addEventListener('memberUpdated', handleMemberChange)
-        window.addEventListener('localStorageUpdated', handleMemberChange)
+        window.addEventListener('delegationUpdated', handleMemberChange)
         window.addEventListener('positionsUpdated', handlePositionsUpdated)
-        window.addEventListener('storage', handleStorageChange)
-
-        // تحديث العداد عند تحميل المكون
         updateMemberCountInfo()
-
         return () => {
-            window.removeEventListener('memberDeleted', handleMemberChange)
-            window.removeEventListener('memberAdded', handleMemberChange)
-            window.removeEventListener('memberUpdated', handleMemberChange)
-            window.removeEventListener('localStorageUpdated', handleMemberChange)
+            window.removeEventListener('delegationUpdated', handleMemberChange)
             window.removeEventListener('positionsUpdated', handlePositionsUpdated)
-            window.removeEventListener('storage', handleStorageChange)
         }
     }, [delegationId])
 
-    // تحديث دوري للعداد (كل 2 ثانية) للتأكد من التزامن
     useEffect(() => {
-        const interval = setInterval(() => {
-            updateMemberCountInfo()
-        }, 2000)
-
+        const interval = setInterval(() => { updateMemberCountInfo() }, 2000)
         return () => clearInterval(interval)
     }, [delegationId])
 
@@ -520,7 +230,7 @@ const AddMemberToDelegation = () => {
                     </span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[725px] max-h-[675px] [&_[data-slot='dialog-close']]:!right-[95%] overflow-auto">
+            <DialogContent className="sm:max-w-[725px] maxह-[675px] [&_[data-slot='dialog-close']]:!right-[95%] overflow-auto">
                 <DialogHeader className="!text-start !py-2">
                     <DialogTitle>إضافة عضو جديد للوفد</DialogTitle>
                     <DialogDescription>
@@ -570,9 +280,8 @@ const AddMemberToDelegation = () => {
                             />
                             {errors.role && <span className="text-sm text-rose-400 block">{errors.role.message}</span>}
                         </div>
-                        
                         <div className="grid gap-3 w-full">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify_between">
                                 <Label htmlFor="equivalentRole">المنصب العسكري المعادل</Label>
                                 <Button 
                                     type="button"
@@ -585,7 +294,6 @@ const AddMemberToDelegation = () => {
                                     <span>إضافة منصب جديد</span>
                                 </Button>
                             </div>
-                            
                             {showAddPosition && (
                                 <div className="flex gap-2 p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
                                     <input 
@@ -616,7 +324,6 @@ const AddMemberToDelegation = () => {
                                     </Button>
                                 </div>
                             )}
-                            
                             <Select value={selectedEquivalentPosition} onValueChange={handleEquivalentPositionChange}>
                                 <SelectTrigger className="w-full text-right" dir="rtl">
                                     <SelectValue placeholder="ابحث واختر المنصب العسكري المعادل" />
@@ -628,7 +335,7 @@ const AddMemberToDelegation = () => {
                                             placeholder="ابحث في المناصب العسكرية..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm"
+                                            className="w-full px-3 py-2 border border-neutral-300 rounded-md text_sm"
                                             onClick={(e) => e.stopPropagation()}
                                         />
                                     </div>
@@ -683,8 +390,6 @@ const AddMemberToDelegation = () => {
                     </DialogFooter>
                 </form>
             </DialogContent>
-            
-            {/* نافذة تأكيد الحذف */}
             {deleteItem && (
                 <Dialog open={!!deleteItem} onOpenChange={() => setDeleteItem(null)}>
                     <DialogContent className="sm:max-w-[425px]">

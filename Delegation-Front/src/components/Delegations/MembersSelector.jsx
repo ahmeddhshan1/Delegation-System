@@ -2,131 +2,46 @@ import { useState, useEffect } from 'react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@iconify/react/dist/iconify.js"
-import { members } from "../../data"
+import { memberService } from '../../services/api'
 
 const MembersSelector = ({ delegation, selected, onChange }) => {
     const [availableMembers, setAvailableMembers] = useState([])
 
     useEffect(() => {
-        // تحميل الأعضاء من localStorage
-        const loadMembers = () => {
-
+        const loadMembers = async () => {
             try {
-                const savedMembers = localStorage.getItem('members')
-                if (savedMembers) {
-                    const parsedMembers = JSON.parse(savedMembers)
-
-                    // تصفية الأعضاء الذين ينتمون لهذا الوفد ولم يغادروا بعد
-                    // أو الأعضاء المختارين مسبقاً (للسماح بتعديل الجلسة)
-                    const delegationMembers = parsedMembers.filter(member => {
-                        if (!member.delegation || member.delegation.id !== delegation.id) {
-                            return false
-                        }
-                        
-                        // إذا كان العضو مختار مسبقاً (للتعديل)، اظهره حتى لو سافر
-                        if (selected.includes(member.id)) {
-                            return true
-                        }
-                        
-                        // إذا لم يسافر بعد، اظهره
-                        // في البيانات الافتراضية: "not_departed" = لم يغادر، "departed" = مغادر
-                        return member.memberStatus !== 'departed'
-                    })
-                    
-
-                    setAvailableMembers(delegationMembers)
-
-                } else {
-                    // استخدام البيانات الافتراضية إذا لم توجد بيانات محفوظة
-                    const delegationMembers = members.filter(member => 
-                        member.delegation.id === delegation.id && 
-                        (member.memberStatus !== 'departed' || selected.includes(member.id))
-                    )
-                    setAvailableMembers(delegationMembers)
-
-                }
+                // جلب أعضاء الوفد من الـ API
+                const response = await memberService.getMembers({ delegation_id: delegation.id })
+                const list = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : []
+                // فلترة: اظهر غير المغادرين + المختارين مسبقاً للسماح بالتعديل
+                const available = list.filter(m => m.status !== 'DEPARTED' || selected.includes(m.id))
+                setAvailableMembers(available)
             } catch (error) {
-                console.error('خطأ في تحميل بيانات الأعضاء:', error)
-                // استخدام البيانات الافتراضية في حالة الخطأ
-                const delegationMembers = members.filter(member => 
-                    member.delegation.id === delegation.id && 
-                    (member.memberStatus !== 'departed' || selected.includes(member.id))
-                )
-                setAvailableMembers(delegationMembers)
+                console.error('خطأ في جلب الأعضاء من الـ API:', error)
+                setAvailableMembers([])
             }
         }
-
         loadMembers()
     }, [delegation.id, selected])
 
     // الاستماع لتغييرات الأعضاء
     useEffect(() => {
-        const loadMembers = () => {
-
+        const reload = async () => {
             try {
-                const savedMembers = localStorage.getItem('members')
-                if (savedMembers) {
-                    const parsedMembers = JSON.parse(savedMembers)
-
-                    // تصفية الأعضاء الذين ينتمون لهذا الوفد ولم يغادروا بعد
-                    // أو الأعضاء المختارين مسبقاً (للسماح بتعديل الجلسة)
-                    const delegationMembers = parsedMembers.filter(member => {
-                        if (!member.delegation || member.delegation.id !== delegation.id) {
-                            return false
-                        }
-                        
-                        // إذا كان العضو مختار مسبقاً (للتعديل)، اظهره حتى لو سافر
-                        if (selected.includes(member.id)) {
-                            return true
-                        }
-                        
-                        // إذا لم يسافر بعد، اظهره
-                        // في البيانات الافتراضية: "not_departed" = لم يغادر، "departed" = مغادر
-                        return member.memberStatus !== 'departed'
-                    })
-                    
-
-                    setAvailableMembers(delegationMembers)
-
-                } else {
-                    // استخدام البيانات الافتراضية إذا لم توجد بيانات محفوظة
-                    const delegationMembers = members.filter(member => 
-                        member.delegation.id === delegation.id && 
-                        (member.memberStatus !== 'departed' || selected.includes(member.id))
-                    )
-                    setAvailableMembers(delegationMembers)
-
-                }
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات الأعضاء:', error)
-                // استخدام البيانات الافتراضية في حالة الخطأ
-                const delegationMembers = members.filter(member => 
-                    member.delegation.id === delegation.id && 
-                    (member.memberStatus !== 'departed' || selected.includes(member.id))
-                )
-                setAvailableMembers(delegationMembers)
+                const response = await memberService.getMembers({ delegation_id: delegation.id })
+                const list = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : []
+                const available = list.filter(m => m.status !== 'DEPARTED' || selected.includes(m.id))
+                setAvailableMembers(available)
+            } catch (e) {
+                // ignore
             }
         }
-
-        const handleMemberChange = (event) => {
-            loadMembers()
-        }
-
-        window.addEventListener('memberAdded', handleMemberChange)
-        window.addEventListener('memberDeleted', handleMemberChange)
-        window.addEventListener('memberUpdated', handleMemberChange)
-        window.addEventListener('localStorageUpdated', handleMemberChange)
-
-
-
+        // إعادة التحميل عند أي تغيير محتمل من بقية المكونات
+        window.addEventListener('delegationUpdated', reload)
         return () => {
-            window.removeEventListener('memberAdded', handleMemberChange)
-            window.removeEventListener('memberDeleted', handleMemberChange)
-            window.removeEventListener('memberUpdated', handleMemberChange)
-            window.removeEventListener('localStorageUpdated', handleMemberChange)
-
+            window.removeEventListener('delegationUpdated', reload)
         }
-    }, [delegation.id])
+    }, [delegation.id, selected])
 
     const handleSelectAll = () => {
         if (selected.length === availableMembers.length) {
@@ -193,7 +108,7 @@ const MembersSelector = ({ delegation, selected, onChange }) => {
                                 </label>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                                {member.memberStatus === 'departed' && selected.includes(member.id) ? (
+                                {member.status === 'DEPARTED' && selected.includes(member.id) ? (
                                     <span className="text-orange-600">مغادر (مختار)</span>
                                 ) : (
                                     <span className="text-green-600">متاح</span>

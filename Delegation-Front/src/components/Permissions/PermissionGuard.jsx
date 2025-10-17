@@ -2,14 +2,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { useEffect, useState } from 'react'
 import { Icon } from "@iconify/react/dist/iconify.js"
 import { Button } from "@/components/ui/button"
-import { 
-    hasPermission, 
-    hasAllPermissions, 
-    hasAnyPermission,
-    canAccessCurrentPage,
-    getRoleInfo,
-    USER_ROLES 
-} from '../../utils/permissions'
+import { usePermissions, useAuth } from '../../store/hooks'
 
 // مكون حماية الصفحات
 const PermissionGuard = ({ 
@@ -21,29 +14,27 @@ const PermissionGuard = ({
 }) => {
     const location = useLocation()
     const navigate = useNavigate()
-    const [userRole, setUserRole] = useState(null)
+    const { userRole, checkPermission, checkAllPermissions, checkAnyPermission, roleInfo } = usePermissions()
+    const { isAuthenticated } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        // محاكاة جلب دور المستخدم - في الواقع ستأتي من API أو localStorage
-        const mockUserRole = localStorage.getItem('userRole') || USER_ROLES.ADMIN
-        setUserRole(mockUserRole)
-        setIsLoading(false)
-    }, [])
+        // التحقق من حالة المصادقة
+        if (typeof isAuthenticated === 'boolean') {
+            setIsLoading(false)
+        }
+    }, [isAuthenticated])
 
     useEffect(() => {
         if (!isLoading && userRole) {
             // التحقق من إمكانية الوصول للصفحة الحالية
-            if (!canAccessCurrentPage(userRole, location.pathname)) {
-                navigate(redirectTo)
-                return
-            }
+            // يمكن إضافة منطق التحقق من الصفحات هنا لاحقاً
 
             // التحقق من الصلاحيات المطلوبة
             if (requiredPermissions.length > 0) {
                 const hasAccess = requireAll 
-                    ? hasAllPermissions(userRole, requiredPermissions)
-                    : hasAnyPermission(userRole, requiredPermissions)
+                    ? checkAllPermissions(requiredPermissions)
+                    : checkAnyPermission(requiredPermissions)
 
                 if (!hasAccess) {
                     navigate(redirectTo)
@@ -51,7 +42,7 @@ const PermissionGuard = ({
                 }
             }
         }
-    }, [userRole, isLoading, location.pathname, navigate, requiredPermissions, requireAll, redirectTo])
+    }, [userRole, isLoading, location.pathname, navigate, requiredPermissions, requireAll, redirectTo, checkAllPermissions, checkAnyPermission])
 
     if (isLoading) {
         return (
@@ -82,8 +73,8 @@ const PermissionGuard = ({
     // التحقق من الصلاحيات
     if (requiredPermissions.length > 0) {
         const hasAccess = requireAll 
-            ? hasAllPermissions(userRole, requiredPermissions)
-            : hasAnyPermission(userRole, requiredPermissions)
+            ? checkAllPermissions(requiredPermissions)
+            : checkAnyPermission(requiredPermissions)
 
         if (!hasAccess) {
             if (fallbackComponent) {
@@ -104,8 +95,8 @@ const PermissionGuard = ({
                                 <span className="font-medium">دورك الحالي:</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Icon icon={getRoleInfo(userRole).icon} className={getRoleInfo(userRole).color} />
-                                <span className={getRoleInfo(userRole).color}>{getRoleInfo(userRole).name}</span>
+                                <Icon icon={roleInfo?.icon} className={roleInfo?.color} />
+                                <span className={roleInfo?.color}>{roleInfo?.name}</span>
                             </div>
                         </div>
                         <Button onClick={() => navigate(redirectTo)}>
@@ -126,51 +117,30 @@ const PermissionElement = ({
     permission, 
     permissions = [], 
     requireAll = false,
-    fallback = null,
-    userRole = null
+    fallback = null
 }) => {
-    const [currentUserRole, setCurrentUserRole] = useState(userRole)
+    const { userRole, checkPermission, checkAllPermissions, checkAnyPermission } = usePermissions()
 
-    useEffect(() => {
-        if (!userRole) {
-            const mockUserRole = localStorage.getItem('userRole') || USER_ROLES.ADMIN
-            setCurrentUserRole(mockUserRole)
-        } else {
-            setCurrentUserRole(userRole)
-        }
-    }, [userRole])
-
-    if (!currentUserRole) return fallback
+    if (!userRole) return fallback
 
     let hasAccess = false
 
     if (permission) {
-        hasAccess = hasPermission(currentUserRole, permission)
+        hasAccess = checkPermission(permission)
     } else if (permissions.length > 0) {
         hasAccess = requireAll 
-            ? hasAllPermissions(currentUserRole, permissions)
-            : hasAnyPermission(currentUserRole, permissions)
+            ? checkAllPermissions(permissions)
+            : checkAnyPermission(permissions)
     }
 
     return hasAccess ? children : fallback
 }
 
 // مكون عرض معلومات المستخدم
-const UserRoleInfo = ({ userRole = null }) => {
-    const [currentUserRole, setCurrentUserRole] = useState(userRole)
+const UserRoleInfo = () => {
+    const { userRole, roleInfo } = usePermissions()
 
-    useEffect(() => {
-        if (!userRole) {
-            const mockUserRole = localStorage.getItem('userRole') || USER_ROLES.ADMIN
-            setCurrentUserRole(mockUserRole)
-        } else {
-            setCurrentUserRole(userRole)
-        }
-    }, [userRole])
-
-    if (!currentUserRole) return null
-
-    const roleInfo = getRoleInfo(currentUserRole)
+    if (!userRole || !roleInfo) return null
 
     return (
         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${roleInfo.bgColor}`}>
@@ -181,21 +151,10 @@ const UserRoleInfo = ({ userRole = null }) => {
 }
 
 // مكون قائمة الصلاحيات
-const PermissionsList = ({ userRole = null }) => {
-    const [currentUserRole, setCurrentUserRole] = useState(userRole)
+const PermissionsList = () => {
+    const { userRole, roleInfo } = usePermissions()
 
-    useEffect(() => {
-        if (!userRole) {
-            const mockUserRole = localStorage.getItem('userRole') || USER_ROLES.ADMIN
-            setCurrentUserRole(mockUserRole)
-        } else {
-            setCurrentUserRole(userRole)
-        }
-    }, [userRole])
-
-    if (!currentUserRole) return null
-
-    const roleInfo = getRoleInfo(currentUserRole)
+    if (!userRole || !roleInfo) return null
 
     return (
         <div className="space-y-4">

@@ -24,6 +24,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { hallOptions } from "../../constants"
+import { departureSessionService, airportService, airlineService, citiesService } from '../../services/api'
 import MembersSelector from './MembersSelector'
 
 const EditDepartureSession = ({ session, delegation, onUpdate }) => {
@@ -348,6 +349,30 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         }
     }, [])
 
+    // تحميل القوائم من الـ API عند فتح النموذج (مرة واحدة فقط)
+    useEffect(() => {
+        let mounted = true
+        const loadOptions = async () => {
+            try {
+                const [apRes, alRes, cRes] = await Promise.all([
+                    airportService.getAirports(),
+                    airlineService.getAirlines(),
+                    citiesService.getCities(),
+                ])
+                if (!mounted) return
+                const toList = (res) => (res && Array.isArray(res.results)) ? res.results : (Array.isArray(res) ? res : [])
+                const ap = toList(apRes)
+                const al = toList(alRes)
+                const ci = toList(cRes)
+                setAvailableAirports(ap.map(x => x.name))
+                setAvailableAirlines(al.map(x => x.name))
+                setAvailableDestinations(ci.map(x => x.city_name))
+            } catch {}
+        }
+        if (open) loadOptions()
+        return () => { mounted = false }
+    }, [open]) // فقط open، مش delegation.id
+
     // إضافة event listener عام للـ localStorage changes
     useEffect(() => {
         const handleStorageEvent = (e) => {
@@ -373,6 +398,8 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         }
     }, [])
 
+    
+
     const validationSchema = yup.object({
         date: yup.string().required("هذا الحقل لا يمكن ان يكون فارغا"),
         time: yup.string()
@@ -389,52 +416,37 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
     const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
         resolver: yupResolver(validationSchema),
         defaultValues: {
-            date: session.date,
-            time: session.time,
-            hall: session.hall,
-            airline: session.airline,
-            flightNumber: session.flightNumber,
-            destination: session.destination,
-            receptor: session.receptor,
-            shipments: session.shipments,
+            date: session.checkout_date || session.date || "",
+            time: (session.checkout_time ? String(session.checkout_time).replace(/:/g, '').slice(0,4) : (session.time || "")),
+            hall: session.airport_name || session.hall || "",
+            airline: session.airline_name || session.airline || "",
+            flightNumber: session.flight_number || session.flightNumber || "",
+            destination: session.city_name || session.destination || "",
+            receptor: session.depositor_name || session.receptor || "",
+            shipments: session.goods || session.shipments || "",
             notes: session.notes || "",
         }
     })
 
     useEffect(() => {
         if (open && session) {
-            // تعبئة النموذج بالبيانات الحالية
-            setValue('date', session.date)
-            setValue('time', session.time)
-            setValue('hall', session.hall)
-            setValue('airline', session.airline)
-            setValue('flightNumber', session.flightNumber)
-            setValue('destination', session.destination)
-            setValue('receptor', session.receptor)
-            setValue('shipments', session.shipments)
-            setValue('notes', session.notes || "")
+            reset({
+                date: session.checkout_date || session.date || "",
+                time: (session.checkout_time ? String(session.checkout_time).replace(/:/g, '').slice(0,4) : (session.time || "")),
+                hall: session.airport_name || session.hall || "",
+                airline: session.airline_name || session.airline || "",
+                flightNumber: session.flight_number || session.flightNumber || "",
+                destination: session.city_name || session.destination || "",
+                receptor: session.depositor_name || session.receptor || "",
+                shipments: session.goods || session.shipments || "",
+                notes: session.notes || "",
+            })
             
-            // تعبئة الـ dropdowns بالبيانات الحالية
-            setSelectedAirport(session.hall || "")
-            setSelectedAirline(session.airline || "")
-            setSelectedDestination(session.destination || "")
-            
-            // إعادة تعيين البحث
-            setAirportSearchTerm("")
-            setAirlineSearchTerm("")
-            setDestinationSearchTerm("")
-            
-            // إعادة تعيين الإضافة
-            setShowAddAirport(false)
-            setShowAddAirline(false)
-            setShowAddDestination(false)
-            setNewAirport("")
-            setNewAirline("")
-            setNewDestination("")
-            setDeleteItem(null)
+            setSelectedAirport(session.airport_name || session.hall || "")
+            setSelectedAirline(session.airline_name || session.airline || "")
+            setSelectedDestination(session.city_name || session.destination || "")
             
             // تعبئة الأعضاء المختارين
-            // إذا كان session.members يحتوي على member objects، استخرج الـ IDs
             const memberIds = (session.members || []).map(member => {
                 if (typeof member === 'object' && member.id) {
                     return member.id
@@ -442,114 +454,93 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                 return member
             })
             setSelectedMembers(memberIds)
+        } else if (!open) {
+            // فقط لما النموذج يتقفل، نمسح البيانات
+            reset()
+            setSelectedAirport("")
+            setSelectedAirline("")
+            setSelectedDestination("")
+            setAirportSearchTerm("")
+            setAirlineSearchTerm("")
+            setDestinationSearchTerm("")
+            setShowAddAirport(false)
+            setShowAddAirline(false)
+            setShowAddDestination(false)
+            setNewAirport("")
+            setNewAirline("")
+            setNewDestination("")
+            setDeleteItem(null)
         }
-    }, [open, session, setValue])
+    }, [open, reset]) // شلت session من dependencies
 
-    const onSubmit = handleSubmit((data) => {
+    const onSubmit = handleSubmit(async (data) => {
         if (selectedMembers.length === 0) {
             toast.error("يجب اختيار عضو واحد على الأقل")
             return
         }
 
-        // تحويل IDs إلى member objects كاملة
-        const memberObjects = selectedMembers.map(memberId => {
-            // البحث عن العضو في localStorage
-            try {
-                const savedMembers = localStorage.getItem('members')
-                if (savedMembers) {
-                    const members = JSON.parse(savedMembers)
-                    return members.find(member => member.id === memberId)
-                }
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات الأعضاء:', error)
-            }
-            return null
-        }).filter(member => member !== null)
+        // تحويل الوقت إلى HH:MM:SS
+        const timeStr = (data.time || '').trim()
+        const hh = timeStr.slice(0, 2)
+        const mm = timeStr.slice(2, 4)
+        const normalizedTime = (hh && mm) ? `${hh}:${mm}:00` : null
 
-        const updatedSession = {
-            ...session,
-            date: data.date,
-            time: data.time,
-            hall: data.hall,
-            airline: data.airline,
-            flightNumber: data.flightNumber,
-            destination: data.destination,
-            receptor: data.receptor,
-            shipments: data.shipments,
-            members: memberObjects, // حفظ member objects كاملة
-            notes: data.notes || ""
+        // الحصول على معرفات المطارات والخطوط والمدن
+        let airportId = null
+        let airlineId = null
+        let cityId = null
+
+        try {
+            if (data.hall && availableAirports.includes(data.hall)) {
+                const airportsRes = await airportService.getAirports()
+                const airports = Array.isArray(airportsRes?.results) ? airportsRes.results : (Array.isArray(airportsRes) ? airportsRes : [])
+                airportId = airports.find(a => a.name === data.hall)?.id
+            }
+            
+            if (data.airline && availableAirlines.includes(data.airline)) {
+                const airlinesRes = await airlineService.getAirlines()
+                const airlines = Array.isArray(airlinesRes?.results) ? airlinesRes.results : (Array.isArray(airlinesRes) ? airlinesRes : [])
+                airlineId = airlines.find(a => a.name === data.airline)?.id
+            }
+            
+            if (data.destination && availableDestinations.includes(data.destination)) {
+                const citiesRes = await citiesService.getCities()
+                const cities = Array.isArray(citiesRes?.results) ? citiesRes.results : (Array.isArray(citiesRes) ? citiesRes : [])
+                cityId = cities.find(c => c.city_name === data.destination)?.id
+            }
+        } catch (error) {
+            console.error('خطأ في الحصول على معرفات القوائم:', error)
+        }
+
+        const payload = {
+            delegation_id: delegation.id,
+            checkout_date: data.date,
+            checkout_time: normalizedTime,
+            airport_id: airportId,
+            airline_id: airlineId,
+            city_id: cityId,
+            flight_number: data.flightNumber,
+            depositor_name: data.receptor,
+            goods: data.shipments,
+            notes: data.notes || "",
+            members: selectedMembers,
         }
 
         setLoading(true)
-        
-        // تحديث حالة الأعضاء في localStorage
         try {
-            const savedMembers = localStorage.getItem('members')
-            if (savedMembers) {
-                const members = JSON.parse(savedMembers)
-                
-                // الحصول على الأعضاء اللي كانوا في الجلسة القديمة
-                const oldMemberIds = (session.members || []).map(member => {
-                    if (typeof member === 'object' && member.id) {
-                        return member.id
-                    }
-                    return member
-                })
-                
-                // الحصول على الأعضاء الجدد في الجلسة
-                const newMemberIds = selectedMembers
-                
-                // الأعضاء اللي تم إزالتهم من الجلسة
-                const removedMemberIds = oldMemberIds.filter(id => !newMemberIds.includes(id))
-                
-                // الأعضاء الجدد في الجلسة
-                const addedMemberIds = newMemberIds.filter(id => !oldMemberIds.includes(id))
-                
-
-
-
-
-                
-                const updatedMembers = members.map(member => {
-                    // إرجاع الأعضاء المحذوفين لحالة "لم يغادر"
-                    if (removedMemberIds.includes(member.id)) {
-
-                        return { 
-                            ...member, 
-                            memberStatus: 'not_departed',
-                            departureDate: null // إرجاع تاريخ المغادرة لـ null
-                        }
-                    }
-                    // تحديث الأعضاء الجدد لحالة "مغادر"
-                    if (addedMemberIds.includes(member.id)) {
-
-                        return { 
-                            ...member, 
-                            memberStatus: 'departed',
-                            departureDate: data.date // تحديث تاريخ المغادرة
-                        }
-                    }
-                    return member
-                })
-                
-                localStorage.setItem('members', JSON.stringify(updatedMembers))
-                
-                // إرسال events لتحديث المكونات
-                window.dispatchEvent(new CustomEvent('memberUpdated'))
-                window.dispatchEvent(new CustomEvent('localStorageUpdated'))
-                
-
-            }
-        } catch (error) {
-            console.error('خطأ في تحديث حالة الأعضاء:', error)
-        }
-        
-        setTimeout(() => {
-            onUpdate(updatedSession)
+            console.log('Sending payload:', payload)
+            const result = await departureSessionService.updateDepartureSession(session.id, payload)
+            console.log('Update result:', result)
             toast.success("تم تحديث جلسة المغادرة بنجاح")
-            setLoading(false)
+            if (onUpdate) { onUpdate() }
             setOpen(false)
-        }, 1500)
+        } catch (error) {
+            console.error('خطأ في تحديث جلسة المغادرة:', error)
+            console.error('Error details:', error.response?.data)
+            toast.error(`فشل تحديث جلسة المغادرة: ${error.response?.data?.detail || error.message}`)
+        } finally {
+            setLoading(false)
+        }
     })
 
     return (

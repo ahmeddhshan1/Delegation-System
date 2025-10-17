@@ -5,7 +5,7 @@ import uuid
 
 class User(AbstractUser):
     """
-    Custom User model based on the existing users table in PostgreSQL
+    Custom User model based on the new users table schema
     """
     USER_ROLES = [
         ('SUPER_ADMIN', 'مدير النظام'),
@@ -15,14 +15,17 @@ class User(AbstractUser):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=50, unique=True)
-    password_hash = models.CharField(max_length=255, db_column='password_hash')
     full_name = models.CharField(max_length=100)
-    role = models.CharField(max_length=20, choices=USER_ROLES, default='USER')
+    password_hash = models.CharField(max_length=255, db_column='password_hash')
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    role = models.CharField(max_length=20, choices=USER_ROLES, default='USER')
+    last_login = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_users', db_column='created_by')
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='updated_users', db_column='updated_by')
+    updated_at = models.DateTimeField(auto_now=True)
     device_info = models.JSONField(default=dict, blank=True)
     
     # Override password field to use password_hash column
@@ -46,17 +49,41 @@ class User(AbstractUser):
         """Set password_hash when password is set"""
         self.password_hash = value
     
-    # Add missing fields for Django auth compatibility
-    last_login = models.DateTimeField(null=True, blank=True)
-    date_joined = models.DateTimeField(auto_now_add=True)
-    is_staff = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)
-    email = models.EmailField(null=True, blank=True)
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
-    
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['full_name', 'role']
+    
+    # Override Django auth fields to match our schema
+    @property
+    def email(self):
+        return None
+    
+    @email.setter
+    def email(self, value):
+        pass
+    
+    @property
+    def first_name(self):
+        return None
+    
+    @first_name.setter
+    def first_name(self, value):
+        pass
+    
+    @property
+    def last_name(self):
+        return None
+    
+    @last_name.setter
+    def last_name(self, value):
+        pass
+    
+    @property
+    def date_joined(self):
+        return self.created_at
+    
+    @date_joined.setter
+    def date_joined(self, value):
+        self.created_at = value
     
     class Meta:
         db_table = 'users'
@@ -104,23 +131,23 @@ class User(AbstractUser):
         return self.username
 
 
-class LoginSession(models.Model):
+class LoginLogs(models.Model):
     """
-    Login sessions tracking model
+    Login logs tracking model
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_sessions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_logs')
     login_time = models.DateTimeField(auto_now_add=True)
-    logout_time = models.DateTimeField(null=True, blank=True)
-    device_info = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
+    device = models.TextField(null=True, blank=True)
     user_agent = models.TextField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
+    success = models.BooleanField(default=True)
     
     class Meta:
-        db_table = 'login_sessions'
-        verbose_name = 'جلسة دخول'
-        verbose_name_plural = 'جلسات الدخول'
+        db_table = 'login_logs'
+        verbose_name = 'سجل الدخول'
+        verbose_name_plural = 'سجلات الدخول'
+        ordering = ['-login_time']
     
     def __str__(self):
         return f"{self.user.full_name} - {self.login_time}"
@@ -136,21 +163,22 @@ class AuditLog(models.Model):
         ('DELETE', 'حذف'),
     ]
     
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    table_name = models.CharField(max_length=50)
-    record_id = models.UUIDField()
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    old_values = models.JSONField(null=True, blank=True)
-    new_values = models.JSONField(null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, db_column='user_id')
-    timestamp = models.DateTimeField(auto_now_add=True)
-    device_info = models.JSONField(default=dict, blank=True)
+    id = models.BigAutoField(primary_key=True)
+    table_name = models.CharField(max_length=100)
+    record_id = models.UUIDField(null=True, blank=True)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    old_data = models.JSONField(null=True, blank=True)
+    new_data = models.JSONField(null=True, blank=True)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    changed_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
     
     class Meta:
         db_table = 'audit_log'
         verbose_name = 'سجل التدقيق'
         verbose_name_plural = 'سجلات التدقيق'
-        ordering = ['-timestamp']
+        ordering = ['-changed_at']
     
     def __str__(self):
-        return f"{self.action} - {self.table_name} - {self.timestamp}"
+        return f"{self.action} - {self.table_name} - {self.changed_at}"

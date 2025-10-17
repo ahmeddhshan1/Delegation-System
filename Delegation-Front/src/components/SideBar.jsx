@@ -3,6 +3,8 @@ import { NavLink, useLocation, useNavigate, useRoutes } from "react-router"
 import { navLinks } from "../constants"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
+import { usePermissions } from "../store/hooks"
+import { eventService } from "../services/api"
 
 const SideBar = () => {
     const navigate = useNavigate()
@@ -10,130 +12,107 @@ const SideBar = () => {
     const handleLogout = () => navigate('/login')    
     const [subEvents, setSubEvents] = useState({})
     const [dynamicNavLinks, setDynamicNavLinks] = useState([])
+    
+    // جلب صلاحيات المستخدم من Redux
+    const { checkPermission, userRole } = usePermissions()
 
-    // جلب بيانات الأحداث من localStorage أو API
+    // جلب بيانات الأحداث من API
     useEffect(() => {
-        // محاولة جلب البيانات من localStorage أولاً
-        const savedEvents = localStorage.getItem('mainEvents')
-        if (savedEvents) {
+        let isMounted = true
+        
+        const loadEventsFromAPI = async () => {
             try {
-                const events = JSON.parse(savedEvents)
+                const response = await eventService.getMainEvents()
+                
+                if (!isMounted) return
+                
+                // التحقق من أن response يحتوي على results array
+                let events = []
+                if (response && response.results && Array.isArray(response.results)) {
+                    events = response.results
+                } else if (Array.isArray(response)) {
+                    // fallback للـ response القديم
+                    events = response
+                } else {
+                    console.warn('⚠️ API لم يرجع results array للأحداث:', response)
+                    if (isMounted) {
+                        setSubEvents({})
+                        setDynamicNavLinks([])
+                    }
+                    return
+                }
+                
                 const eventsMap = {}
                 const dynamicLinks = []
                 
-                        events.forEach(event => {
-                            // تحويل اسم الحدث إلى مسار مناسب
-                            let path = ''
-                            // استخدام الاسم الإنجليزي إذا كان متوفراً
-                            if (event.englishName) {
-                                path = `/${event.englishName.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')}`
-                            } else {
-                                path = `/${event.name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')}`
-                            }
-                    
-                    eventsMap[path] = event.sub_events?.map(subEvent => ({
-                        id: subEvent.id,
-                        name: subEvent.name,
-                        to: `${path}/${subEvent.id}`
-                    })) || []
-
-                    // إضافة الرابط الديناميكي
-                    dynamicLinks.push({
-                        name: event.name,
-                        icon: event.icon,
-                        to: path,
-                        type: "main-event",
-                        isFromLocalStorage: true
-                    })
-                })
-                
-                setSubEvents(eventsMap)
-                setDynamicNavLinks(dynamicLinks)
-            } catch (error) {
-                console.error('خطأ في تحليل بيانات الأحداث:', error)
-                setDynamicNavLinks([])
-            }
-            } else {
-                // لا توجد أحداث - ابدأ فارغ
-                setSubEvents({})
-                setDynamicNavLinks([])
-            }
-    }, [])
-
-    // الاستماع لتغييرات البيانات
-    useEffect(() => {
-        const handleStorageChange = () => {
-            const savedEvents = localStorage.getItem('mainEvents')
-            if (savedEvents) {
-                try {
-                    const events = JSON.parse(savedEvents)
-                    const eventsMap = {}
-                    const dynamicLinks = []
-                    
-                    events.forEach(event => {
-                        // تحويل اسم الحدث إلى مسار مناسب
-                        let path = ''
-                        // استخدام الاسم الإنجليزي إذا كان متوفراً
-                        if (event.englishName) {
-                            path = `/${event.englishName.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')}`
-                        } else {
-                            path = `/${event.name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')}`
+                // جلب الأحداث الفرعية لكل حدث رئيسي
+                for (const event of events) {
+                    try {
+                        const subEventsResponse = await eventService.getSubEvents(event.id)
+                        
+                        if (!isMounted) return
+                        
+                        // التحقق من أن subEventsResponse يحتوي على results array
+                        let validSubEvents = []
+                        if (subEventsResponse && subEventsResponse.results && Array.isArray(subEventsResponse.results)) {
+                            validSubEvents = subEventsResponse.results
+                        } else if (Array.isArray(subEventsResponse)) {
+                            validSubEvents = subEventsResponse
                         }
                         
-                        eventsMap[path] = event.sub_events?.map(subEvent => ({
+                        // تحويل اسم الحدث إلى مسار مناسب
+                        let path = ''
+                        // استخدام event_link إذا كان متوفراً، وإلا الاسم العربي
+                        if (event.event_link && event.event_link.trim()) {
+                            // إذا كان في event_link، استخدمه مباشرة
+                            path = `/${event.event_link.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')}`
+                        } else {
+                            // استخدام اسم الحدث بالعربية
+                            path = `/${event.event_name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')}`
+                        }
+                        
+                        eventsMap[path] = validSubEvents.map(subEvent => ({
                             id: subEvent.id,
-                            name: subEvent.name,
+                            name: subEvent.event_name,
                             to: `${path}/${subEvent.id}`
-                        })) || []
+                        }))
 
                         // إضافة الرابط الديناميكي
                         dynamicLinks.push({
-                            name: event.name,
-                            icon: event.icon,
+                            name: event.event_name,
+                            icon: event.event_icon || null, // لا نضع أيقونة افتراضية
                             to: path,
                             type: "main-event",
-                            isFromLocalStorage: true
+                            isFromAPI: true
                         })
-                    })
-                    
+                    } catch (subEventError) {
+                        console.error(`❌ خطأ في جلب الأحداث الفرعية للحدث ${event.event_name}:`, subEventError)
+                        // متابعة مع الأحداث الأخرى حتى لو فشل أحدها
+                    }
+                }
+                
+                if (isMounted) {
                     setSubEvents(eventsMap)
                     setDynamicNavLinks(dynamicLinks)
-                } catch (error) {
-                    console.error('خطأ في تحليل بيانات الأحداث:', error)
+                }
+            } catch (error) {
+                console.error('❌ خطأ في جلب الأحداث من API:', error)
+                if (isMounted) {
+                    setSubEvents({})
                     setDynamicNavLinks([])
                 }
-            } else {
-                setDynamicNavLinks([])
             }
         }
-
-        // الاستماع لتغييرات localStorage (للتابات الأخرى)
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'lastEventUpdate') {
-                handleStorageChange()
-            }
-        })
         
-        // الاستماع للأحداث المخصصة (لنفس التابة)
-        window.addEventListener('eventAdded', handleStorageChange)
-        window.addEventListener('eventDeleted', handleStorageChange)
-        window.addEventListener('eventUpdated', handleStorageChange)
+        loadEventsFromAPI()
         
-        // فحص دوري للتغييرات (للتطوير)
-        const interval = setInterval(handleStorageChange, 1000)
-
         return () => {
-            window.removeEventListener('storage', (event) => {
-                if (event.key === 'lastEventUpdate') {
-                    handleStorageChange()
-                }
-            })
-            window.removeEventListener('eventAdded', handleStorageChange)
-            window.removeEventListener('eventDeleted', handleStorageChange)
-            window.removeEventListener('eventUpdated', handleStorageChange)
-            clearInterval(interval)
+            isMounted = false
         }
     }, [])
+
+    // إزالة الاستماع لتغييرات localStorage لأننا نستخدم API الآن
+    // يمكن إضافة refresh mechanism إذا لزم الأمر
 
 
 
@@ -153,14 +132,14 @@ const SideBar = () => {
                     </NavLink>
                 </li>
                 
-                {/* الأحداث الأساسية من localStorage */}
+                {/* الأحداث الأساسية من API */}
                 {dynamicNavLinks.map((link, index) => (
-                        <li key={index}>
+                    <li key={index}>
                         <NavLink to={link.to} className="link">
-                                <Icon icon={link.icon} fontSize={24} />
-                                <span>{link.name}</span>
-                            </NavLink>
-                        </li>
+                            {link.icon && <Icon icon={link.icon} fontSize={24} />}
+                            <span>{link.name}</span>
+                        </NavLink>
+                    </li>
                 ))}
                 
                 {/* الأحداث الجديدة المضافة */}
@@ -201,13 +180,15 @@ const SideBar = () => {
                     }
                 })}
                 
-                {/* إدارة الأحداث */}
-                <li>
-                    <NavLink to="/events-management" className="link">
-                        <Icon icon="material-symbols:event" fontSize={24} />
-                        <span>إدارة الأحداث</span>
-                    </NavLink>
-                </li>
+                {/* إدارة الأحداث - ممنوع على USER */}
+                {checkPermission('MANAGE_EVENTS') && (
+                    <li>
+                        <NavLink to="/events-management" className="link">
+                            <Icon icon="material-symbols:event" fontSize={24} />
+                            <span>إدارة الأحداث</span>
+                        </NavLink>
+                    </li>
+                )}
             </ul>
 
             <div className="mt-auto space-y-4">

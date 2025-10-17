@@ -1,7 +1,7 @@
 import { Icon } from '@iconify/react/dist/iconify.js'
 import { useNavigate } from 'react-router'
 
-const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebersNum}) => {
+const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebersNum, loading = false}) => {
     const navigate = useNavigate()
     
     return (
@@ -9,7 +9,9 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
             <div className='box w-full bg-white p-6 rounded-2xl border border-neutral-300 flex items-center gap-2 justify-between'>
                 <div className='flex flex-col gap-1'>
                     <span className='text-neutral-600'>عدد الوفود</span>
-                    <h2 className='text-sky-700 font-bold text-5xl'>{delegationNum}</h2>
+                    <h2 className='text-sky-700 font-bold text-5xl'>
+                        {loading ? '...' : delegationNum}
+                    </h2>
                     <span className='text-neutral-400 text-xs'>
                         اخر تحديث منذ {new Date().toLocaleDateString()}
                     </span>

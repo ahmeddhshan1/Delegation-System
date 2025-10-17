@@ -4,7 +4,6 @@ import DelegationReportExport from "./DelegationReportExport"
 import DelegationFilter from "./DelegationFilter"
 import { useMemo } from "react"
 import { PermissionElement } from "../Permissions/PermissionGuard"
-import { PERMISSIONS } from "../../utils/permissions"
 
 
 const DelegationTableToolbar = ({ table, data, subEventId }) => {
@@ -24,13 +23,13 @@ const DelegationTableToolbar = ({ table, data, subEventId }) => {
                 className="max-w-sm !ring-0"
             />
             <div className="flex items-center gap-2">
-                <PermissionElement permission={PERMISSIONS.USE_FILTERS}>
+                <PermissionElement permission="USE_FILTERS">
                     <DelegationFilter table={table} data={data} />
                 </PermissionElement>
-                <PermissionElement permission={PERMISSIONS.EXPORT_REPORTS}>
+                <PermissionElement permission="EXPORT_REPORTS">
                     <DelegationReportExport data={filteredData} />
                 </PermissionElement>
-                <PermissionElement permission={PERMISSIONS.ADD_DELEGATIONS}>
+                <PermissionElement permission="ADD_DELEGATIONS">
                     <AddDelegation subEventId={subEventId} />
                 </PermissionElement>
             </div>

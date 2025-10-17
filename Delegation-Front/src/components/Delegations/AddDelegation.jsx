@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 import { hallOptions } from "../../constants"
 import { nationalities } from "../../utils/nationalities"
+import { delegationService, nationalityService, airportService, airlineService, citiesService } from "../../services/api"
 // import DeleteConfirm from "../ui/delete-confirm"
 
 const AddDelegation = ({ subEventId }) => {
@@ -33,71 +34,28 @@ const AddDelegation = ({ subEventId }) => {
     const [selectedNationality, setSelectedNationality] = useState("")
     const [showAddNationality, setShowAddNationality] = useState(false)
     const [newNationality, setNewNationality] = useState("")
-    const [availableNationalities, setAvailableNationalities] = useState(() => {
-        const savedNationalities = localStorage.getItem('nationalities')
-        if (savedNationalities) {
-            return JSON.parse(savedNationalities)
-        }
-        return nationalities
-    })
+    const [availableNationalities, setAvailableNationalities] = useState([])
     const [searchTerm, setSearchTerm] = useState("")
     
     // مطارات
     const [selectedAirport, setSelectedAirport] = useState("")
     const [showAddAirport, setShowAddAirport] = useState(false)
     const [newAirport, setNewAirport] = useState("")
-    const [availableAirports, setAvailableAirports] = useState(() => {
-        const savedAirports = localStorage.getItem('airports')
-        if (savedAirports) {
-            return JSON.parse(savedAirports)
-        }
-        return hallOptions.map(option => option.label)
-    })
+    const [availableAirports, setAvailableAirports] = useState([])
     const [airportSearchTerm, setAirportSearchTerm] = useState("")
     
     // شركات الطيران
     const [selectedAirline, setSelectedAirline] = useState("")
     const [showAddAirline, setShowAddAirline] = useState(false)
     const [newAirline, setNewAirline] = useState("")
-    const [availableAirlines, setAvailableAirlines] = useState(() => {
-        const savedAirlines = localStorage.getItem('airlines')
-        if (savedAirlines) {
-            return JSON.parse(savedAirlines)
-        }
-        return [
-            "مصر للطيران", "الخطوط الجوية السعودية", "طيران الإمارات", "الخطوط الجوية القطرية",
-            "الخطوط الجوية الكويتية", "الخطوط الجوية البحرينية", "الخطوط الجوية العمانية",
-            "الخطوط الجوية الأردنية", "الخطوط الجوية اللبنانية", "الخطوط الجوية السورية",
-            "الخطوط الجوية العراقية", "الخطوط الجوية الليبية", "الخطوط الجوية الجزائرية",
-            "الخطوط الجوية المغربية", "الخطوط الجوية التونسية", "الخطوط الجوية السودانية",
-            "الخطوط الجوية اليمنية", "الخطوط الجوية الصومالية", "الخطوط الجوية الموريتانية",
-            "الخطوط الجوية الجيبوتية", "الخطوط الجوية الكينية", "الخطوط الجوية الإثيوبية",
-            "الخطوط الجوية التركية", "الخطوط الجوية الألمانية", "الخطوط الجوية الفرنسية",
-            "الخطوط الجوية البريطانية", "الخطوط الجوية الإيطالية", "الخطوط الجوية الإسبانية",
-            "الخطوط الجوية الأمريكية", "الخطوط الجوية الكندية", "الخطوط الجوية الأسترالية"
-        ]
-    })
+    const [availableAirlines, setAvailableAirlines] = useState([])
     const [airlineSearchTerm, setAirlineSearchTerm] = useState("")
 
     // قادمة من
     const [selectedOrigin, setSelectedOrigin] = useState("")
     const [showAddOrigin, setShowAddOrigin] = useState(false)
     const [newOrigin, setNewOrigin] = useState("")
-    const [availableOrigins, setAvailableOrigins] = useState(() => {
-        const savedOrigins = localStorage.getItem('origins')
-        if (savedOrigins) {
-            return JSON.parse(savedOrigins)
-        }
-        return [
-            "الرياض", "جدة", "الدمام", "مكة المكرمة", "المدينة المنورة",
-            "دبي", "أبو ظبي", "الشارقة", "عجمان", "رأس الخيمة",
-            "القاهرة", "الإسكندرية", "الأقصر", "أسوان", "شرم الشيخ",
-            "لندن", "باريس", "برلين", "روما", "مدريد",
-            "نيويورك", "لوس أنجلوس", "شيكاغو", "هيوستن", "فينيكس",
-            "طوكيو", "سيول", "بكين", "شنغهاي", "هونغ كونغ",
-            "سيدني", "ملبورن", "بريسبان", "بيرث", "أديلايد"
-        ]
-    })
+    const [availableOrigins, setAvailableOrigins] = useState([])
     const [originSearchTerm, setOriginSearchTerm] = useState("")
 
     // حالات حذف العناصر
@@ -105,28 +63,33 @@ const AddDelegation = ({ subEventId }) => {
 
     // الاستماع لتغييرات localStorage
     useEffect(() => {
+        let isMounted = true // flag لتتبع حالة المكون
+        
         const handleStorageChange = () => {
+            // التحقق من أن المكون ما زال mounted
+            if (!isMounted) return
+            
             // تحديث الجنسيات
             const savedNationalities = localStorage.getItem('nationalities')
-            if (savedNationalities) {
+            if (savedNationalities && isMounted) {
                 setAvailableNationalities(JSON.parse(savedNationalities))
             }
             
             // تحديث المطارات
             const savedAirports = localStorage.getItem('airports')
-            if (savedAirports) {
+            if (savedAirports && isMounted) {
                 setAvailableAirports(JSON.parse(savedAirports))
             }
             
             // تحديث شركات الطيران
             const savedAirlines = localStorage.getItem('airlines')
-            if (savedAirlines) {
+            if (savedAirlines && isMounted) {
                 setAvailableAirlines(JSON.parse(savedAirlines))
             }
             
             // تحديث المدن
             const savedOrigins = localStorage.getItem('origins')
-            if (savedOrigins) {
+            if (savedOrigins && isMounted) {
                 setAvailableOrigins(JSON.parse(savedOrigins))
             }
         }
@@ -141,12 +104,46 @@ const AddDelegation = ({ subEventId }) => {
         window.addEventListener('originsUpdated', handleStorageChange)
         
         return () => {
+            isMounted = false // تعيين flag إلى false عند cleanup
             window.removeEventListener('storage', handleStorageChange)
             window.removeEventListener('nationalitiesUpdated', handleStorageChange)
             window.removeEventListener('airportsUpdated', handleStorageChange)
             window.removeEventListener('airlinesUpdated', handleStorageChange)
             window.removeEventListener('originsUpdated', handleStorageChange)
         }
+    }, [])
+
+    // تحميل القوائم من قاعدة البيانات (API)
+    useEffect(() => {
+        let mounted = true
+        const loadDropdownsFromAPI = async () => {
+            try {
+                const [nRes, apRes, alRes, cRes] = await Promise.all([
+                    nationalityService.getNationalities(),
+                    airportService.getAirports(),
+                    airlineService.getAirlines(),
+                    citiesService.getCities(),
+                ])
+
+                if (!mounted) return
+
+                const toArray = (res, nameKey) => {
+                    if (res && Array.isArray(res.results)) return res.results.map(r => r[nameKey]).filter(Boolean)
+                    if (Array.isArray(res)) return res.map(r => r[nameKey]).filter(Boolean)
+                    return []
+                }
+
+                setAvailableNationalities(toArray(nRes, 'name'))
+                setAvailableAirports(toArray(apRes, 'name'))
+                setAvailableAirlines(toArray(alRes, 'name'))
+                setAvailableOrigins(toArray(cRes, 'city_name'))
+            } catch (e) {
+                // إبقاء القيم الحالية (localStorage / الثوابت) كـ fallback
+            }
+        }
+
+        loadDropdownsFromAPI()
+        return () => { mounted = false }
     }, [])
 
     const validationSchema = yup.object({
@@ -222,82 +219,86 @@ const AddDelegation = ({ subEventId }) => {
         }
     }
 
-    const handleAddOrigin = () => {
-        if (newOrigin.trim() && !availableOrigins.includes(newOrigin.trim())) {
-            const updatedOrigins = [...availableOrigins, newOrigin.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableOrigins(updatedOrigins)
-            localStorage.setItem('origins', JSON.stringify(updatedOrigins))
-            // إرسال custom event لتحديث الفورمات الأخرى
-            window.dispatchEvent(new CustomEvent('originsUpdated'))
-            setSelectedOrigin(newOrigin.trim())
+    const handleAddOrigin = async () => {
+        const name = newOrigin.trim()
+        if (!name) {
+            toast.error("يرجى إدخال اسم المدينة")
+            return
+        }
+        try {
+            const created = await citiesService.createCity({ city_name: name })
+            const updated = [...availableOrigins, created.city_name].sort((a, b) => a.localeCompare(b, 'ar'))
+            setAvailableOrigins(updated)
+            setSelectedOrigin(created.city_name)
             setNewOrigin("")
             setShowAddOrigin(false)
             setOriginSearchTerm("")
             toast.success("تم إضافة المدينة الجديدة بنجاح")
-        } else if (availableOrigins.includes(newOrigin.trim())) {
-            toast.error("هذه المدينة موجودة بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم المدينة")
+        } catch (e) {
+            toast.error("تعذر إضافة المدينة. تأكد أن الاسم غير مكرر")
         }
     }
 
-    const handleAddNewNationality = () => {
-        if (newNationality.trim() && !availableNationalities.includes(newNationality.trim())) {
-            const updatedNationalities = [...availableNationalities, newNationality.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableNationalities(updatedNationalities)
-            localStorage.setItem('nationalities', JSON.stringify(updatedNationalities))
-            // إرسال custom event لتحديث الفورمات الأخرى
-            window.dispatchEvent(new CustomEvent('nationalitiesUpdated'))
-            setSelectedNationality(newNationality.trim())
-            setValue('nationality', newNationality.trim())
+    const handleAddNewNationality = async () => {
+        const name = newNationality.trim()
+        if (!name) {
+            toast.error("يرجى إدخال اسم الجنسية")
+            return
+        }
+        try {
+            const created = await nationalityService.createNationality({ name })
+            const updated = [...availableNationalities, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
+            setAvailableNationalities(updated)
+            setSelectedNationality(created.name)
+            setValue('nationality', created.name)
             setNewNationality("")
             setShowAddNationality(false)
             setSearchTerm("")
             toast.success("تم إضافة الجنسية الجديدة بنجاح")
-        } else if (availableNationalities.includes(newNationality.trim())) {
-            toast.error("هذه الجنسية موجودة بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم الجنسية")
+        } catch (e) {
+            toast.error("تعذر إضافة الجنسية. تأكد أن الاسم غير مكرر")
         }
     }
 
-    const handleAddNewAirport = () => {
-        if (newAirport.trim() && !availableAirports.includes(newAirport.trim())) {
-            const updatedAirports = [...availableAirports, newAirport.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableAirports(updatedAirports)
-            localStorage.setItem('airports', JSON.stringify(updatedAirports))
-            // إرسال custom event لتحديث الفورمات الأخرى
-            window.dispatchEvent(new CustomEvent('airportsUpdated'))
-            setSelectedAirport(newAirport.trim())
-            setValue('arrivalHall', newAirport.trim())
+    const handleAddNewAirport = async () => {
+        const name = newAirport.trim()
+        if (!name) {
+            toast.error("يرجى إدخال اسم المطار")
+            return
+        }
+        try {
+            const created = await airportService.createAirport({ name })
+            const updated = [...availableAirports, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
+            setAvailableAirports(updated)
+            setSelectedAirport(created.name)
+            setValue('arrivalHall', created.name)
             setNewAirport("")
             setShowAddAirport(false)
             setAirportSearchTerm("")
             toast.success("تم إضافة المطار الجديد بنجاح")
-        } else if (availableAirports.includes(newAirport.trim())) {
-            toast.error("هذا المطار موجود بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم المطار")
+        } catch (e) {
+            toast.error("تعذر إضافة المطار. تأكد أن الاسم غير مكرر")
         }
     }
 
-    const handleAddNewAirline = () => {
-        if (newAirline.trim() && !availableAirlines.includes(newAirline.trim())) {
-            const updatedAirlines = [...availableAirlines, newAirline.trim()].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableAirlines(updatedAirlines)
-            localStorage.setItem('airlines', JSON.stringify(updatedAirlines))
-            // إرسال custom event لتحديث الفورمات الأخرى
-            window.dispatchEvent(new CustomEvent('airlinesUpdated'))
-            setSelectedAirline(newAirline.trim())
-            setValue('arrivalAirline', newAirline.trim())
+    const handleAddNewAirline = async () => {
+        const name = newAirline.trim()
+        if (!name) {
+            toast.error("يرجى إدخال اسم شركة الطيران")
+            return
+        }
+        try {
+            const created = await airlineService.createAirline({ name })
+            const updated = [...availableAirlines, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
+            setAvailableAirlines(updated)
+            setSelectedAirline(created.name)
+            setValue('arrivalAirline', created.name)
             setNewAirline("")
             setShowAddAirline(false)
             setAirlineSearchTerm("")
             toast.success("تم إضافة شركة الطيران الجديدة بنجاح")
-        } else if (availableAirlines.includes(newAirline.trim())) {
-            toast.error("هذه شركة الطيران موجودة بالفعل")
-        } else {
-            toast.error("يرجى إدخال اسم شركة الطيران")
+        } catch (e) {
+            toast.error("تعذر إضافة شركة الطيران. تأكد أن الاسم غير مكرر")
         }
     }
 
@@ -475,7 +476,7 @@ const AddDelegation = ({ subEventId }) => {
         origin.toLowerCase().includes(originSearchTerm.toLowerCase())
     )
 
-    const onSubmit = handleSubmit((data) => {
+    const onSubmit = handleSubmit(async (data) => {
         setLoading(true)
         
         // التحقق من الجنسية والمطار وشركة الطيران وقادمة من
@@ -504,44 +505,49 @@ const AddDelegation = ({ subEventId }) => {
         }
         
         try {
-            // الحصول على البيانات الحالية من localStorage
-            const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-            
-            // إنشاء الوفد الجديد
-            const newDelegation = {
-                id: Date.now().toString(),
-                ...data,
-                type: data.delegationType, // إضافة type للتوافق مع حساب الإحصائيات
-                subEventId: parseInt(subEventId), // تحويل إلى number
-                nationality: selectedNationality,
-                delegationStatus: 'not_departed', // إضافة حالة افتراضية
-                arrivalInfo: {
-                    arrivalHall: selectedAirport,
-                    arrivalAirline: selectedAirline,
-                    arrivalFlightNumber: data.arrivalFlightNumber,
-                    arrivalOrigin: selectedOrigin,
-                    arrivalDate: data.arrivalDate,
-                    arrivalTime: data.arrivalTime,
-                    arrivalReceptor: data.arrivalReceptor,
-                    arrivalDestination: data.arrivalDestination,
-                    arrivalShipments: data.arrivalShipments
-                },
-                createdAt: new Date().toISOString(),
-                status: 'active'
+            // تجهيز المعرفات من القوائم
+            const natRes = await nationalityService.getNationalities()
+            const apRes = await airportService.getAirports()
+            const alRes = await airlineService.getAirlines()
+            const ciRes = await citiesService.getCities()
+
+            const toList = (res) => (res && Array.isArray(res.results)) ? res.results : (Array.isArray(res) ? res : [])
+            const nat = toList(natRes).find(x => x.name === selectedNationality)
+            const ap = toList(apRes).find(x => x.name === selectedAirport)
+            const al = toList(alRes).find(x => x.name === selectedAirline)
+            const ci = toList(ciRes).find(x => x.city_name === selectedOrigin)
+
+            // صياغة الوقت HHMM إلى HH:MM
+            const timeStr = (data.arrivalTime || '').trim()
+            const formattedTime = timeStr && timeStr.length === 4 ? `${timeStr.slice(0,2)}:${timeStr.slice(2)}` : null
+
+            // إعداد بيانات الوفد حسب نموذج الباك إند
+            const delegationData = {
+                sub_event_id: subEventId,
+                nationality_id: nat ? nat.id : null,
+                airport_id: ap ? ap.id : null,
+                airline_id: al ? al.id : null,
+                city_id: ci ? ci.id : null,
+                delegation_leader_name: data.delegationHead,
+                member_count: parseInt(data.membersCount) || 0,
+                flight_number: data.arrivalFlightNumber,
+                type: data.delegationType === 'military' ? 'MILITARY' : 'CIVILIAN',
+                status: 'NOT_DEPARTED',
+                arrive_date: data.arrivalDate || null,
+                arrive_time: formattedTime,
+                receiver_name: data.arrivalReceptor,
+                going_to: selectedOrigin,
+                goods: data.arrivalShipments,
             }
-            
-            // إضافة الوفد الجديد
-            const updatedDelegations = [...existingDelegations, newDelegation]
-            
-            // حفظ البيانات في localStorage
-            localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
+
+            // إرسال البيانات للباك إند
+            const newDelegation = await delegationService.createDelegation(delegationData)
             
             // إرسال حدث لتحديث المكونات الأخرى
             console.log('AddDelegation: Dispatching delegationAdded event')
             window.dispatchEvent(new CustomEvent('delegationAdded', { detail: newDelegation }))
             
-        setTimeout(() => {
-            toast.success("تم اضافة وفد جديد")
+            toast.success("تم إضافة وفد جديد بنجاح")
             reset()
             setSelectedNationality("")
             setSelectedAirport("")
@@ -553,10 +559,13 @@ const AddDelegation = ({ subEventId }) => {
             setOriginSearchTerm("")
             setLoading(false)
             setOpen(false)
-        }, 1000)
+            
         } catch (error) {
             console.error('Error adding delegation:', error)
-            toast.error("حدث خطأ أثناء إضافة الوفد")
+            const errorMessage = error.response?.data?.detail || 
+                                error.response?.data?.error || 
+                                "حدث خطأ أثناء إضافة الوفد"
+            toast.error(errorMessage)
             setLoading(false)
         }
     })

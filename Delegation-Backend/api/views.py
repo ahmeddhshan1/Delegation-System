@@ -5,21 +5,19 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Count, Q
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 import json
 
 User = get_user_model()
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
 from .models import (
-    MainEvent, SubEvent, Nationality, MilitaryPosition,
-    Airport, Airline, Delegation, Member, DepartureSession
+    MainEvent, SubEvent, Nationality, Cities,
+    AirLine, AirPort, EquivalentJob, Delegation, Member, CheckOut
 )
 from .serializers import (
     MainEventSerializer, SubEventSerializer, NationalitySerializer,
-    MilitaryPositionSerializer, AirportSerializer, AirlineSerializer,
-    DelegationSerializer, MemberSerializer, DepartureSessionSerializer,
+    CitiesSerializer, AirLineSerializer, AirPortSerializer, EquivalentJobSerializer,
+    DelegationSerializer, MemberSerializer, CheckOutSerializer,
     DashboardDataSerializer
 )
 
@@ -33,31 +31,17 @@ class MainEventViewSet(viewsets.ModelViewSet):
         queryset = MainEvent.objects.all().prefetch_related('sub_events')
         search = self.request.query_params.get('search', None)
         if search:
-            queryset = queryset.filter(name__icontains=search)
+            queryset = queryset.filter(event_name__icontains=search)
         return queryset.order_by('-created_at')
     
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
-        self.send_websocket_update('event_created', instance)
     
     def perform_update(self, serializer):
         instance = serializer.save(updated_by=self.request.user)
-        self.send_websocket_update('event_updated', instance)
     
     def perform_destroy(self, instance):
-        self.send_websocket_update('event_deleted', instance)
         instance.delete()
-    
-    def send_websocket_update(self, event_type, instance):
-        channel_layer = get_channel_layer()
-        serializer_data = MainEventSerializer(instance).data
-        async_to_sync(channel_layer.group_send)(
-            'events',
-            {
-                'type': event_type,
-                'data': serializer_data
-            }
-        )
 
 
 class SubEventViewSet(viewsets.ModelViewSet):
@@ -66,14 +50,14 @@ class SubEventViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = SubEvent.objects.all().select_related('main_event')
+        queryset = SubEvent.objects.all().select_related('main_event_id')
         main_event_id = self.request.query_params.get('main_event_id', None)
         search = self.request.query_params.get('search', None)
         
         if main_event_id:
             queryset = queryset.filter(main_event_id=main_event_id)
         if search:
-            queryset = queryset.filter(name__icontains=search)
+            queryset = queryset.filter(event_name__icontains=search)
         
         return queryset.order_by('-created_at')
 
@@ -91,49 +75,55 @@ class NationalityViewSet(viewsets.ModelViewSet):
         return queryset.order_by('name')
 
 
-class MilitaryPositionViewSet(viewsets.ModelViewSet):
-    queryset = MilitaryPosition.objects.all()
-    serializer_class = MilitaryPositionSerializer
+class CitiesViewSet(viewsets.ModelViewSet):
+    queryset = Cities.objects.all()
+    serializer_class = CitiesSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = MilitaryPosition.objects.all()
+        queryset = Cities.objects.all()
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(city_name__icontains=search)
+        return queryset.order_by('city_name')
+
+
+class AirLineViewSet(viewsets.ModelViewSet):
+    queryset = AirLine.objects.all()
+    serializer_class = AirLineSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = AirLine.objects.all()
         search = self.request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(name__icontains=search)
-        return queryset.order_by('rank_level', 'name')
-
-
-class AirportViewSet(viewsets.ModelViewSet):
-    queryset = Airport.objects.all()
-    serializer_class = AirportSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        queryset = Airport.objects.all()
-        search = self.request.query_params.get('search', None)
-        if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) | 
-                Q(code__icontains=search) |
-                Q(city__icontains=search)
-            )
         return queryset.order_by('name')
 
 
-class AirlineViewSet(viewsets.ModelViewSet):
-    queryset = Airline.objects.all()
-    serializer_class = AirlineSerializer
+class AirPortViewSet(viewsets.ModelViewSet):
+    queryset = AirPort.objects.all()
+    serializer_class = AirPortSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = Airline.objects.all()
+        queryset = AirPort.objects.all()
         search = self.request.query_params.get('search', None)
         if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) | 
-                Q(code__icontains=search)
-            )
+            queryset = queryset.filter(name__icontains=search)
+        return queryset.order_by('name')
+
+
+class EquivalentJobViewSet(viewsets.ModelViewSet):
+    queryset = EquivalentJob.objects.all()
+    serializer_class = EquivalentJobSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = EquivalentJob.objects.all()
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(name__icontains=search)
         return queryset.order_by('name')
 
 
@@ -144,7 +134,7 @@ class DelegationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Delegation.objects.all().select_related(
-            'nationality', 'sub_event__main_event'
+            'nationality_id', 'sub_event_id__main_event_id'
         ).prefetch_related('members')
         
         # Filters
@@ -163,40 +153,18 @@ class DelegationViewSet(viewsets.ModelViewSet):
         if status_filter:
             queryset = queryset.filter(status=status_filter)
         if search:
-            queryset = queryset.filter(nationality__name__icontains=search)
+            queryset = queryset.filter(delegation_leader_name__icontains=search)
         
         return queryset.order_by('-created_at')
     
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
-        self.send_websocket_update('delegation_created', instance)
     
     def perform_update(self, serializer):
         instance = serializer.save(updated_by=self.request.user)
-        self.send_websocket_update('delegation_updated', instance)
     
     def perform_destroy(self, instance):
-        self.send_websocket_update('delegation_deleted', instance)
         instance.delete()
-    
-    def send_websocket_update(self, event_type, instance):
-        channel_layer = get_channel_layer()
-        serializer_data = DelegationSerializer(instance).data
-        async_to_sync(channel_layer.group_send)(
-            'delegations',
-            {
-                'type': event_type,
-                'data': serializer_data
-            }
-        )
-        # Also update dashboard stats
-        async_to_sync(channel_layer.group_send)(
-            'dashboard',
-            {
-                'type': 'stats_updated',
-                'data': {'type': 'delegation_change'}
-            }
-        )
 
 
 class MemberViewSet(viewsets.ModelViewSet):
@@ -206,7 +174,7 @@ class MemberViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Member.objects.all().select_related(
-            'delegation__nationality', 'delegation__sub_event'
+            'delegation_id__nationality_id', 'delegation_id__sub_event_id'
         )
         
         # Filters
@@ -225,56 +193,72 @@ class MemberViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
-        self.send_websocket_update('member_created', instance)
     
     def perform_update(self, serializer):
         instance = serializer.save(updated_by=self.request.user)
-        self.send_websocket_update('member_updated', instance)
     
     def perform_destroy(self, instance):
-        self.send_websocket_update('member_deleted', instance)
         instance.delete()
-    
-    def send_websocket_update(self, event_type, instance):
-        channel_layer = get_channel_layer()
-        serializer_data = MemberSerializer(instance).data
-        async_to_sync(channel_layer.group_send)(
-            'members',
-            {
-                'type': event_type,
-                'data': serializer_data
-            }
-        )
-        # Also update dashboard stats
-        async_to_sync(channel_layer.group_send)(
-            'dashboard',
-            {
-                'type': 'stats_updated',
-                'data': {'type': 'member_change'}
-            }
-        )
 
 
-class DepartureSessionViewSet(viewsets.ModelViewSet):
-    queryset = DepartureSession.objects.all()
-    serializer_class = DepartureSessionSerializer
+class CheckOutViewSet(viewsets.ModelViewSet):
+    queryset = CheckOut.objects.all()
+    serializer_class = CheckOutSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = DepartureSession.objects.all().select_related(
-            'delegation__nationality', 'delegation__sub_event'
+        queryset = CheckOut.objects.all().select_related(
+            'delegation_id__nationality_id', 'delegation_id__sub_event_id'
         )
         
         # Filters
         delegation_id = self.request.query_params.get('delegation_id', None)
-        session_type = self.request.query_params.get('session_type', None)
+        checkout_date = self.request.query_params.get('checkout_date', None)
         
         if delegation_id:
             queryset = queryset.filter(delegation_id=delegation_id)
-        if session_type:
-            queryset = queryset.filter(session_type=session_type)
+        if checkout_date:
+            queryset = queryset.filter(checkout_date=checkout_date)
         
         return queryset.order_by('-created_at')
+    
+    def perform_create(self, serializer):
+        instance = serializer.save(created_by=self.request.user)
+    
+    def perform_update(self, serializer):
+        # Revert members that were removed from this session to NOT_DEPARTED
+        instance: CheckOut = self.get_object()
+        old_member_ids = set()
+        try:
+            old_member_ids = set([str(m) for m in instance.members]) if instance.members else set()
+        except Exception:
+            old_member_ids = set()
+
+        # Save updates (DB trigger will mark NEW members as DEPARTED)
+        instance = serializer.save(updated_by=self.request.user)
+
+        try:
+            new_member_ids = set([str(m) for m in instance.members]) if instance.members else set()
+        except Exception:
+            new_member_ids = set()
+
+        removed_ids = old_member_ids - new_member_ids
+        if removed_ids:
+            Member.objects.filter(id__in=list(removed_ids), delegation_id=instance.delegation_id).update(
+                status='NOT_DEPARTED', departure_date=None
+            )
+    
+    def perform_destroy(self, instance):
+        # Before delete: revert members in this session to NOT_DEPARTED
+        try:
+            member_ids = [str(m) for m in (instance.members or [])]
+        except Exception:
+            member_ids = []
+        if member_ids:
+            Member.objects.filter(id__in=member_ids, delegation_id=instance.delegation_id).update(
+                status='NOT_DEPARTED', departure_date=None
+            )
+        instance.delete()
 
 
 class DashboardViewSet(viewsets.ViewSet):
@@ -290,7 +274,7 @@ class DashboardViewSet(viewsets.ViewSet):
             'total_sub_events': SubEvent.objects.count(),
             'total_delegations': Delegation.objects.count(),
             'total_members': Member.objects.count(),
-            'total_departure_sessions': DepartureSession.objects.count(),
+            'total_check_outs': CheckOut.objects.count(),
         }
         
         # Delegation stats
@@ -312,11 +296,15 @@ class DashboardViewSet(viewsets.ViewSet):
         
         # Recent data
         recent_delegations = Delegation.objects.select_related(
-            'nationality', 'sub_event__main_event'
+            'nationality_id', 'sub_event_id__main_event_id'
         ).order_by('-created_at')[:10]
         
         recent_members = Member.objects.select_related(
-            'delegation__nationality'
+            'delegation_id__nationality_id'
+        ).order_by('-created_at')[:10]
+        
+        recent_check_outs = CheckOut.objects.select_related(
+            'delegation_id__nationality_id'
         ).order_by('-created_at')[:10]
         
         data = {
@@ -325,6 +313,7 @@ class DashboardViewSet(viewsets.ViewSet):
             'member_stats': member_stats,
             'recent_delegations': DelegationSerializer(recent_delegations, many=True).data,
             'recent_members': MemberSerializer(recent_members, many=True).data,
+            'recent_check_outs': CheckOutSerializer(recent_check_outs, many=True).data,
         }
         
         return Response(data)
@@ -351,13 +340,14 @@ class AuthViewSet(viewsets.ViewSet):
                 login(request, user)
                 token, created = Token.objects.get_or_create(user=user)
                 
-                # Create login session
-                from accounts.models import LoginSession
-                LoginSession.objects.create(
+                # Create login log
+                from accounts.models import LoginLogs
+                LoginLogs.objects.create(
                     user=user,
-                    device_info=request.data.get('device_info', {}),
+                    device=request.data.get('device_info', {}).get('device', ''),
                     ip_address=self.get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    success=True
                 )
                 
                 return Response({
@@ -377,6 +367,20 @@ class AuthViewSet(viewsets.ViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         else:
+            # Log failed login attempt
+            try:
+                user = User.objects.get(username=username)
+                from accounts.models import LoginLogs
+                LoginLogs.objects.create(
+                    user=user,
+                    device=request.data.get('device_info', {}).get('device', ''),
+                    ip_address=self.get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                    success=False
+                )
+            except User.DoesNotExist:
+                pass
+            
             return Response(
                 {'error': 'Invalid credentials'}, 
                 status=status.HTTP_401_UNAUTHORIZED
@@ -386,13 +390,6 @@ class AuthViewSet(viewsets.ViewSet):
     def logout(self, request):
         """User logout"""
         if request.user.is_authenticated:
-            # End active login session
-            from accounts.models import LoginSession
-            LoginSession.objects.filter(
-                user=request.user, 
-                is_active=True
-            ).update(is_active=False, logout_time=timezone.now())
-            
             logout(request)
             return Response({'message': 'Logged out successfully'})
         return Response({'error': 'Not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -467,6 +464,42 @@ class AuthViewSet(viewsets.ViewSet):
                 {'error': f'Failed to create admin session: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=False, methods=['get'])
+    def check_permission(self, request):
+        """Check if user has specific permission"""
+        if not request.user.is_authenticated:
+            return Response({'error': 'Not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        permission = request.query_params.get('permission')
+        if not permission:
+            return Response({'error': 'Permission parameter required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        has_permission = request.user.has_perm(permission) if permission else False
+        
+        return Response({
+            'has_permission': has_permission,
+            'permission': permission,
+            'user_role': request.user.role
+        })
+    
+    @action(detail=False, methods=['get'])
+    def user_permissions(self, request):
+        """Get all permissions for current user"""
+        if not request.user.is_authenticated:
+            return Response({'error': 'Not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        permissions = {
+            'is_super_admin': request.user.is_super_admin(),
+            'is_admin': request.user.is_admin(),
+            'can_manage_users': request.user.can_manage_users(),
+            'can_view_reports': request.user.can_view_reports(),
+            'can_print_reports': request.user.can_print_reports(),
+            'can_delete_data': request.user.can_delete_data(),
+            'role': request.user.role,
+        }
+        
+        return Response(permissions)
     
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')

@@ -17,6 +17,7 @@ import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
 import { toast } from "sonner"
 import { useEffect } from "react"
+import { departureSessionService, airportService, airlineService, citiesService } from '../../services/api'
 import {
     Select,
     SelectContent,
@@ -34,48 +35,18 @@ const AddDepartureSession = ({ delegation, onAdd, remainingMembers }) => {
 
     // إضافة الـ states للـ dropdown lists المشتركة
     const [selectedAirport, setSelectedAirport] = useState("")
-    const [availableAirports, setAvailableAirports] = useState(() => {
-        const savedAirports = localStorage.getItem('airports')
-        if (savedAirports) {
-            return JSON.parse(savedAirports)
-        }
-        return hallOptions.map(option => option.label)
-    })
+    const [availableAirports, setAvailableAirports] = useState([])
+    const [airportNameToId, setAirportNameToId] = useState({})
     const [airportSearchTerm, setAirportSearchTerm] = useState("")
     
     const [selectedAirline, setSelectedAirline] = useState("")
-    const [availableAirlines, setAvailableAirlines] = useState(() => {
-        const savedAirlines = localStorage.getItem('airlines')
-        if (savedAirlines) {
-            return JSON.parse(savedAirlines)
-        }
-        return [
-            "الخطوط الجوية السعودية", "الخطوط الجوية الإماراتية", "الخطوط الجوية القطرية",
-            "الخطوط الجوية الكويتية", "الخطوط الجوية العمانية", "الخطوط الجوية البحرينية",
-            "الخطوط الجوية المصرية", "الخطوط الجوية الأردنية", "الخطوط الجوية اللبنانية",
-            "الخطوط الجوية السورية", "الخطوط الجوية العراقية", "الخطوط الجوية اليمنية",
-            "الخطوط الجوية التركية", "الخطوط الجوية الإيرانية", "الخطوط الجوية الأفغانية",
-            "الخطوط الجوية الباكستانية", "الخطوط الجوية الهندية", "الخطوط الجوية البنجلاديشية",
-            "الخطوط الجوية السريلانكية", "الخطوط الجوية المالديفية", "الخطوط الجوية النيبالية",
-            "الخطوط الجوية الأمريكية", "الخطوط الجوية الكندية", "الخطوط الجوية الأسترالية"
-        ]
-    })
+    const [availableAirlines, setAvailableAirlines] = useState([])
+    const [airlineNameToId, setAirlineNameToId] = useState({})
     const [airlineSearchTerm, setAirlineSearchTerm] = useState("")
     
     const [selectedDestination, setSelectedDestination] = useState("")
-    const [availableDestinations, setAvailableDestinations] = useState(() => {
-        const savedOrigins = localStorage.getItem('origins')
-        if (savedOrigins) {
-            return JSON.parse(savedOrigins)
-        }
-        return [
-            "الرياض", "جدة", "الدمام", "مكة المكرمة", "المدينة المنورة",
-            "الطائف", "تبوك", "بريدة", "خميس مشيط", "الهفوف",
-            "الجبيل", "ينبع", "النماص", "الخبر", "القطيف",
-            "الأحساء", "حائل", "الباحة", "نجران", "عرعر",
-            "سكاكا", "القريات", "الرس", "عنيزة", "الزلفي"
-        ]
-    })
+    const [availableDestinations, setAvailableDestinations] = useState([])
+    const [cityNameToId, setCityNameToId] = useState({})
     const [destinationSearchTerm, setDestinationSearchTerm] = useState("")
 
     // إضافة الـ states للإضافة والحذف
@@ -304,49 +275,29 @@ const AddDepartureSession = ({ delegation, onAdd, remainingMembers }) => {
         destination.toLowerCase().includes(destinationSearchTerm.toLowerCase())
     )
 
-    // الاستماع لتغييرات localStorage
+    // تحميل القوائم من الـ API
     useEffect(() => {
-        const handleStorageChange = () => {
-            // تحديث المطارات
-            const savedAirports = localStorage.getItem('airports')
-            if (savedAirports) {
-                const airports = JSON.parse(savedAirports)
-                setAvailableAirports(airports)
-                // إعادة تعيين البحث
-                setAirportSearchTerm("")
-            }
-            
-            // تحديث شركات الطيران
-            const savedAirlines = localStorage.getItem('airlines')
-            if (savedAirlines) {
-                const airlines = JSON.parse(savedAirlines)
-                setAvailableAirlines(airlines)
-                // إعادة تعيين البحث
-                setAirlineSearchTerm("")
-            }
-            
-            // تحديث المدن (الوجهات)
-            const savedOrigins = localStorage.getItem('origins')
-            if (savedOrigins) {
-                const origins = JSON.parse(savedOrigins)
-                setAvailableDestinations(origins)
-                // إعادة تعيين البحث
-                setDestinationSearchTerm("")
-            }
+        const loadLookups = async () => {
+            try {
+                const airportsResp = await airportService.getAirports()
+                const airports = Array.isArray(airportsResp?.results) ? airportsResp.results : Array.isArray(airportsResp) ? airportsResp : []
+                setAvailableAirports(airports.map(a => a.name))
+                setAirportNameToId(airports.reduce((acc, a) => { acc[a.name] = a.id; return acc }, {}))
+            } catch {}
+            try {
+                const airlinesResp = await airlineService.getAirlines()
+                const airlines = Array.isArray(airlinesResp?.results) ? airlinesResp.results : Array.isArray(airlinesResp) ? airlinesResp : []
+                setAvailableAirlines(airlines.map(a => a.name))
+                setAirlineNameToId(airlines.reduce((acc, a) => { acc[a.name] = a.id; return acc }, {}))
+            } catch {}
+            try {
+                const citiesResp = await citiesService.getCities()
+                const cities = Array.isArray(citiesResp?.results) ? citiesResp.results : Array.isArray(citiesResp) ? citiesResp : []
+                setAvailableDestinations(cities.map(c => c.city_name))
+                setCityNameToId(cities.reduce((acc, c) => { acc[c.city_name] = c.id; return acc }, {}))
+            } catch {}
         }
-
-        // الاستماع للـ custom events
-        window.addEventListener('airportsUpdated', handleStorageChange)
-        window.addEventListener('airlinesUpdated', handleStorageChange)
-        window.addEventListener('originsUpdated', handleStorageChange)
-        window.addEventListener('delegationUpdated', handleStorageChange)
-        
-        return () => {
-            window.removeEventListener('airportsUpdated', handleStorageChange)
-            window.removeEventListener('airlinesUpdated', handleStorageChange)
-            window.removeEventListener('originsUpdated', handleStorageChange)
-            window.removeEventListener('delegationUpdated', handleStorageChange)
-        }
+        loadLookups()
     }, [])
 
     // إضافة event listener عام للـ localStorage changes
@@ -402,7 +353,7 @@ const AddDepartureSession = ({ delegation, onAdd, remainingMembers }) => {
         }
     })
 
-    const onSubmit = handleSubmit((data) => {
+    const onSubmit = handleSubmit(async (data) => {
         if (selectedMembers.length === 0) {
             toast.error("يجب اختيار عضو واحد على الأقل")
             return
@@ -412,75 +363,41 @@ const AddDepartureSession = ({ delegation, onAdd, remainingMembers }) => {
             toast.error("لا يوجد أعضاء متاحين للمغادرة")
             return
         }
+        // ماب الحقول من الواجهة إلى الـ API
+        // تحويل الوقت إلى HH:MM:SS
+        const timeStr = (data.time || '').trim()
+        const hh = timeStr.slice(0, 2)
+        const mm = timeStr.slice(2, 4)
+        const normalizedTime = (hh && mm) ? `${hh}:${mm}:00` : null
 
-        // تحويل IDs إلى member objects كاملة
-        const memberObjects = selectedMembers.map(memberId => {
-            // البحث عن العضو في localStorage
-            try {
-                const savedMembers = localStorage.getItem('members')
-                if (savedMembers) {
-                    const members = JSON.parse(savedMembers)
-                    return members.find(member => member.id === memberId)
-                }
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات الأعضاء:', error)
-            }
-            return null
-        }).filter(member => member !== null)
-
-        const newSession = {
-            id: `dep_${Date.now()}`,
-            date: data.date,
-            time: data.time,
-            hall: data.hall,
-            airline: data.airline,
-            flightNumber: data.flightNumber,
-            destination: data.destination,
-            receptor: data.receptor,
-            shipments: data.shipments,
-            members: memberObjects, // حفظ member objects كاملة
-            notes: data.notes || ""
+        const payload = {
+            delegation_id: delegation.id,
+            checkout_date: data.date,
+            checkout_time: normalizedTime,
+            airport_id: airportNameToId[data.hall] || null,
+            airline_id: airlineNameToId[data.airline] || null,
+            city_id: cityNameToId[data.destination] || null,
+            flight_number: data.flightNumber,
+            depositor_name: data.receptor,
+            goods: data.shipments,
+            notes: data.notes || "",
+            members: selectedMembers,
         }
 
         setLoading(true)
-        
-        // تحديث حالة الأعضاء في localStorage فوراً (بدون setTimeout)
-
         try {
-            const savedMembers = localStorage.getItem('members')
-            if (savedMembers) {
-                const members = JSON.parse(savedMembers)
-
-                
-                const updatedMembers = members.map(member => {
-                    if (selectedMembers.includes(member.id)) {
-
-                        return { 
-                            ...member, 
-                            memberStatus: 'departed',
-                            departureDate: data.date // تحديث تاريخ المغادرة
-                        }
-                    }
-                    return member
-                })
-                localStorage.setItem('members', JSON.stringify(updatedMembers))
-                
-                // إرسال events لتحديث المكونات
-                window.dispatchEvent(new CustomEvent('memberUpdated'))
-                window.dispatchEvent(new CustomEvent('localStorageUpdated'))
-            }
-        } catch (error) {
-            console.error('خطأ في تحديث حالة الأعضاء:', error)
-        }
-        
-        setTimeout(() => {
-            onAdd(newSession)
+            await departureSessionService.createDepartureSession(payload)
             toast.success("تم إضافة جلسة مغادرة جديدة")
+            // دعوة الأب لإعادة التحميل
+            if (onAdd) { onAdd() }
             reset()
             setSelectedMembers([])
-            setLoading(false)
             setOpen(false)
-        }, 1500)
+        } catch (e) {
+            toast.error("فشل إنشاء جلسة المغادرة")
+        } finally {
+            setLoading(false)
+        }
     })
 
     useEffect(() => {

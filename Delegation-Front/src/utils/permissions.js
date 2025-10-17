@@ -2,9 +2,9 @@
 
 // أدوار المستخدمين
 export const USER_ROLES = {
-    SUPER_ADMIN: 'super_admin',
-    ADMIN: 'admin',
-    USER: 'user'
+    SUPER_ADMIN: 'SUPER_ADMIN',
+    ADMIN: 'ADMIN',
+    USER: 'USER'
 }
 
 // الصلاحيات المتاحة
@@ -96,26 +96,25 @@ export const ROLE_PERMISSIONS = {
         // إدارة النظام
         PERMISSIONS.SYSTEM_SETTINGS,
         PERMISSIONS.AUDIT_LOGS
+        
+        // ملاحظة: لا توجد إدارة مستخدمين في الفرونت إند
     ],
     
     [USER_ROLES.USER]: [
-        // عرض الأحداث
+        // عرض الأحداث (محدود - لا يمكن رؤية إدارة الأحداث)
         PERMISSIONS.VIEW_EVENTS,
         
-        // إدارة الوفود (محدودة)
+        // إدارة الوفود (محدودة - إضافة فقط، بدون تعديل أو حذف)
         PERMISSIONS.VIEW_DELEGATIONS,
         PERMISSIONS.ADD_DELEGATIONS,
-        PERMISSIONS.EDIT_DELEGATIONS,
         
-        // إدارة الأعضاء (محدودة)
+        // إدارة الأعضاء (محدودة - إضافة فقط، بدون تعديل أو حذف)
         PERMISSIONS.VIEW_MEMBERS,
         PERMISSIONS.ADD_MEMBERS,
-        PERMISSIONS.EDIT_MEMBERS,
         
-        // إدارة المغادرات (محدودة)
+        // إدارة المغادرات (محدودة - إضافة فقط، بدون تعديل أو حذف)
         PERMISSIONS.VIEW_DEPARTURES,
         PERMISSIONS.ADD_DEPARTURES,
-        PERMISSIONS.EDIT_DEPARTURES,
         
         // الفلترة والبحث
         PERMISSIONS.USE_FILTERS,
@@ -123,12 +122,24 @@ export const ROLE_PERMISSIONS = {
     ]
 }
 
-// دالة للتحقق من الصلاحية
-export const hasPermission = (userRole, permission) => {
+// دالة للتحقق من الصلاحية (محلية - للاستخدام المؤقت)
+export const hasPermissionLocal = (userRole, permission) => {
     if (!userRole || !permission) return false
     
     const rolePermissions = ROLE_PERMISSIONS[userRole] || []
     return rolePermissions.includes(permission)
+}
+
+// دالة للتحقق من الصلاحية عبر API (الجديدة)
+export const hasPermission = async (permission) => {
+    try {
+        const { userService } = await import('../services/api')
+        const response = await userService.checkPermission(permission)
+        return response.has_permission
+    } catch (error) {
+        console.error('Error checking permission:', error)
+        return false
+    }
 }
 
 // دالة للتحقق من عدة صلاحيات (AND)
@@ -213,7 +224,7 @@ export const PAGE_PERMISSIONS = {
     '/': [PERMISSIONS.VIEW_EVENTS],
     // الصلاحيات للأحداث ديناميكية - يتم إضافتها تلقائياً
     '/all-members': [PERMISSIONS.VIEW_MEMBERS],
-    '/events-management': [PERMISSIONS.MANAGE_EVENTS],
+    '/events-management': [PERMISSIONS.MANAGE_EVENTS], // ممنوع على USER
     '/category/:categoryId': [PERMISSIONS.VIEW_EVENTS],
     '/category/:categoryId/event/:eventId': [PERMISSIONS.VIEW_DELEGATIONS]
 }

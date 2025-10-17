@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react/dist/iconify.js"
 import { NavLink, useNavigate } from "react-router"
 import { events } from "../../constants"
 import { useState, useEffect } from "react"
+import { delegationService } from "../../services/api"
 
 
 const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEventEnglishName }) => {
@@ -11,71 +12,53 @@ const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEvent
     // استخدام البيانات الممررة أو البيانات الافتراضية
     const eventsData = customEvents || events;
     
-    // حساب الإحصائيات الحقيقية لكل حدث
+    // حساب الإحصائيات الحقيقية لكل حدث من API
     useEffect(() => {
-        const calculateStats = () => {
-            const updatedEvents = eventsData.map(event => {
-                // جلب الوفود
-                const savedDelegations = localStorage.getItem('delegations')
-                let delegationCount = 0
+        const calculateStats = async () => {
+            try {
+                // جلب جميع الوفود من API
+                const delegationsResponse = await delegationService.getDelegations()
+                let allDelegations = []
                 
-                if (savedDelegations) {
-                    try {
-                        const delegations = JSON.parse(savedDelegations)
-                        delegationCount = delegations.filter(d => 
-                            d.subEventId === event.id || d.subEventId === parseInt(event.id)
-                        ).length
-                    } catch (error) {
-                        console.error('خطأ في تحليل بيانات الوفود:', error)
-                    }
+                if (delegationsResponse && delegationsResponse.results && Array.isArray(delegationsResponse.results)) {
+                    allDelegations = delegationsResponse.results
+                } else if (Array.isArray(delegationsResponse)) {
+                    allDelegations = delegationsResponse
                 }
                 
-                // جلب الأعضاء
-                const savedMembers = localStorage.getItem('members')
-                let memberCount = 0
-                
-                if (savedMembers) {
-                    try {
-                        const members = JSON.parse(savedMembers)
-                        memberCount = members.filter(m => 
-                            m.subEventId === event.id || m.subEventId === parseInt(event.id)
-                        ).length
-                    } catch (error) {
-                        console.error('خطأ في تحليل بيانات الأعضاء:', error)
+                // حساب الإحصائيات لكل حدث
+                const updatedEvents = eventsData.map(event => {
+                    const eventDelegations = allDelegations.filter(delegation => 
+                        delegation.sub_event_id === event.id
+                    )
+                    
+                    const totalMembers = eventDelegations.reduce((sum, delegation) => 
+                        sum + (delegation.current_members || 0), 0
+                    )
+                    
+                    return {
+                        ...event,
+                        delegationCount: eventDelegations.length,
+                        membersCount: totalMembers,
+                        date: event.date || new Date(event.created_at).toLocaleDateString('ar-EG')
                     }
-                }
+                })
                 
-                return {
+                setEventsWithStats(updatedEvents)
+            } catch (error) {
+                console.error('خطأ في جلب الإحصائيات:', error)
+                // في حالة الخطأ، استخدم البيانات بدون إحصائيات
+                const updatedEvents = eventsData.map(event => ({
                     ...event,
-                    delegationCount,
-                    membersCount: memberCount,
+                    delegationCount: 0,
+                    membersCount: 0,
                     date: event.date || new Date(event.created_at).toLocaleDateString('ar-EG')
-                }
-            })
-            
-            setEventsWithStats(updatedEvents)
+                }))
+                setEventsWithStats(updatedEvents)
+            }
         }
         
         calculateStats()
-        
-        // الاستماع لتغييرات localStorage
-        const handleStorageChange = () => {
-            calculateStats()
-        }
-        
-        window.addEventListener('storage', handleStorageChange)
-        window.addEventListener('delegationAdded', handleStorageChange)
-        window.addEventListener('delegationDeleted', handleStorageChange)
-        window.addEventListener('memberAdded', handleStorageChange)
-        window.addEventListener('memberDeleted', handleStorageChange)
-        
-        return () => {
-            window.removeEventListener('storage', handleStorageChange)
-            window.removeEventListener('delegationAdded', handleStorageChange)
-            window.removeEventListener('delegationDeleted', handleStorageChange)
-            window.removeEventListener('memberAdded', handleStorageChange)
-            window.removeEventListener('memberDeleted', handleStorageChange)
-        }
     }, [eventsData])
     
     return (
@@ -111,11 +94,7 @@ const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEvent
                                 <Icon icon="stash:calendar-star-solid" fontSize={42} className="text-white" />
                             </div>
                             <div className="flex flex-col gap-1">
-                                <h2 className="font-bold text-xl">{event.name}</h2>
-                                <div className="text-neutral-400 flex items-center gap-1">
-                                    <Icon icon={'mingcute:location-fill'} fontSize={22} />
-                                    <span>مركز مصر للمعارض الدولية</span>
-                                </div>
+                                <h2 className="font-bold text-xl">{event.event_name || event.name}</h2>
                             </div>
                         </div>
                         <div className="w-full flex items-center gap-6 p-6 justify-between">

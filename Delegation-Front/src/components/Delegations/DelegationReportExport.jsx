@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { members } from '../../data'
+// import { members } from '../../data' // تم إزالة البيانات الوهمية
 import SmartCombinedReportPDF from '../PDF Templates/SmartCombinedReportPDF'
 import { pdf } from '@react-pdf/renderer'
 import { saveAs } from "file-saver";
@@ -18,6 +18,10 @@ const DelegationReportExport = ({data}) => {
 
     const exportCombinedReport = async () => {
         try {
+            // جلب الأعضاء من localStorage بدلاً من البيانات الوهمية
+            const savedMembers = localStorage.getItem('members')
+            const members = savedMembers ? JSON.parse(savedMembers) : []
+            
             const filteredMembers = members.filter(member => 
                 data.some(d => d.id === member.delegation?.id)
             );

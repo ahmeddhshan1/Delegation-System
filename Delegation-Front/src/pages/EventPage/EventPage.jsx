@@ -6,6 +6,7 @@ import EmptyEvent from "../../components/Events/EmptyEvent"
 import EventsList from "../../components/Events/EventsList"
 import { Button } from "@/components/ui/button"
 import Stats from "../../components/Stats"
+import { eventService, delegationService } from "../../services/api"
 
 const EventPage = () => {
     const { eventName } = useParams()
@@ -18,71 +19,89 @@ const EventPage = () => {
         memebersNum: 0
     })
 
+    // دالة لإعادة تحميل الأحداث الفرعية عند إضافة حدث جديد
+    const handleEventAdded = async () => {
+        if (eventData) {
+            try {
+                const subEventsResponse = await eventService.getSubEvents(eventData.id)
+                let validSubEvents = []
+                
+                if (subEventsResponse && subEventsResponse.results && Array.isArray(subEventsResponse.results)) {
+                    validSubEvents = subEventsResponse.results
+                } else if (Array.isArray(subEventsResponse)) {
+                    validSubEvents = subEventsResponse
+                }
+                
+                setSubEvents(validSubEvents)
+            } catch (error) {
+                console.error('خطأ في إعادة تحميل الأحداث الفرعية:', error)
+            }
+        }
+    }
+
     useEffect(() => {
-        const loadEvents = () => {
-            // جلب الأحداث الفرعية للحدث المحدد من localStorage
-            const savedEvents = localStorage.getItem('mainEvents')
-            if (savedEvents) {
-                try {
-                    const events = JSON.parse(savedEvents)
-                    // البحث عن الحدث بالاسم
-                    const event = events.find(e => {
-                        // استخدام الاسم الإنجليزي إذا كان متوفراً، وإلا استخدم الاسم العربي
-                        let eventPath = ''
-                        if (e.englishName) {
-                            eventPath = e.englishName.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
-                        } else {
-                            eventPath = e.name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
-                            // معالجة التاء المربوطة
-                            if (eventPath.endsWith('ة')) {
-                                eventPath = eventPath.slice(0, -1) + 'ه'
-                            }
+        const loadEvents = async () => {
+            try {
+                // جلب جميع الأحداث الرئيسية من API
+                const mainEventsResponse = await eventService.getMainEvents()
+                
+                let mainEvents = []
+                if (mainEventsResponse && mainEventsResponse.results && Array.isArray(mainEventsResponse.results)) {
+                    mainEvents = mainEventsResponse.results
+                } else if (Array.isArray(mainEventsResponse)) {
+                    mainEvents = mainEventsResponse
+                }
+                
+                // البحث عن الحدث المطلوب
+                const targetEvent = mainEvents.find(event => {
+                    // إنشاء المسار من event_link أو event_name
+                    let eventPath = ''
+                    if (event.event_link && event.event_link.trim()) {
+                        eventPath = event.event_link.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
+                    } else {
+                        eventPath = event.event_name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
+                    }
+                    
+                    return eventPath === eventName
+                })
+                
+                if (targetEvent) {
+                    setEventData(targetEvent)
+                    
+                    // جلب الأحداث الفرعية
+                    const subEventsResponse = await eventService.getSubEvents(targetEvent.id)
+                    
+                    let validSubEvents = []
+                    if (subEventsResponse && subEventsResponse.results && Array.isArray(subEventsResponse.results)) {
+                        validSubEvents = subEventsResponse.results
+                    } else if (Array.isArray(subEventsResponse)) {
+                        validSubEvents = subEventsResponse
+                    }
+                    
+                    setSubEvents(validSubEvents)
+                    
+                    // حساب الإحصائيات
+                    if (validSubEvents.length > 0) {
+                        // جلب جميع الوفود
+                        const allDelegationsResponse = await delegationService.getDelegations()
+                        let allDelegations = []
+                        if (allDelegationsResponse && allDelegationsResponse.results && Array.isArray(allDelegationsResponse.results)) {
+                            allDelegations = allDelegationsResponse.results
+                        } else if (Array.isArray(allDelegationsResponse)) {
+                            allDelegations = allDelegationsResponse
                         }
                         
-                        // معالجة التاء المربوطة في المقارنة
-                        let normalizedEventName = eventName
-                        if (normalizedEventName.endsWith('ة')) {
-                            normalizedEventName = normalizedEventName.slice(0, -1) + 'ه'
-                        }
-                        return eventPath === normalizedEventName
-                    })
-                    
-                    if (event) {
-                        setEventData(event)
-                        if (event.sub_events) {
-                            setSubEvents(event.sub_events)
-                            
-                            // حساب الإحصائيات الحقيقية
-                            const subEventIds = event.sub_events.map(se => se.id)
-                            
-                            // جلب الوفود
-                            const savedDelegations = localStorage.getItem('delegations')
-                            let delegationCount = 0
-                            let militaryCount = 0
-                            let civilCount = 0
-                            
-                            if (savedDelegations) {
-                                const delegations = JSON.parse(savedDelegations)
-                                const filteredDelegations = delegations.filter(d => 
-                                    subEventIds.includes(d.subEventId) || subEventIds.includes(parseInt(d.subEventId))
-                                )
-                                
-                                delegationCount = filteredDelegations.length
-                                militaryCount = filteredDelegations.filter(d => d.type === 'military').length
-                                civilCount = filteredDelegations.filter(d => d.type === 'civil').length
-                            }
-                            
-                            // جلب الأعضاء
-                            const savedMembers = localStorage.getItem('members')
-                            let memberCount = 0
-                            
-                            if (savedMembers) {
-                                const members = JSON.parse(savedMembers)
-                                const filteredMembers = members.filter(m => 
-                                    subEventIds.includes(m.subEventId) || subEventIds.includes(parseInt(m.subEventId))
-                                )
-                                memberCount = filteredMembers.length
-                            }
+                        // فلترة الوفود للأحداث الفرعية
+                        const subEventIds = validSubEvents.map(se => se.id)
+                        const filteredDelegations = allDelegations.filter(d => 
+                            subEventIds.includes(d.sub_event_id)
+                        )
+                        
+                        // حساب الإحصائيات
+                        const delegationCount = filteredDelegations.length
+                        const militaryCount = filteredDelegations.filter(d => d.type === 'MILITARY').length
+                        const civilCount = filteredDelegations.filter(d => d.type === 'CIVILIAN').length
+                        const memberCount = filteredDelegations.reduce((sum, d) => sum + (d.current_members || 0), 0)
                             
                             setStats({
                                 delegationNum: delegationCount,
@@ -91,7 +110,6 @@ const EventPage = () => {
                                 memebersNum: memberCount
                             })
                         } else {
-                            setSubEvents([])
                             setStats({
                                 delegationNum: 0,
                                 militaryDelegationNum: 0,
@@ -99,7 +117,7 @@ const EventPage = () => {
                                 memebersNum: 0
                             })
                         }
-                    } else {
+                } else {
                         setEventData(null)
                         setSubEvents([])
                         setStats({
@@ -110,40 +128,18 @@ const EventPage = () => {
                         })
                     }
                 } catch (error) {
-                    console.error('خطأ في تحليل بيانات الأحداث:', error)
                     setEventData(null)
                     setSubEvents([])
-                }
-            } else {
-                setEventData(null)
-                setSubEvents([])
+                setStats({
+                    delegationNum: 0,
+                    militaryDelegationNum: 0,
+                    civilDelegationNum: 0,
+                    memebersNum: 0
+                })
             }
         }
         
         loadEvents()
-        
-        // الاستماع لتغييرات localStorage
-        const handleStorageChange = () => {
-            loadEvents()
-        }
-        
-        window.addEventListener('storage', handleStorageChange)
-        window.addEventListener('eventAdded', handleStorageChange)
-        window.addEventListener('eventDeleted', handleStorageChange)
-        window.addEventListener('delegationAdded', handleStorageChange)
-        window.addEventListener('delegationDeleted', handleStorageChange)
-        window.addEventListener('memberAdded', handleStorageChange)
-        window.addEventListener('memberDeleted', handleStorageChange)
-        
-        return () => {
-            window.removeEventListener('storage', handleStorageChange)
-            window.removeEventListener('eventAdded', handleStorageChange)
-            window.removeEventListener('eventDeleted', handleStorageChange)
-            window.removeEventListener('delegationAdded', handleStorageChange)
-            window.removeEventListener('delegationDeleted', handleStorageChange)
-            window.removeEventListener('memberAdded', handleStorageChange)
-            window.removeEventListener('memberDeleted', handleStorageChange)
-        }
     }, [eventName])
 
     if (!eventData) {
@@ -176,9 +172,13 @@ const EventPage = () => {
                                 <Icon icon={'fluent:filter-32-filled'} />
                                 <span>فلتر</span>
                             </Button>
-                            <AddEvent />
+                            <AddEvent onEventAdded={handleEventAdded} />
                         </div>
-                        <EventsList events={subEvents} />
+                        <EventsList 
+                            events={subEvents} 
+                            mainEventName={eventData.event_name} 
+                            mainEventEnglishName={eventData.event_link}
+                        />
                     </>
                 )}
             </div>

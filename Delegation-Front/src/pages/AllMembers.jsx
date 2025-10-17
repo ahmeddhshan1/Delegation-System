@@ -13,7 +13,7 @@ import DataTable from "../components/DataTable"
 import AllMembersTableToolbar from "../components/Members/AllMembersTableToolbar"
 import DeletePopup from "../components/DeletePopup"
 import EditMember from "../components/Members/EditMember"
-import { members } from "../data"
+// import { members } from "../data" // تم إزالة البيانات الوهمية
 import { toast } from "sonner"
 
 const AllMembers = () => {

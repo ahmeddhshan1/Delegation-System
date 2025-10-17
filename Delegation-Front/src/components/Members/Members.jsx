@@ -20,7 +20,8 @@ import DataTable from "../DataTable"
 import DeletePopup from "../DeletePopup"
 import EditMember from "./EditMember"
 import MembersTableToolbar from "./MembersTableToolbar"
-import { members } from "../../data"
+// import { members } from "../../data" // تم إزالة البيانات الوهمية
+import { usePermissions } from "../../store/hooks"
 
 export const columns = [
     {
@@ -118,6 +119,14 @@ export const columns = [
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
+            // جلب صلاحيات المستخدم من Redux
+            const { checkPermission } = usePermissions()
+            
+            // إخفاء أزرار التعديل والحذف عن USER
+            if (!checkPermission('EDIT_MEMBERS') && !checkPermission('DELETE_MEMBERS')) {
+                return null
+            }
+            
             return (
                 <DropdownMenu dir='rtl'>
                     <DropdownMenuTrigger asChild>
@@ -126,18 +135,22 @@ export const columns = [
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <EditMember member={row.original}>
-                            <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                <Icon icon={'material-symbols:edit-outline-rounded'} />
-                                <span>تعديل</span>
-                            </DropdownMenuItem>
-                        </EditMember>
-                        <DeletePopup item={row}>
-                            <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
-                                <Icon icon={'material-symbols:delete-outline-rounded'} />
-                                <span>حذف</span>
-                            </DropdownMenuItem>
-                        </DeletePopup>
+                        {checkPermission('EDIT_MEMBERS') && (
+                            <EditMember member={row.original}>
+                                <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                    <Icon icon={'material-symbols:edit-outline-rounded'} />
+                                    <span>تعديل</span>
+                                </DropdownMenuItem>
+                            </EditMember>
+                        )}
+                        {checkPermission('DELETE_MEMBERS') && (
+                            <DeletePopup item={row}>
+                                <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
+                                    <Icon icon={'material-symbols:delete-outline-rounded'} />
+                                    <span>حذف</span>
+                                </DropdownMenuItem>
+                            </DeletePopup>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             )

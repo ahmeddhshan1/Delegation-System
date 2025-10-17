@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
-    MainEvent, SubEvent, Nationality, MilitaryPosition,
-    Airport, Airline, Delegation, Member, DepartureSession
+    MainEvent, SubEvent, Nationality, Cities,
+    AirLine, AirPort, EquivalentJob, Delegation, Member, CheckOut
 )
 
 
@@ -18,7 +18,7 @@ class MainEventSerializer(serializers.ModelSerializer):
 
 
 class SubEventSerializer(serializers.ModelSerializer):
-    main_event_name = serializers.CharField(source='main_event.name', read_only=True)
+    main_event_name = serializers.CharField(source='main_event_id.event_name', read_only=True)
     delegations_count = serializers.SerializerMethodField()
     
     class Meta:
@@ -37,30 +37,38 @@ class NationalitySerializer(serializers.ModelSerializer):
         read_only_fields = ('created_at', 'updated_at', 'id')
 
 
-class MilitaryPositionSerializer(serializers.ModelSerializer):
+class CitiesSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MilitaryPosition
+        model = Cities
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at', 'id')
 
 
-class AirportSerializer(serializers.ModelSerializer):
+class AirLineSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Airport
+        model = AirLine
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at', 'id')
 
 
-class AirlineSerializer(serializers.ModelSerializer):
+class AirPortSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Airline
+        model = AirPort
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at', 'id')
+
+
+class EquivalentJobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EquivalentJob
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at', 'id')
 
 
 class MemberSerializer(serializers.ModelSerializer):
-    delegation_nationality = serializers.CharField(source='delegation.nationality.name', read_only=True)
-    delegation_sub_event = serializers.CharField(source='delegation.sub_event.name', read_only=True)
+    delegation_nationality = serializers.CharField(source='delegation_id.nationality_id.name', read_only=True)
+    delegation_sub_event = serializers.CharField(source='delegation_id.sub_event_id.event_name', read_only=True)
+    equivalent_job_name = serializers.CharField(source='equivalent_job_id.name', read_only=True)
     
     class Meta:
         model = Member
@@ -70,38 +78,60 @@ class MemberSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         member = super().create(validated_data)
         # Update delegation members count
-        member.delegation.update_members_count()
+        if member.delegation_id:
+            member.delegation_id.update_members_count()
         return member
     
     def update(self, instance, validated_data):
         member = super().update(instance, validated_data)
         # Update delegation members count
-        member.delegation.update_members_count()
+        if member.delegation_id:
+            member.delegation_id.update_members_count()
         return member
 
 
 class DelegationSerializer(serializers.ModelSerializer):
-    nationality_name = serializers.CharField(source='nationality.name', read_only=True)
-    sub_event_name = serializers.CharField(source='sub_event.name', read_only=True)
-    main_event_name = serializers.CharField(source='sub_event.main_event.name', read_only=True)
-    delegation_head = serializers.SerializerMethodField()
+    nationality_name = serializers.CharField(source='nationality_id.name', read_only=True)
+    sub_event_name = serializers.CharField(source='sub_event_id.event_name', read_only=True)
+    main_event_name = serializers.CharField(source='sub_event_id.main_event_id.event_name', read_only=True)
+    airport_name = serializers.CharField(source='airport_id.name', read_only=True)
+    airline_name = serializers.CharField(source='airline_id.name', read_only=True)
+    city_name = serializers.CharField(source='city_id.city_name', read_only=True)
     members = MemberSerializer(many=True, read_only=True)
     
     class Meta:
         model = Delegation
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at', 'id', 'current_members')
+
+
+class CheckOutSerializer(serializers.ModelSerializer):
+    delegation_nationality = serializers.CharField(source='delegation_id.nationality_id.name', read_only=True)
+    delegation_sub_event = serializers.CharField(source='delegation_id.sub_event_id.event_name', read_only=True)
+    airport_name = serializers.CharField(source='airport_id.name', read_only=True)
+    airline_name = serializers.CharField(source='airline_id.name', read_only=True)
+    city_name = serializers.CharField(source='city_id.city_name', read_only=True)
     
-    def get_delegation_head(self, obj):
-        return obj.get_delegation_head()
-
-
-class DepartureSessionSerializer(serializers.ModelSerializer):
-    delegation_nationality = serializers.CharField(source='delegation.nationality.name', read_only=True)
-    delegation_sub_event = serializers.CharField(source='delegation.sub_event.name', read_only=True)
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        
+        # تحويل member IDs إلى member objects كاملة
+        if 'members' in data and data['members']:
+            from .models import Member
+            member_ids = data['members']
+            if isinstance(member_ids, list) and member_ids:
+                try:
+                    members = Member.objects.filter(id__in=member_ids).values('id', 'name', 'rank')
+                    member_dict = {str(member['id']): member for member in members}
+                    data['members'] = [member_dict.get(str(member_id), {'id': member_id, 'name': f'عضو #{member_id}', 'rank': ''}) for member_id in member_ids]
+                except Exception as e:
+                    # في حالة الخطأ، نترك البيانات كما هي
+                    pass
+        
+        return data
     
     class Meta:
-        model = DepartureSession
+        model = CheckOut
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at', 'id')
 
@@ -112,7 +142,7 @@ class EventStatsSerializer(serializers.Serializer):
     total_sub_events = serializers.IntegerField()
     total_delegations = serializers.IntegerField()
     total_members = serializers.IntegerField()
-    total_departure_sessions = serializers.IntegerField()
+    total_check_outs = serializers.IntegerField()
 
 
 class DelegationStatsSerializer(serializers.Serializer):
@@ -137,3 +167,4 @@ class DashboardDataSerializer(serializers.Serializer):
     member_stats = MemberStatsSerializer()
     recent_delegations = DelegationSerializer(many=True)
     recent_members = MemberSerializer(many=True)
+    recent_check_outs = CheckOutSerializer(many=True)
