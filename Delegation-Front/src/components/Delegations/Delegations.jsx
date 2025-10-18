@@ -72,7 +72,18 @@ export const columns = [
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue) return true
             const nationality = row.getValue(columnId)
-            return nationality && nationality.toLowerCase().includes(filterValue.toLowerCase())
+            
+            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            if (filterValue === "empty") {
+                return !nationality || nationality === ""
+            }
+            
+            // إذا كان الفلتر له قيمة محددة، نعرض فقط القيم المكتملة التي تطابق
+            // التأكد من أن القيمة ليست فارغة قبل المقارنة
+            if (!nationality || nationality === "") {
+                return false
+            }
+            return nationality.toLowerCase().includes(filterValue.toLowerCase())
         },
     },
     {
@@ -139,7 +150,18 @@ export const columns = [
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue) return true
             const hall = row.getValue(columnId)
-            return hall && hall.toLowerCase().includes(filterValue.toLowerCase())
+            
+            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            if (filterValue === "empty") {
+                return !hall || hall === ""
+            }
+            
+            // إذا كان الفلتر له قيمة محددة، نعرض فقط القيم المكتملة التي تطابق
+            // التأكد من أن القيمة ليست فارغة قبل المقارنة
+            if (!hall || hall === "") {
+                return false
+            }
+            return hall.toLowerCase().includes(filterValue.toLowerCase())
         },
     },
     {
@@ -151,7 +173,18 @@ export const columns = [
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue) return true
             const airline = row.getValue(columnId)
-            return airline && airline.toLowerCase().includes(filterValue.toLowerCase())
+            
+            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            if (filterValue === "empty") {
+                return !airline || airline === ""
+            }
+            
+            // إذا كان الفلتر له قيمة محددة، نعرض فقط القيم المكتملة التي تطابق
+            // التأكد من أن القيمة ليست فارغة قبل المقارنة
+            if (!airline || airline === "") {
+                return false
+            }
+            return airline.toLowerCase().includes(filterValue.toLowerCase())
         },
     },
     {
@@ -163,7 +196,18 @@ export const columns = [
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue) return true
             const origin = row.getValue(columnId)
-            return origin && origin.toLowerCase().includes(filterValue.toLowerCase())
+            
+            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            if (filterValue === "empty") {
+                return !origin || origin === ""
+            }
+            
+            // إذا كان الفلتر له قيمة محددة، نعرض فقط القيم المكتملة التي تطابق
+            // التأكد من أن القيمة ليست فارغة قبل المقارنة
+            if (!origin || origin === "") {
+                return false
+            }
+            return origin.toLowerCase().includes(filterValue.toLowerCase())
         },
     },
     {

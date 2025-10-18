@@ -30,7 +30,12 @@ const DelegationFilter = ({ table, data }) => {
     const applyFilter = (val, fieldName) => {
         const column = table.getColumn(fieldName)
         if (column) {
-            column.setFilterValue(val === "" ? undefined : val)
+            // إذا كانت القيمة "empty"، نطبق فلتر للقيم الفارغة
+            if (val === "empty") {
+                column.setFilterValue("empty")
+            } else {
+                column.setFilterValue(val)
+            }
         } else {
             console.error('DelegationFilter: Column not found:', fieldName)
         }
@@ -112,14 +117,15 @@ const DelegationFilter = ({ table, data }) => {
                                 <SelectTrigger className="w-full !ring-0 col-span-2">
                                     <SelectValue placeholder="الجنسية" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    {
-                                        [...new Set(data.map(el => el.nationality).filter(Boolean))]
-                                            .map((nationality, index) => (
-                                                <SelectItem key={index} value={nationality} >{nationality}</SelectItem>
-                                            ))
-                                    }
-                                </SelectContent>
+                                    <SelectContent>
+                                        <SelectItem value="empty">غير محدد</SelectItem>
+                                        {
+                                            [...new Set(data.map(el => el.nationality).filter(Boolean))]
+                                                .map((nationality, index) => (
+                                                    <SelectItem key={index} value={nationality}>{nationality}</SelectItem>
+                                                ))
+                                        }
+                                    </SelectContent>
                             </Select>
                         </div>
                         <div className="grid grid-cols-3 items-center gap-4">
@@ -128,24 +134,25 @@ const DelegationFilter = ({ table, data }) => {
                                 <SelectTrigger className="w-full !ring-0 col-span-2">
                                     <SelectValue placeholder="قادمة من" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    {(() => {
-                                        const origins = data
-                                            .map(el => el.arrivalInfo?.arrivalOrigin)
-                                            .filter(Boolean)
-                                        
-                                        // إزالة التكرارات وترتيب القائمة
-                                        const uniqueOrigins = [...new Set(origins)].sort((a, b) => a.localeCompare(b, 'ar'))
-                                        
-                                        if (uniqueOrigins.length === 0) {
-                                            return <SelectItem value="no-data">لا توجد بيانات</SelectItem>
-                                        }
-                                        
-                                        return uniqueOrigins.map((origin, index) => (
-                                            <SelectItem key={index} value={origin}>{origin}</SelectItem>
-                                        ))
-                                    })()}
-                                </SelectContent>
+                                    <SelectContent>
+                                        <SelectItem value="empty">غير محدد</SelectItem>
+                                        {(() => {
+                                            const origins = data
+                                                .map(el => el.arrivalInfo?.arrivalOrigin)
+                                                .filter(Boolean)
+                                            
+                                            // إزالة التكرارات وترتيب القائمة
+                                            const uniqueOrigins = [...new Set(origins)].sort((a, b) => a.localeCompare(b, 'ar'))
+                                            
+                                            if (uniqueOrigins.length === 0) {
+                                                return <SelectItem value="no-data">لا توجد بيانات</SelectItem>
+                                            }
+                                            
+                                            return uniqueOrigins.map((origin, index) => (
+                                                <SelectItem key={index} value={origin}>{origin}</SelectItem>
+                                            ))
+                                        })()}
+                                    </SelectContent>
                             </Select>
                         </div>
                         <div className="grid grid-cols-3 items-center gap-4">
