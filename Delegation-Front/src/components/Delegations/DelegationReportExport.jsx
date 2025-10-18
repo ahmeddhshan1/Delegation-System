@@ -26,17 +26,9 @@ const DelegationReportExport = ({data}) => {
                 data.some(d => d.id === member.delegation_id)
             );
             
-            // 1. طباعة التقرير الشامل
+            // طباعة التقرير الشامل الواحد فقط
             const combinedBlob = await pdf(<SmartCombinedReportPDF delegationData={data} membersData={filteredMembers} showDelegations={true} showMembers={true} />).toBlob();
             saveAs(combinedBlob, "تقرير شامل.pdf");
-            
-            // 2. طباعة تقرير الوفود المنفصل
-            const delegationBlob = await pdf(<SmartCombinedReportPDF delegationData={data} membersData={[]} showDelegations={true} showMembers={false} />).toBlob();
-            saveAs(delegationBlob, "تقرير الوفود.pdf");
-            
-            // 3. طباعة تقرير الأعضاء المنفصل
-            const membersBlob = await pdf(<SmartCombinedReportPDF delegationData={[]} membersData={filteredMembers} showDelegations={false} showMembers={true} />).toBlob();
-            saveAs(membersBlob, "تقرير الأعضاء.pdf");
             
         } catch (error) {
             console.error('Error generating reports:', error);

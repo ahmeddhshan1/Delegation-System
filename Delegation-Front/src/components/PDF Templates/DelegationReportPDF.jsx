@@ -78,6 +78,7 @@ const headers = [
   "مطار الوصول",
   "شركة طيران الوصول",
   "رقم رحلة الوصول",
+  "قادمة من",
   "حالة الوفد",
   "تاريخ الوصول",
   "سعت الوصول",
@@ -136,6 +137,7 @@ const DelegationReportPDF = ({ data }) => {
               <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalHall}</Text>
               <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalAirline}</Text>
               <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalFlightNumber}</Text>
+              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
               <Text style={[styles.cell]}>
                 {row.delegationStatus === 'all_departed' ? 'الوفد غادر' :
                  row.delegationStatus === 'partial_departed' ? 'جزء منه غادر' :

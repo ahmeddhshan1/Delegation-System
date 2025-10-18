@@ -104,6 +104,7 @@ const delegationHeaders = [
   "الصالة",
   "شركة الطيران",
   "رقم الرحلة",
+  "قادمة من",
   "نوع الحركة",
   "التاريخ",
   "سعت",
@@ -176,6 +177,7 @@ const CombinedReportPDF = ({
                   <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalHall}</Text>
                   <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalAirline}</Text>
                   <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalFlightNumber}</Text>
+                  <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
                   <Text style={[styles.cell]}>
                     {row.delegationStatus === 'all_departed' ? 'تم مغادرة الوفد' :
                      row.delegationStatus === 'partial_departed' ? 'لم يغادر جزء من الوفد' :

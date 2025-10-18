@@ -93,6 +93,7 @@ const delegationHeaders = [
   "المطار",
   "شركة الطيران",
   "رقم الرحلة",
+  "قادمة من",
   "الوجهة",
   "المستقبل",
   "الشحنات"
@@ -191,6 +192,7 @@ const CombinedDelegationReportPDF = ({ delegationData, membersData }) => {
               <Text style={styles.cell}>{row.arrivalInfo?.arrivalHall || '-'}</Text>
               <Text style={styles.cell}>{row.arrivalInfo?.arrivalAirline || '-'}</Text>
               <Text style={styles.cell}>{row.arrivalInfo?.arrivalFlightNumber || '-'}</Text>
+              <Text style={styles.cell}>{row.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
               <Text style={styles.cell}>{row.arrivalInfo?.arrivalDestination || '-'}</Text>
               <Text style={styles.cell}>{row.arrivalInfo?.arrivalReceptor || '-'}</Text>
               <Text style={styles.cell}>{row.arrivalInfo?.arrivalShipments || '-'}</Text>
