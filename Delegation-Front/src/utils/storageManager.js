@@ -8,9 +8,8 @@ export class StorageManager {
   static async clearAllStorage() {
     try {
       await persistor.purge()
-      localStorage.clear()
-      sessionStorage.clear()
-      console.log('تم مسح جميع البيانات المحفوظة')
+      // ملاحظة: تم إزالة مسح localStorage و sessionStorage لأن البيانات المرجعية تُحمل من API الآن
+      console.log('تم مسح البيانات المحفوظة في Redux')
     } catch (error) {
       console.error('خطأ في مسح البيانات المحفوظة:', error)
     }

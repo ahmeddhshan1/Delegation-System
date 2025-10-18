@@ -1,0 +1,20 @@
+[33ma000542[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Major updates: Enhanced delegation management, improved members handling, updated PDF reports, and UI components optimization
+[33m2beff5e[m Fix dark overlay issue: Reduce backdrop opacity from 50% to 30% for better UX
+[33m647532e[m Update departure management components and PDF templates
+[33mebfeedb[m Major system update: Enhanced delegation management system with improved authentication, database optimization, and UI improvements
+[33m5ec57df[m feat: Add seamless Django Admin integration for Super Admin
+[33m74221c8[m Update EdexMembers component
+[33m533d44f[m Make Excel export match PDF format exactly
+[33m9d46ff4[m Fix PDF export to show only filtered data
+[33m0b6dfd7[m Fix home page statistics update issues
+[33m78a81a2[m Fix real-time data updates on Home page
+[33m9654920[m Improve PDF report design and layout
+[33m74ce5f2[m Remove all console.log statements from Members components
+[33m4e2260f[m Update project name to delegation-system and add Vercel deployment config
+[33m82451ed[m Merge branch 'main' of https://github.com/ahmeddhshan1/Delegation-System
+[33m2a593fc[m Remove console.log statements from AllMembers page
+[33mc703ce6[m Update README.md
+[33m8c4bad8[m Add comprehensive README.md with project documentation
+[33m9953fc9[m Update package.json and package-lock.json dependencies
+[33mc1b72d5[m Add Delegation-Front as normal folder
+[33mb51fe72[m Initial commit

@@ -230,37 +230,29 @@ const AddMemberToDelegation = () => {
         }
     }, [open, delegationId])
 
-    useEffect(() => {
-        const savedPositions = localStorage.getItem('militaryPositions')
-        if (savedPositions) {
-            try {
-                const positions = JSON.parse(savedPositions)
-                setAvailablePositions(positions)
-            } catch (error) {
-                setAvailablePositions(militaryPositions)
-            }
-        } else {
+    // تحميل الوظائف المعادلة من API
+    const loadEquivalentJobs = async () => {
+        try {
+            const jobs = await equivalentJobService.getEquivalentJobs()
+            const jobNames = jobs.map(job => job.name)
+            setAvailablePositions(jobNames)
+        } catch (error) {
+            console.error('خطأ في تحميل الوظائف المعادلة:', error)
+            // استخدام البيانات الافتراضية كـ fallback
             setAvailablePositions(militaryPositions)
         }
+    }
+
+    useEffect(() => {
+        loadEquivalentJobs()
     }, [])
 
     useEffect(() => {
         const handleMemberChange = () => { updateMemberCountInfo() }
-        const handlePositionsUpdated = () => {
-            const savedPositions = localStorage.getItem('militaryPositions')
-            if (savedPositions) {
-                try {
-                    const positions = JSON.parse(savedPositions)
-                    setAvailablePositions(positions)
-                } catch {}
-            }
-        }
         window.addEventListener('delegationUpdated', handleMemberChange)
-        window.addEventListener('positionsUpdated', handlePositionsUpdated)
         updateMemberCountInfo()
         return () => {
             window.removeEventListener('delegationUpdated', handleMemberChange)
-            window.removeEventListener('positionsUpdated', handlePositionsUpdated)
         }
     }, [delegationId])
 

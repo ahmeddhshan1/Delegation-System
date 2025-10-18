@@ -62,32 +62,11 @@ const EditDelegation = ({ delegation, children }) => {
     const [citiesList, setCitiesList] = useState([])
     const [originSearchTerm, setOriginSearchTerm] = useState("")
 
-
-    // تحميل القوائم من الـ API عند فتح النموذج
+    // تحميل البيانات المرجعية عند فتح النموذج
     useEffect(() => {
-        let mounted = true
-        const loadOptions = async () => {
-            try {
-                const [nRes, apRes, alRes, cRes] = await Promise.all([
-                    nationalityService.getNationalities(),
-                    airportService.getAirports(),
-                    airlineService.getAirlines(),
-                    citiesService.getCities(),
-                ])
-                if (!mounted) return
-                const toList = (res) => (res && Array.isArray(res.results)) ? res.results : (Array.isArray(res) ? res : [])
-                const n = toList(nRes)
-                const ap = toList(apRes)
-                const al = toList(alRes)
-                const ci = toList(cRes)
-                setNationalitiesList(n); setAvailableNationalities(n.map(x => x.name))
-                setAirportsList(ap); setAvailableAirports(ap.map(x => x.name))
-                setAirlinesList(al); setAvailableAirlines(al.map(x => x.name))
-                setCitiesList(ci); setAvailableOrigins(ci.map(x => x.city_name))
-            } catch {}
+        if (open) {
+            loadReferenceData()
         }
-        if (open) loadOptions()
-        return () => { mounted = false }
     }, [open])
 
     const validationSchema = yup.object({
@@ -129,22 +108,43 @@ const EditDelegation = ({ delegation, children }) => {
         return apiType === 'MILITARY' ? 'military' : apiType === 'CIVILIAN' ? 'civil' : ''
     }
 
-    // تحميل البيانات من API/القيم الحالية عند فتح النموذج
-    useEffect(() => {
-        if (open) {
-            // تحميل الجنسيات من localStorage
-            const savedNationalities = localStorage.getItem('nationalities')
-            if (savedNationalities) {
-                setAvailableNationalities(JSON.parse(savedNationalities))
+    // تحميل البيانات المرجعية من API
+    const loadReferenceData = async () => {
+        try {
+            const [nationalitiesRes, airportsRes, airlinesRes, citiesRes] = await Promise.all([
+                nationalityService.getNationalities(),
+                airportService.getAirports(),
+                airlineService.getAirlines(),
+                citiesService.getCities(),
+            ])
+
+            // تحويل البيانات إلى مصفوفات من الأسماء
+            const toArray = (res, nameKey) => {
+                if (res && Array.isArray(res.results)) return res.results.map(r => r[nameKey]).filter(Boolean)
+                if (Array.isArray(res)) return res.map(r => r[nameKey]).filter(Boolean)
+                return []
             }
+
+            const nationalities = toArray(nationalitiesRes, 'name')
+            const airports = toArray(airportsRes, 'name')
+            const airlines = toArray(airlinesRes, 'name')
+            const origins = toArray(citiesRes, 'city_name')
+
+            setAvailableNationalities(nationalities)
+            setAvailableAirports(airports)
+            setAvailableAirlines(airlines)
+            setAvailableOrigins(origins)
             
-            // تحميل المطارات من localStorage
-            const savedAirports = localStorage.getItem('airports')
-            if (savedAirports) {
-                setAvailableAirports(JSON.parse(savedAirports))
-            }
+            // حفظ البيانات الكاملة للاستخدام في onSubmit
+            setNationalitiesList(Array.isArray(nationalitiesRes?.results) ? nationalitiesRes.results : Array.isArray(nationalitiesRes) ? nationalitiesRes : [])
+            setAirportsList(Array.isArray(airportsRes?.results) ? airportsRes.results : Array.isArray(airportsRes) ? airportsRes : [])
+            setAirlinesList(Array.isArray(airlinesRes?.results) ? airlinesRes.results : Array.isArray(airlinesRes) ? airlinesRes : [])
+            setCitiesList(Array.isArray(citiesRes?.results) ? citiesRes.results : Array.isArray(citiesRes) ? citiesRes : [])
+        } catch (error) {
+            console.error('خطأ في تحميل البيانات المرجعية:', error)
+            toast.error('فشل في تحميل البيانات المرجعية')
         }
-    }, [open])
+    }
 
 
     const handleNationalityChange = (value) => {
@@ -304,13 +304,38 @@ const EditDelegation = ({ delegation, children }) => {
         
         try {
             // استخراج المعرفات من القوائم
+            console.log('البحث عن المعرفات:', {
+                selectedNationality,
+                selectedAirport,
+                selectedAirline,
+                selectedOrigin,
+                nationalitiesList: nationalitiesList.length,
+                airportsList: airportsList.length,
+                airlinesList: airlinesList.length,
+                citiesList: citiesList.length
+            })
+            
             const nat = nationalitiesList.find(x => x.name === selectedNationality)
             const ap = airportsList.find(x => x.name === selectedAirport)
             const al = airlinesList.find(x => x.name === selectedAirline)
             const ci = citiesList.find(x => x.city_name === selectedOrigin)
+            
+            console.log('المعرفات المستخرجة:', { nat, ap, al, ci })
 
             const timeStr = (data.arrivalTime || '').trim()
             const formattedTime = timeStr && timeStr.length === 4 ? `${timeStr.slice(0,2)}:${timeStr.slice(2)}` : null
+
+            // التحقق من عدد الأعضاء
+            const newMemberCount = parseInt(data.membersCount) || 0
+            const currentMembers = delegation.current_members || 0
+            
+            console.log('Validation check:', { newMemberCount, currentMembers, delegation })
+            
+            if (newMemberCount < currentMembers) {
+                toast.error(`لا يمكن تقليل العدد أقل من ${currentMembers} عضو`)
+                setLoading(false)
+                return
+            }
 
             const payload = {
                 nationality_id: nat ? nat.id : null,
@@ -318,13 +343,13 @@ const EditDelegation = ({ delegation, children }) => {
                 airline_id: al ? al.id : null,
                 city_id: ci ? ci.id : null,
                 delegation_leader_name: data.delegationHead,
-                member_count: parseInt(data.membersCount) || 0,
+                member_count: newMemberCount,
                 flight_number: data.arrivalFlightNumber,
                 type: data.delegationType === 'military' ? 'MILITARY' : 'CIVILIAN',
                 arrive_date: data.arrivalDate || null,
                 arrive_time: formattedTime,
                 receiver_name: data.arrivalReceptor,
-                going_to: selectedOrigin,
+                going_to: data.arrivalDestination, // الوجهة (الفندق)
                 goods: data.arrivalShipments,
             }
 
@@ -358,6 +383,14 @@ const EditDelegation = ({ delegation, children }) => {
             if (initialType) {
                 setValue('delegationType', initialType, { shouldValidate: false })
             }
+            
+            // تعيين القيم المختارة من البيانات المحملة
+            console.log('تعيين القيم المختارة:', {
+                nationality: delegation.nationality,
+                arrivalHall: delegation.arrivalInfo?.arrivalHall,
+                arrivalAirline: delegation.arrivalInfo?.arrivalAirline,
+                arrivalOrigin: delegation.arrivalInfo?.arrivalOrigin
+            })
             
             setSelectedNationality(delegation.nationality || "")
             setSelectedAirport(delegation.arrivalInfo?.arrivalHall || "")

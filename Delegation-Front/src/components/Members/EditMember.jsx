@@ -203,73 +203,41 @@ const EditMember = ({ member, children }) => {
         }
     }, [open, reset])
 
-    // تحميل المناصب العسكرية من localStorage في البداية
-    useEffect(() => {
-        const savedPositions = localStorage.getItem('militaryPositions')
-        if (savedPositions) {
-            try {
-                const positions = JSON.parse(savedPositions)
-                setAvailablePositions(positions)
-            } catch (error) {
-                console.error('خطأ في تحليل المناصب العسكرية:', error)
-                // استخدام المناصب الافتراضية في حالة الخطأ
-                setAvailablePositions(militaryPositions)
-            }
-        } else {
-            // إذا لم توجد مناصب محفوظة، استخدم الافتراضية
+    // تحميل الوظائف المعادلة من API
+    const loadEquivalentJobs = async () => {
+        try {
+            const jobs = await equivalentJobService.getEquivalentJobs()
+            const jobNames = jobs.map(job => job.name)
+            setAvailablePositions(jobNames)
+        } catch (error) {
+            console.error('خطأ في تحميل الوظائف المعادلة:', error)
+            // استخدام البيانات الافتراضية كـ fallback
             setAvailablePositions(militaryPositions)
         }
+    }
+
+    // تحميل الوظائف المعادلة عند فتح المكون
+    useEffect(() => {
+        loadEquivalentJobs()
     }, [])
 
-    // الاستماع لتحديث المناصب العسكرية من الفورمات الأخرى
+    // الاستماع لتحديث الوظائف المعادلة
     useEffect(() => {
         const handlePositionsUpdated = () => {
-            const savedPositions = localStorage.getItem('militaryPositions')
-            if (savedPositions) {
-                try {
-                    const positions = JSON.parse(savedPositions)
-                    setAvailablePositions(positions)
-                } catch (error) {
-                    console.error('خطأ في تحليل المناصب العسكرية:', error)
-                }
-            }
+            loadEquivalentJobs()
         }
 
-        // الاستماع لتغييرات localStorage مباشرة
-        const handleStorageChange = (e) => {
-            if (e.key === 'militaryPositions' && e.newValue) {
-                try {
-                    const positions = JSON.parse(e.newValue)
-                    setAvailablePositions(positions)
-                } catch (error) {
-                    console.error('خطأ في تحليل المناصب العسكرية:', error)
-                }
-            }
-        }
-
-        // الاستماع لتحديث الأعضاء (لإعادة تحميل البيانات عند الحاجة)
         const handleMemberUpdate = () => {
-            // إعادة تحميل البيانات من localStorage
-            const savedPositions = localStorage.getItem('militaryPositions')
-            if (savedPositions) {
-                try {
-                    const positions = JSON.parse(savedPositions)
-                    setAvailablePositions(positions)
-                } catch (error) {
-                    console.error('خطأ في تحليل المناصب العسكرية:', error)
-                }
-            }
+            loadEquivalentJobs()
         }
 
         window.addEventListener('positionsUpdated', handlePositionsUpdated)
-        window.addEventListener('storage', handleStorageChange)
         window.addEventListener('memberAdded', handleMemberUpdate)
         window.addEventListener('memberDeleted', handleMemberUpdate)
         window.addEventListener('memberUpdated', handleMemberUpdate)
         
         return () => {
             window.removeEventListener('positionsUpdated', handlePositionsUpdated)
-            window.removeEventListener('storage', handleStorageChange)
             window.removeEventListener('memberAdded', handleMemberUpdate)
             window.removeEventListener('memberDeleted', handleMemberUpdate)
             window.removeEventListener('memberUpdated', handleMemberUpdate)

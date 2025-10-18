@@ -536,7 +536,7 @@ const AddDelegation = ({ subEventId }) => {
                 arrive_date: data.arrivalDate || null,
                 arrive_time: formattedTime,
                 receiver_name: data.arrivalReceptor,
-                going_to: selectedOrigin,
+                going_to: data.arrivalDestination, // الوجهة (الفندق)
                 goods: data.arrivalShipments,
             }
 

@@ -33,16 +33,9 @@ const DeletePopup = ({item, children, onDelete}) => {
                 const deleteResult = deleteDelegationData(itemId)
                 
                 if (deleteResult.success) {
-                    // حذف الوفد نفسه
-                    const savedDelegations = localStorage.getItem('delegations')
-                    if (savedDelegations) {
-                        const delegations = JSON.parse(savedDelegations)
-                        const updatedDelegations = delegations.filter(delegation => delegation.id !== itemId)
-                        localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                        
-                        window.dispatchEvent(new CustomEvent('delegationDeleted'))
-                        toast.success('تم حذف الوفد وجميع البيانات المرتبطة به بنجاح')
-                    }
+                    // إرسال إشعار بالحذف
+                    window.dispatchEvent(new CustomEvent('delegationDeleted'))
+                    toast.success('تم حذف الوفد وجميع البيانات المرتبطة به بنجاح')
                 } else {
                     toast.error(deleteResult.message)
                     setLoading(false)

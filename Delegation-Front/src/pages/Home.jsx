@@ -162,8 +162,7 @@ const Home = () => {
         
         loadLatestSubEvents()
         
-        // إزالة event listeners للـ localStorage لأننا نستخدم API الآن
-        // يمكن إضافة refresh button أو periodic refresh إذا لزم الأمر
+        // ملاحظة: تم إزالة event listeners للـ localStorage لأننا نستخدم API الآن
         
         return () => {
             isMounted = false // تعيين flag إلى false عند cleanup

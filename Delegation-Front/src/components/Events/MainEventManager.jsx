@@ -64,49 +64,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
         // selectedEvent يأتي من props، لا نحتاج لحفظه في state محلي
     }, [selectedEvent])
 
-    // الاستماع لتغييرات localStorage والأحداث المخصصة
-    useEffect(() => {
-        const handleStorageChange = () => {
-            // إعادة تحميل البيانات من localStorage
-            const savedEvents = localStorage.getItem('mainEvents')
-            if (savedEvents) {
-                try {
-                    const parsedEvents = JSON.parse(savedEvents)
-                    setMainEvents(parsedEvents)
-                    
-                    // إلغاء تحديد الحدث إذا كان محذوف
-                    if (selectedEvent && !parsedEvents.find(e => e.id === selectedEvent.id)) {
-                        onEventSelected && onEventSelected(null)
-                    }
-                } catch (error) {
-                    console.error('خطأ في تحليل بيانات الأحداث:', error)
-                }
-            }
-        }
-
-        // الاستماع لتغييرات localStorage (للتابات الأخرى)
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'lastEventUpdate') {
-                handleStorageChange()
-            }
-        })
-        
-        // الاستماع للأحداث المخصصة (لنفس التابة)
-        window.addEventListener('eventAdded', handleStorageChange)
-        window.addEventListener('eventDeleted', handleStorageChange)
-        window.addEventListener('eventUpdated', handleStorageChange)
-
-        return () => {
-            window.removeEventListener('storage', (event) => {
-                if (event.key === 'lastEventUpdate') {
-                    handleStorageChange()
-                }
-            })
-            window.removeEventListener('eventAdded', handleStorageChange)
-            window.removeEventListener('eventDeleted', handleStorageChange)
-            window.removeEventListener('eventUpdated', handleStorageChange)
-        }
-    }, [])
+    // ملاحظة: تم إزالة الاستماع لتغييرات localStorage لأن الأحداث تُحمل من API الآن
 
     const onSubmit = handleSubmit(async (data) => {
         // التحقق الإضافي من التكرار قبل الحفظ

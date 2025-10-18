@@ -114,8 +114,7 @@ const DelegationFilter = ({ table, data }) => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {
-                                        data
-                                            .map(el => el[table.getColumn("nationality").id])
+                                        [...new Set(data.map(el => el.nationality).filter(Boolean))]
                                             .map((nationality, index) => (
                                                 <SelectItem key={index} value={nationality} >{nationality}</SelectItem>
                                             ))

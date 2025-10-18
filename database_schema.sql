@@ -217,7 +217,7 @@ CREATE TABLE delegation (
     arrive_date DATE,                               -- تاريخ الوصول
     arrive_time TIME,                               -- ساعة الوصول
     receiver_name VARCHAR(100),                     -- اسم المستقبل (ورتبته)
-    going_to VARCHAR(255),                          -- الوجهة (الطيارة قادمة منين)
+    going_to VARCHAR(255),                          -- الوجهة (الفندق أو المكان اللي هيروحوا عليه)
     goods TEXT,                                     -- الشحنات
     -- ملاحظة: تم إزالة arrival_info و departure_info لتجنب التكرار
     -- جميع معلومات الوصول موجودة في الحقول العادية أعلاه

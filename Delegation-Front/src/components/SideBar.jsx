@@ -142,43 +142,7 @@ const SideBar = () => {
                     </li>
                 ))}
                 
-                {/* الأحداث الجديدة المضافة */}
-                {Object.keys(subEvents).map((path) => {
-                    // تجاهل الأحداث الموجودة بالفعل في dynamicNavLinks
-                    const existingEvent = dynamicNavLinks.find(link => link.to === path)
-                    if (existingEvent) return null
-                    
-                    // جلب اسم الحدث من localStorage
-                    const savedEvents = localStorage.getItem('mainEvents')
-                    if (!savedEvents) return null
-                    
-                    try {
-                        const events = JSON.parse(savedEvents)
-                        const event = events.find(e => {
-                            let eventPath = ''
-                            // للأحداث الجديدة، استخدم الاسم الإنجليزي إذا كان متوفراً
-                            if (e.englishName) {
-                                eventPath = `/${e.englishName.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')}`
-                            } else {
-                                eventPath = `/${e.name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')}`
-                            }
-                            return eventPath === path
-                        })
-                        
-                        if (!event) return null
-                        
-                        return (
-                            <li key={path}>
-                                <NavLink to={path} className="link">
-                                    <Icon icon={event.icon} fontSize={24} />
-                                    <span>{event.name}</span>
-                                </NavLink>
-                            </li>
-                        )
-                    } catch (error) {
-                        return null
-                    }
-                })}
+                {/* ملاحظة: تم إزالة الأحداث الجديدة المضافة من localStorage لأنها تُحمل من API الآن */}
                 
                 {/* إدارة الأحداث - ممنوع على USER */}
                 {checkPermission('MANAGE_EVENTS') && (

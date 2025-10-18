@@ -15,41 +15,44 @@ import DeletePopup from "../components/DeletePopup"
 import EditMember from "../components/Members/EditMember"
 // import { members } from "../data" // تم إزالة البيانات الوهمية
 import { toast } from "sonner"
+import { memberService, delegationService, eventService } from "../services/api"
 
 const AllMembers = () => {
     const [data, setData] = useState([])
     
-    // دالة محسنة لتحميل الأعضاء مع تحديث حالة المغادرة
-    const loadMembers = useCallback(() => {
+    // دالة محسنة لتحميل الأعضاء من API
+    const loadMembers = useCallback(async () => {
         try {
-            const savedMembers = localStorage.getItem('members')
-            const savedDelegations = localStorage.getItem('delegations')
-            const savedEventCategories = localStorage.getItem('eventCategories')
-
-            if (savedMembers && savedMembers !== '[]') {
-                const parsedMembers = JSON.parse(savedMembers)
-                const parsedDelegations = savedDelegations ? JSON.parse(savedDelegations) : []
+            // جلب الأعضاء من API
+            const membersResponse = await memberService.getMembers()
+            const members = Array.isArray(membersResponse?.results) ? membersResponse.results : Array.isArray(membersResponse) ? membersResponse : []
+            
+            if (members.length > 0) {
+                // جلب الوفود من API
+                const delegationsResponse = await delegationService.getDelegations()
+                const delegations = Array.isArray(delegationsResponse?.results) ? delegationsResponse.results : Array.isArray(delegationsResponse) ? delegationsResponse : []
                 
-                // استخراج الأحداث الفرعية من eventCategories
+                // جلب الأحداث من API
+                const eventsResponse = await eventService.getMainEvents()
+                const mainEvents = Array.isArray(eventsResponse?.results) ? eventsResponse.results : Array.isArray(eventsResponse) ? eventsResponse : []
+                
+                // استخراج الأحداث الفرعية
                 let parsedSubEvents = []
-                if (savedEventCategories) {
-                    const eventCategories = JSON.parse(savedEventCategories)
-                    eventCategories.forEach(category => {
-                        if (category.events && Array.isArray(category.events)) {
-                            category.events.forEach(event => {
-                                parsedSubEvents.push({
-                                    id: event.id,
-                                    name: event.name,
-                                    mainEventId: category.id,
-                                    mainEventName: category.name
-                                })
+                mainEvents.forEach(mainEvent => {
+                    if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events)) {
+                        mainEvent.sub_events.forEach(subEvent => {
+                            parsedSubEvents.push({
+                                id: subEvent.id,
+                                name: subEvent.event_name,
+                                mainEventId: mainEvent.id,
+                                mainEventName: mainEvent.event_name
                             })
-                        }
-                    })
-                }
+                        })
+                    }
+                })
 
                 // تحديث حالة الأعضاء وتواريخ الوصول
-                const updatedMembers = parsedMembers.map(member => {
+                const updatedMembers = members.map(member => {
                     // تحديث حالة المغادرة من البيانات المحفوظة مسبقاً
                     if (member.memberStatus && member.departureDate) {
                         return member // البيانات محدثة بالفعل
@@ -58,13 +61,13 @@ const AllMembers = () => {
                     let updatedMember = { ...member }
 
                     // البحث عن معلومات الحدث الرئيسي والفرعي من خلال الوفد
-                    let subEventId = member.subEventId // من العضو مباشرة
+                    let subEventId = member.sub_event_id // من العضو مباشرة
                     
                     // إذا لم يوجد subEventId في العضو، ابحث في الوفد
-                    if (!subEventId && member.delegation && member.delegation.id) {
-                        const delegation = parsedDelegations.find(d => d.id === member.delegation.id)
-                        if (delegation && delegation.subEventId) {
-                            subEventId = delegation.subEventId
+                    if (!subEventId && member.delegation_id) {
+                        const delegation = delegations.find(d => d.id === member.delegation_id)
+                        if (delegation && delegation.sub_event_id) {
+                            subEventId = delegation.sub_event_id
                         }
                     }
                     
@@ -83,39 +86,18 @@ const AllMembers = () => {
                     }
 
                     // البحث عن حالة المغادرة من جلسات المغادرة
-                    if (member.delegation && member.delegation.id) {
-                        const delegation = parsedDelegations.find(d => d.id === member.delegation.id)
+                    if (member.delegation_id) {
+                        const delegation = delegations.find(d => d.id === member.delegation_id)
                         
                         if (delegation) {
                             // تحديث تاريخ الوصول من بيانات الوفد إذا لم يكن موجود للعضو
-                            if (!member.arrivalDate && delegation.arrivalInfo && delegation.arrivalInfo.arrivalDate) {
-                                updatedMember.arrivalDate = delegation.arrivalInfo.arrivalDate
+                            if (!member.arrivalDate && delegation.arrive_date) {
+                                updatedMember.arrivalDate = delegation.arrive_date
                             }
                             
-                            // تحديث حالة المغادرة
-                            if (delegation.departureInfo && delegation.departureInfo.departureSessions) {
-                                // البحث عن العضو في جلسات المغادرة
-                                let departureDate = null
-                                let isInDepartureSession = false
-                                
-                                for (const session of delegation.departureInfo.departureSessions) {
-                                    const memberInSession = session.members.find(sessionMember => {
-                                        if (typeof sessionMember === 'object' && sessionMember.id) {
-                                            return sessionMember.id === member.id
-                                        }
-                                        return sessionMember === member.id
-                                    })
-                                    
-                                    if (memberInSession) {
-                                        isInDepartureSession = true
-                                        departureDate = session.date
-                                        break
-                                    }
-                                }
-                                
-                                updatedMember.memberStatus = isInDepartureSession ? "departed" : "not_departed"
-                                updatedMember.departureDate = departureDate
-                            }
+                            // تحديث حالة المغادرة من API
+                            updatedMember.memberStatus = member.status === 'DEPARTED' ? "departed" : "not_departed"
+                            updatedMember.departureDate = member.departure_date
                         }
                     }
                     
@@ -132,7 +114,7 @@ const AllMembers = () => {
                 setData([])
             }
         } catch (error) {
-            console.error('خطأ في تحليل بيانات الأعضاء:', error)
+            console.error('خطأ في تحميل بيانات الأعضاء:', error)
             setData([])
         }
     }, [])
@@ -334,47 +316,17 @@ const AllMembers = () => {
                     }
                     
                     // البحث في delegation.subEventId مع الأحداث الحقيقية
+                    // ملاحظة: تم إزالة البحث في localStorage لأن الأحداث تُحمل من API الآن
                     if (member.delegation && member.delegation.subEventId) {
-                        const savedMainEvents = localStorage.getItem('mainEvents')
-                        if (savedMainEvents) {
-                            const mainEvents = JSON.parse(savedMainEvents)
-                            
-                            for (const mainEvent of mainEvents) {
-                                if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events)) {
-                                    for (const subEvent of mainEvent.sub_events) {
-                                        if (subEvent.id === member.delegation.subEventId) {
-                                            const mainEventName = mainEvent.name.toLowerCase()
-                                            
-                                            if (mainEventName.includes(searchTerm)) {
-                                                return true
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // يمكن إضافة البحث في API هنا إذا لزم الأمر
+                        return false
                     }
                     
                     // البحث المباشر في subEventId إذا كان العضو عنده
+                    // ملاحظة: تم إزالة البحث في localStorage لأن الأحداث تُحمل من API الآن
                     if (member.subEventId) {
-                        const savedMainEvents = localStorage.getItem('mainEvents')
-                        if (savedMainEvents) {
-                            const mainEvents = JSON.parse(savedMainEvents)
-                            
-                            for (const mainEvent of mainEvents) {
-                                if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events)) {
-                                    for (const subEvent of mainEvent.sub_events) {
-                                        if (subEvent.id === member.subEventId) {
-                                            const mainEventName = mainEvent.name.toLowerCase()
-                                            
-                                            if (mainEventName.includes(searchTerm)) {
-                                                return true
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // يمكن إضافة البحث في API هنا إذا لزم الأمر
+                        return false
                     }
                     
                     return false
@@ -404,48 +356,10 @@ const AllMembers = () => {
                     }
                     
                     // البحث في delegation.subEventId مع الأحداث الحقيقية
+                    // ملاحظة: تم إزالة البحث في localStorage لأن الأحداث تُحمل من API الآن
                     if (member.delegation && member.delegation.subEventId) {
-                        // البحث في mainEvents للأحداث الحقيقية
-                        const savedMainEvents = localStorage.getItem('mainEvents')
-                        if (savedMainEvents) {
-                            const mainEvents = JSON.parse(savedMainEvents)
-                            
-                            for (const mainEvent of mainEvents) {
-                                if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events)) {
-                                    for (const subEvent of mainEvent.sub_events) {
-                                        if (subEvent.id === member.delegation.subEventId) {
-                                            const eventName = subEvent.name.toLowerCase()
-                                            
-                                            if (eventName.includes(searchTerm)) {
-                                                return true
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // البحث المباشر في subEventId إذا كان العضو عنده
-                        if (member.subEventId) {
-                            const savedMainEvents = localStorage.getItem('mainEvents')
-                            if (savedMainEvents) {
-                                const mainEvents = JSON.parse(savedMainEvents)
-                                
-                                for (const mainEvent of mainEvents) {
-                                    if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events)) {
-                                        for (const subEvent of mainEvent.sub_events) {
-                                            if (subEvent.id === member.subEventId) {
-                                                const eventName = subEvent.name.toLowerCase()
-                                                
-                                                if (eventName.includes(searchTerm)) {
-                                                    return true
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // يمكن إضافة البحث في API هنا إذا لزم الأمر
+                        return false
                     }
                     
                     return false

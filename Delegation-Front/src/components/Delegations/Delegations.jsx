@@ -100,6 +100,37 @@ export const columns = [
         },
     },
     {
+        accessorKey: "delegationType",
+        header: () => <div className="text-center">نوع الوفد</div>,
+        size: 120,
+        minSize: 100,
+        maxSize: 150,
+        enableHiding: false,
+        enableSorting: false,
+        enableColumnFilter: true,
+        cell: ({ row }) => {
+            const type = row.getValue("delegationType")
+            return (
+                <div className="text-center">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        type === 'military' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : type === 'civil' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                    }`}>
+                        {type === 'military' ? 'عسكري' : type === 'civil' ? 'مدني' : 'غير محدد'}
+                    </span>
+                </div>
+            )
+        },
+        filterFn: (row, columnId, filterValue) => {
+            if (!filterValue) return true
+            const type = row.getValue(columnId)
+            return type && type.toLowerCase().includes(filterValue.toLowerCase())
+        },
+    },
+    {
         accessorKey: "arrivalInfo.arrivalHall",
         header: () => <div className="text-center">المطار</div>,
         size: 140,
@@ -296,7 +327,9 @@ export const columns = [
 const Delegations = ({ subEventId }) => {
     const [sorting, setSorting] = useState([])
     const [columnFilters, setColumnFilters] = useState([])
-    const [columnVisibility, setColumnVisibility] = useState({})
+    const [columnVisibility, setColumnVisibility] = useState({
+        delegationType: false // إخفاء عمود نوع الوفد افتراضياً
+    })
     const [rowSelection, setRowSelection] = useState({})
     const [globalFilter, setGlobalFilter] = useState('')
     const [data, setData] = useState([])
@@ -323,19 +356,21 @@ const Delegations = ({ subEventId }) => {
                 const mapped = items.map(d => ({
                     id: d.id,
                     type: d.type,
+                    delegationType: d.type === 'MILITARY' ? 'military' : d.type === 'CIVILIAN' ? 'civil' : 'unknown',
                     delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
                     nationality: d.nationality_name || '',
                     delegationHead: d.delegation_leader_name || '',
                     membersCount: d.member_count || 0,
+                    current_members: d.current_members || 0,
                     arrivalInfo: {
                         arrivalHall: d.airport_name || '',
                         arrivalAirline: d.airline_name || '',
-                        arrivalOrigin: d.going_to || '',
+                        arrivalOrigin: d.city_name || '', // قادمة من (المدينة)
                         arrivalFlightNumber: d.flight_number || '',
                         arrivalDate: d.arrive_date || '',
                         arrivalTime: toHHMM(d.arrive_time),
                         arrivalReceptor: d.receiver_name || '',
-                        arrivalDestination: d.city_name || '',
+                        arrivalDestination: d.going_to || '', // الوجهة (الفندق)
                         arrivalShipments: d.goods || '',
                     },
                 }))
@@ -363,19 +398,21 @@ const Delegations = ({ subEventId }) => {
             const mapped = items.map(d => ({
                 id: d.id,
                 type: d.type,
+                delegationType: d.type === 'MILITARY' ? 'military' : d.type === 'CIVILIAN' ? 'civil' : 'unknown',
                 delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
                 nationality: d.nationality_name || '',
                 delegationHead: d.delegation_leader_name || '',
                 membersCount: d.member_count || 0,
+                current_members: d.current_members || 0,
                 arrivalInfo: {
                     arrivalHall: d.airport_name || '',
                     arrivalAirline: d.airline_name || '',
-                    arrivalOrigin: d.going_to || '',
+                    arrivalOrigin: d.city_name || '', // قادمة من (المدينة)
                     arrivalFlightNumber: d.flight_number || '',
                     arrivalDate: d.arrive_date || '',
                     arrivalTime: toHHMM(d.arrive_time),
                     arrivalReceptor: d.receiver_name || '',
-                    arrivalDestination: d.city_name || '',
+                    arrivalDestination: d.going_to || '', // الوجهة (الفندق)
                     arrivalShipments: d.goods || '',
                 },
             }))
