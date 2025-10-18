@@ -54,10 +54,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-    padding: 5,
-    fontSize: 10,
+    padding: 6,
+    fontSize: 9,
     textAlign: "center",
-    width: '100%'
+    minHeight: 25,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap"
   },
   headerCell: {
     backgroundColor: "#f0f0f0",
@@ -83,39 +87,39 @@ const styles = StyleSheet.create({
   },
 });
 
-// ✅ Headers for Delegation Report - الشكل القديم
+// ✅ Headers for Delegation Report with flexible widths
 const delegationHeaders = [
-  "الجنسية",
-  "رئيس الوفد",
-  "عدد الأعضاء",
-  "حالة الوفد",
-  "تاريخ الوصول",
-  "سعت الوصول",
-  "المطار",
-  "شركة الطيران",
-  "رقم الرحلة",
-  "قادمة من",
-  "الوجهة",
-  "المستقبل",
-  "الشحنات"
+  { text: "الجنسية", width: "8%" },           // Short text - nationality
+  { text: "رئيس الوفد", width: "12%" },       // Medium text - delegation head name
+  { text: "عدد الأعضاء", width: "6%" },       // Short number - members count
+  { text: "حالة الوفد", width: "10%" },       // Medium text - status
+  { text: "تاريخ الوصول", width: "8%" },      // Short date - arrival date
+  { text: "سعت الوصول", width: "6%" },        // Short time - arrival time
+  { text: "المطار", width: "10%" },           // Medium text - airport
+  { text: "شركة الطيران", width: "12%" },     // Medium text - airline
+  { text: "رقم الرحلة", width: "8%" },        // Short text - flight number
+  { text: "قادمة من", width: "8%" },          // Short text - origin
+  { text: "الوجهة", width: "10%" },           // Medium text - destination
+  { text: "المستقبل", width: "10%" },         // Medium text - receptor
+  { text: "الشحنات", width: "8%" }            // Medium text - shipments
 ];
 
-// ✅ Headers for Members Report - نفس التقرير المنفصل
+// ✅ Headers for Members Report with flexible widths
 const membersHeaders = [
-  "الرتبة",
-  "الاسم",
-  "الوظيفة",
-  "حالة العضو",
-  "قادم من",
-  "تاريخ الوصول",
-  "سعت الوصول",
-  "رقم رحلة الوصول",
-  "شركة طيران الوصول",
-  "وجهة المغادرة",
-  "تاريخ المغادرة",
-  "سعت المغادرة",
-  "رقم رحلة المغادرة",
-  "شركة طيران المغادرة"
+  { text: "الرتبة", width: "8%" },            // Short text - rank
+  { text: "الاسم", width: "15%" },            // Long text - name
+  { text: "الوظيفة", width: "12%" },          // Medium text - role
+  { text: "حالة العضو", width: "10%" },       // Medium text - status
+  { text: "قادم من", width: "8%" },           // Short text - origin
+  { text: "تاريخ الوصول", width: "8%" },      // Short date - arrival date
+  { text: "سعت الوصول", width: "6%" },        // Short time - arrival time
+  { text: "رقم رحلة الوصول", width: "8%" },   // Short text - arrival flight
+  { text: "شركة طيران الوصول", width: "10%" }, // Medium text - arrival airline
+  { text: "وجهة المغادرة", width: "10%" },    // Medium text - departure destination
+  { text: "تاريخ المغادرة", width: "8%" },    // Short date - departure date
+  { text: "سعت المغادرة", width: "6%" },      // Short time - departure time
+  { text: "رقم رحلة المغادرة", width: "8%" }, // Short text - departure flight
+  { text: "شركة طيران المغادرة", width: "10%" } // Medium text - departure airline
 ];
 
 const SmartCombinedReportPDF = ({ 
@@ -158,31 +162,31 @@ const SmartCombinedReportPDF = ({
             
             <View style={styles.table}>
               <View style={styles.row}>
-                {delegationHeaders.map((h, i) => (
-                  <Text key={i} style={[styles.cell, styles.headerCell]}>
-                    {h}
+                {delegationHeaders.map((header, i) => (
+                  <Text key={i} style={[styles.cell, styles.headerCell, { width: header.width }]}>
+                    {header.text}
                   </Text>
                 ))}
               </View>
 
               {delegationData.map((row, i) => (
                 <View style={styles.row} key={i}>
-                  <Text style={styles.cell}>{row.nationality}</Text>
-                  <Text style={styles.cell}>{row.delegationHead}</Text>
-                  <Text style={styles.cell}>{row.membersCount}</Text>
-                  <Text style={styles.cell}>
+                  <Text style={[styles.cell, { width: delegationHeaders[0].width }]}>{row.nationality || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[1].width }]}>{row.delegationHead || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[2].width }]}>{row.membersCount || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[3].width }]}>
                     {row.delegationStatus === 'all_departed' ? 'غادر بالكامل' :
                      row.delegationStatus === 'partial_departed' ? 'غادر جزئياً' : 'لم يغادر'}
                   </Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalDate}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalTime ? row.arrivalInfo.arrivalTime.replace(':', '') : ''}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalHall}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalAirline}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalFlightNumber}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalDestination}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalReceptor}</Text>
-                  <Text style={styles.cell}>{row.arrivalInfo?.arrivalShipments}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[4].width }]}>{row.arrivalInfo?.arrivalDate || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[5].width }]}>{row.arrivalInfo?.arrivalTime ? row.arrivalInfo.arrivalTime.replace(':', '') : '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[6].width }]}>{row.arrivalInfo?.arrivalHall || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[7].width }]}>{row.arrivalInfo?.arrivalAirline || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[8].width }]}>{row.arrivalInfo?.arrivalFlightNumber || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[9].width }]}>{row.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[10].width }]}>{row.arrivalInfo?.arrivalDestination || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[11].width }]}>{row.arrivalInfo?.arrivalReceptor || '-'}</Text>
+                  <Text style={[styles.cell, { width: delegationHeaders[12].width }]}>{row.arrivalInfo?.arrivalShipments || '-'}</Text>
                 </View>
               ))}
             </View>
@@ -227,9 +231,9 @@ const SmartCombinedReportPDF = ({
 
                       <View style={styles.table}>
                         <View style={styles.row}>
-                          {membersHeaders.map((h, i) => (
-                            <Text key={i} style={[styles.cell, styles.headerCell]}>
-                              {h}
+                          {membersHeaders.map((header, i) => (
+                            <Text key={i} style={[styles.cell, styles.headerCell, { width: header.width }]}>
+                              {header.text}
                             </Text>
                           ))}
                         </View>
@@ -240,44 +244,44 @@ const SmartCombinedReportPDF = ({
                           
                           return (
                             <View style={styles.row} key={i}>
-                              <Text style={styles.cell}>{member.rank || 'غير محدد'}</Text>
-                              <Text style={styles.cell}>{member.name || 'غير محدد'}</Text>
-                              <Text style={styles.cell}>{member.equivalent_job_name || member.job_title || 'غير محدد'}</Text>
-                              <Text style={styles.cell}>
+                              <Text style={[styles.cell, { width: membersHeaders[0].width }]}>{member.rank || '-'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[1].width }]}>{member.name || '-'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[2].width }]}>{member.equivalent_job_name || member.job_title || '-'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[3].width }]}>
                                 {member.status === 'DEPARTED' ? 'غادر' :
-                                 member.status === 'NOT_DEPARTED' ? 'لم يغادر' : 'غير محدد'}
+                                 member.status === 'NOT_DEPARTED' ? 'لم يغادر' : '-'}
                               </Text>
                               {/* قادم من - من بيانات الوفد */}
-                              <Text style={styles.cell}>{memberDelegation?.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[4].width }]}>{memberDelegation?.arrivalInfo?.arrivalOrigin || '-'}</Text>
                               {/* تاريخ الوصول - من بيانات الوفد */}
-                              <Text style={styles.cell}>{memberDelegation?.arrivalInfo?.arrivalDate || 'غير محدد'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[5].width }]}>{memberDelegation?.arrivalInfo?.arrivalDate || '-'}</Text>
                               {/* سعت الوصول - من بيانات الوفد */}
-                              <Text style={styles.cell}>{memberDelegation?.arrivalInfo?.arrivalTime || 'غير محدد'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[6].width }]}>{memberDelegation?.arrivalInfo?.arrivalTime || '-'}</Text>
                               {/* رقم رحلة الوصول - من بيانات الوفد */}
-                              <Text style={styles.cell}>{memberDelegation?.arrivalInfo?.arrivalFlightNumber || 'غير محدد'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[7].width }]}>{memberDelegation?.arrivalInfo?.arrivalFlightNumber || '-'}</Text>
                               {/* شركة طيران الوصول - من بيانات الوفد */}
-                              <Text style={styles.cell}>{memberDelegation?.arrivalInfo?.arrivalAirline || 'غير محدد'}</Text>
+                              <Text style={[styles.cell, { width: membersHeaders[8].width }]}>{memberDelegation?.arrivalInfo?.arrivalAirline || '-'}</Text>
                             
                             {/* معلومات المغادرة - من جلسة المغادرة المرتبطة بالعضو */}
-                            <Text style={styles.cell}>
+                            <Text style={[styles.cell, { width: membersHeaders[9].width }]}>
                               {member.status === 'DEPARTED' ? 
-                               (member.departure_destination || 'غير محدد') : 'غير محدد'}
+                               (member.departure_destination || '-') : '-'}
                             </Text>
-                            <Text style={styles.cell}>
+                            <Text style={[styles.cell, { width: membersHeaders[10].width }]}>
                               {member.status === 'DEPARTED' ? 
-                               (member.departure_date || 'غير محدد') : 'غير محدد'}
+                               (member.departure_date || '-') : '-'}
                             </Text>
-                            <Text style={styles.cell}>
+                            <Text style={[styles.cell, { width: membersHeaders[11].width }]}>
                               {member.status === 'DEPARTED' ? 
-                               (member.departure_time || 'غير محدد') : 'غير محدد'}
+                               (member.departure_time || '-') : '-'}
                             </Text>
-                            <Text style={styles.cell}>
+                            <Text style={[styles.cell, { width: membersHeaders[12].width }]}>
                               {member.status === 'DEPARTED' ? 
-                               (member.departure_flight_number || 'غير محدد') : 'غير محدد'}
+                               (member.departure_flight_number || '-') : '-'}
                             </Text>
-                            <Text style={styles.cell}>
+                            <Text style={[styles.cell, { width: membersHeaders[13].width }]}>
                               {member.status === 'DEPARTED' ? 
-                               (member.departure_airline || 'غير محدد') : 'غير محدد'}
+                               (member.departure_airline || '-') : '-'}
                             </Text>
                           </View>
                         );

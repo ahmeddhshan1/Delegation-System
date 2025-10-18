@@ -56,10 +56,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-    padding: 5,
-    fontSize: 10,
+    padding: 6,
+    fontSize: 9,
     textAlign: "center",
-    width: '10%'
+    minHeight: 25,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap"
   },
   headerCell: {
     backgroundColor: "#f0f0f0",
@@ -70,21 +74,21 @@ const styles = StyleSheet.create({
 
 
 
-// ✅ Headers in Arabic
+// ✅ Headers in Arabic with flexible widths
 const headers = [
-  "الجنسية",
-  "رئيس الوفد",
-  "عدد الاعضاء",
-  "مطار الوصول",
-  "شركة طيران الوصول",
-  "رقم رحلة الوصول",
-  "قادمة من",
-  "حالة الوفد",
-  "تاريخ الوصول",
-  "سعت الوصول",
-  "مستقبل الوصول",
-  "وجهة الوصول",
-  "شحنات الوصول"
+  { text: "الجنسية", width: "8%" },           // Short text - nationality
+  { text: "رئيس الوفد", width: "12%" },       // Medium text - delegation head name
+  { text: "عدد الاعضاء", width: "6%" },       // Short number - members count
+  { text: "مطار الوصول", width: "10%" },      // Medium text - airport
+  { text: "شركة طيران الوصول", width: "12%" }, // Medium text - airline
+  { text: "رقم رحلة الوصول", width: "8%" },   // Short text - flight number
+  { text: "قادمة من", width: "8%" },          // Short text - origin
+  { text: "حالة الوفد", width: "10%" },       // Medium text - status
+  { text: "تاريخ الوصول", width: "8%" },      // Short date - arrival date
+  { text: "سعت الوصول", width: "6%" },        // Short time - arrival time
+  { text: "مستقبل الوصول", width: "10%" },    // Medium text - receptor
+  { text: "وجهة الوصول", width: "10%" },      // Medium text - destination
+  { text: "شحنات الوصول", width: "8%" }       // Medium text - shipments
 ];
 
 const DelegationReportPDF = ({ data }) => {
@@ -122,32 +126,32 @@ const DelegationReportPDF = ({ data }) => {
 
         <View style={styles.table}>
           <View style={styles.row}>
-            {headers.map((h, i) => (
-              <Text key={i} style={[styles.cell, styles.headerCell, { width: '10%' }]}>
-                {h}
+            {headers.map((header, i) => (
+              <Text key={i} style={[styles.cell, styles.headerCell, { width: header.width }]}>
+                {header.text}
               </Text>
             ))}
           </View>
 
           {data.map((row, i) => (
             <View style={styles.row} key={i}>
-              <Text style={[styles.cell]}>{row.nationality}</Text>
-              <Text style={[styles.cell]}>{row.delegationHead}</Text>
-              <Text style={[styles.cell]}>{row.membersCount}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalHall}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalAirline}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalFlightNumber}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
-              <Text style={[styles.cell]}>
+              <Text style={[styles.cell, { width: headers[0].width }]}>{row.nationality || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[1].width }]}>{row.delegationHead || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[2].width }]}>{row.membersCount || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[3].width }]}>{row.arrivalInfo?.arrivalHall || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[4].width }]}>{row.arrivalInfo?.arrivalAirline || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[5].width }]}>{row.arrivalInfo?.arrivalFlightNumber || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[6].width }]}>{row.arrivalInfo?.arrivalOrigin || 'غير محدد'}</Text>
+              <Text style={[styles.cell, { width: headers[7].width }]}>
                 {row.delegationStatus === 'all_departed' ? 'الوفد غادر' :
                  row.delegationStatus === 'partial_departed' ? 'جزء منه غادر' :
-                 row.delegationStatus === 'not_departed' ? 'الوفد ما غادرش' : row.delegationStatus}
+                 row.delegationStatus === 'not_departed' ? 'الوفد ما غادرش' : row.delegationStatus || '-'}
               </Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalDate}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalTime ? row.arrivalInfo.arrivalTime.replace(':', '') : ''}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalReceptor}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalDestination}</Text>
-              <Text style={[styles.cell]}>{row.arrivalInfo?.arrivalShipments}</Text>
+              <Text style={[styles.cell, { width: headers[8].width }]}>{row.arrivalInfo?.arrivalDate || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[9].width }]}>{row.arrivalInfo?.arrivalTime ? row.arrivalInfo.arrivalTime.replace(':', '') : '-'}</Text>
+              <Text style={[styles.cell, { width: headers[10].width }]}>{row.arrivalInfo?.arrivalReceptor || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[11].width }]}>{row.arrivalInfo?.arrivalDestination || '-'}</Text>
+              <Text style={[styles.cell, { width: headers[12].width }]}>{row.arrivalInfo?.arrivalShipments || '-'}</Text>
             </View>
           ))}
         </View>
