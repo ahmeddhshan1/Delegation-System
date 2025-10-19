@@ -13,29 +13,8 @@ const DepartureSessionsList = ({ sessions, delegation, onDelete, onUpdate }) => 
     // تحديث البيانات عند تغيير الأعضاء
     useEffect(() => {
         const updateMemberData = () => {
-            try {
-                const savedMembers = localStorage.getItem('members')
-                if (savedMembers) {
-                    const members = JSON.parse(savedMembers)
-                    
-                    const updatedSessionsWithMembers = sessions.map(session => ({
-                        ...session,
-                        members: session.members.map(member => {
-                            if (typeof member === 'object' && member.id) {
-                                // البحث عن العضو المحدث في localStorage
-                                const updatedMember = members.find(m => m.id === member.id)
-                                return updatedMember || member
-                            }
-                            return member
-                        })
-                    }))
-                    
-                    setUpdatedSessions(updatedSessionsWithMembers)
-                }
-            } catch (error) {
-                console.error('خطأ في تحديث بيانات الأعضاء:', error)
-                setUpdatedSessions(sessions)
-            }
+            // تم إزالة هذه الوظيفة لأننا نستخدم API الآن
+            setUpdatedSessions(sessions)
         }
         
         updateMemberData()
@@ -158,18 +137,7 @@ const DepartureSessionsList = ({ sessions, delegation, onDelete, onUpdate }) => 
                                     const memberId = typeof member === 'object' ? member.id : member
                                     let memberName = `عضو #${memberId}`
                                     
-                                    try {
-                                        const savedMembers = localStorage.getItem('members')
-                                        if (savedMembers) {
-                                            const members = JSON.parse(savedMembers)
-                                            const foundMember = members.find(m => m.id === memberId)
-                                            if (foundMember && foundMember.name) {
-                                                memberName = `${foundMember.rank || ''} ${foundMember.name}`.trim()
-                                            }
-                                        }
-                                    } catch (error) {
-                                        console.error('خطأ في تحميل بيانات العضو:', error)
-                                    }
+                                    // تم إزالة تحديث البيانات من localStorage لأننا نستخدم API الآن
                                     
                                     return (
                                         <span 

@@ -67,57 +67,7 @@ const AddDelegation = ({ subEventId }) => {
     const [airlinesList, setAirlinesList] = useState([])
     const [citiesList, setCitiesList] = useState([])
 
-    // الاستماع لتغييرات localStorage
-    useEffect(() => {
-        let isMounted = true // flag لتتبع حالة المكون
-        
-        const handleStorageChange = () => {
-            // التحقق من أن المكون ما زال mounted
-            if (!isMounted) return
-            
-            // تحديث الجنسيات
-            const savedNationalities = localStorage.getItem('nationalities')
-            if (savedNationalities && isMounted) {
-                setAvailableNationalities(JSON.parse(savedNationalities))
-            }
-            
-            // تحديث المطارات
-            const savedAirports = localStorage.getItem('airports')
-            if (savedAirports && isMounted) {
-                setAvailableAirports(JSON.parse(savedAirports))
-            }
-            
-            // تحديث شركات الطيران
-            const savedAirlines = localStorage.getItem('airlines')
-            if (savedAirlines && isMounted) {
-                setAvailableAirlines(JSON.parse(savedAirlines))
-            }
-            
-            // تحديث المدن
-            const savedOrigins = localStorage.getItem('origins')
-            if (savedOrigins && isMounted) {
-                setAvailableOrigins(JSON.parse(savedOrigins))
-            }
-        }
-
-        // الاستماع للـ storage event (من tabs تانية)
-        window.addEventListener('storage', handleStorageChange)
-        
-        // الاستماع للـ custom events (من نفس الـ tab)
-        window.addEventListener('nationalitiesUpdated', handleStorageChange)
-        window.addEventListener('airportsUpdated', handleStorageChange)
-        window.addEventListener('airlinesUpdated', handleStorageChange)
-        window.addEventListener('originsUpdated', handleStorageChange)
-        
-        return () => {
-            isMounted = false // تعيين flag إلى false عند cleanup
-            window.removeEventListener('storage', handleStorageChange)
-            window.removeEventListener('nationalitiesUpdated', handleStorageChange)
-            window.removeEventListener('airportsUpdated', handleStorageChange)
-            window.removeEventListener('airlinesUpdated', handleStorageChange)
-            window.removeEventListener('originsUpdated', handleStorageChange)
-        }
-    }, [])
+    // تم إزالة الاستماع لـ localStorage لأننا نستخدم API الآن
 
     // تحميل القوائم من قاعدة البيانات (API)
     useEffect(() => {

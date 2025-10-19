@@ -298,50 +298,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         destination.toLowerCase().includes(destinationSearchTerm.toLowerCase())
     )
 
-    // الاستماع لتغييرات localStorage
-    useEffect(() => {
-        const handleStorageChange = () => {
-            // تحديث المطارات
-            const savedAirports = localStorage.getItem('airports')
-            if (savedAirports) {
-                const airports = JSON.parse(savedAirports)
-                setAvailableAirports(airports)
-                // إعادة تعيين البحث
-                setAirportSearchTerm("")
-            }
-            
-            // تحديث شركات الطيران
-            const savedAirlines = localStorage.getItem('airlines')
-            if (savedAirlines) {
-                const airlines = JSON.parse(savedAirlines)
-                setAvailableAirlines(airlines)
-                // إعادة تعيين البحث
-                setAirlineSearchTerm("")
-            }
-            
-            // تحديث المدن (الوجهات)
-            const savedOrigins = localStorage.getItem('origins')
-            if (savedOrigins) {
-                const origins = JSON.parse(savedOrigins)
-                setAvailableDestinations(origins)
-                // إعادة تعيين البحث
-                setDestinationSearchTerm("")
-            }
-        }
-
-        // الاستماع للـ custom events
-        window.addEventListener('airportsUpdated', handleStorageChange)
-        window.addEventListener('airlinesUpdated', handleStorageChange)
-        window.addEventListener('originsUpdated', handleStorageChange)
-        window.addEventListener('delegationUpdated', handleStorageChange)
-        
-        return () => {
-            window.removeEventListener('airportsUpdated', handleStorageChange)
-            window.removeEventListener('airlinesUpdated', handleStorageChange)
-            window.removeEventListener('originsUpdated', handleStorageChange)
-            window.removeEventListener('delegationUpdated', handleStorageChange)
-        }
-    }, [])
+    // تم إزالة الاستماع لـ localStorage لأننا نستخدم API الآن
 
     // تحميل القوائم من الـ API عند فتح النموذج (مرة واحدة فقط)
     useEffect(() => {

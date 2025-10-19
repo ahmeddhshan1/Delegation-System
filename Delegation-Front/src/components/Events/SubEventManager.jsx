@@ -108,37 +108,7 @@ const SubEventManager = ({ mainEvent, onSubEventAdded, onSubEventUpdated, onSubE
         }
     }, [mainEvent])
 
-    // الاستماع لحذف الحدث الرئيسي وإعادة تحميل البيانات
-    useEffect(() => {
-        const handleMainEventDeleted = () => {
-            // إعادة تحميل البيانات من localStorage
-            const savedEvents = localStorage.getItem('mainEvents')
-            if (savedEvents) {
-                try {
-                    const events = JSON.parse(savedEvents)
-                    const updatedMainEvent = events.find(e => e.id === mainEvent?.id)
-                    if (updatedMainEvent && updatedMainEvent.sub_events) {
-                        setSubEvents(updatedMainEvent.sub_events)
-                    } else {
-                        setSubEvents([])
-                    }
-                } catch (error) {
-                    console.error('خطأ في تحليل بيانات الأحداث:', error)
-                    setSubEvents([])
-                }
-            } else {
-                setSubEvents([])
-            }
-        }
-
-        window.addEventListener('eventDeleted', handleMainEventDeleted)
-        window.addEventListener('eventUpdated', handleMainEventDeleted)
-
-        return () => {
-            window.removeEventListener('eventDeleted', handleMainEventDeleted)
-            window.removeEventListener('eventUpdated', handleMainEventDeleted)
-        }
-    }, [mainEvent?.id])
+    // تم إزالة الاستماع لـ localStorage لأننا نستخدم API الآن
 
     // إعادة تحميل البيانات عند تغيير mainEvent
     useEffect(() => {
