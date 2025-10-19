@@ -73,6 +73,10 @@ class NationalityViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(name__icontains=search)
         return queryset.order_by('name')
+    
+    def perform_destroy(self, instance):
+        # حذف الجنسية من قاعدة البيانات
+        instance.delete()
 
 
 class CitiesViewSet(viewsets.ModelViewSet):
@@ -86,6 +90,10 @@ class CitiesViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(city_name__icontains=search)
         return queryset.order_by('city_name')
+    
+    def perform_destroy(self, instance):
+        # حذف المدينة من قاعدة البيانات
+        instance.delete()
 
 
 class AirLineViewSet(viewsets.ModelViewSet):
@@ -99,6 +107,10 @@ class AirLineViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(name__icontains=search)
         return queryset.order_by('name')
+    
+    def perform_destroy(self, instance):
+        # حذف شركة الطيران من قاعدة البيانات
+        instance.delete()
 
 
 class AirPortViewSet(viewsets.ModelViewSet):
@@ -112,6 +124,10 @@ class AirPortViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(name__icontains=search)
         return queryset.order_by('name')
+    
+    def perform_destroy(self, instance):
+        # حذف المطار من قاعدة البيانات
+        instance.delete()
 
 
 class EquivalentJobViewSet(viewsets.ModelViewSet):

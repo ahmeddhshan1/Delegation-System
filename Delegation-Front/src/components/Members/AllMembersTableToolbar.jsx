@@ -22,41 +22,8 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
         return table.getFilteredRowModel().rows.map(row => row.original)
     }, [table, data, table.getState().globalFilter, table.getState().columnFilters])
     const cleanupOrphanedMembers = () => {
-        try {
-            const savedDelegations = localStorage.getItem('delegations')
-            const savedMembers = localStorage.getItem('members')
-            
-            if (savedDelegations && savedMembers) {
-                const delegations = JSON.parse(savedDelegations)
-                const members = JSON.parse(savedMembers)
-                
-                const delegationIds = delegations.map(d => d.id)
-                const validMembers = members.filter(member => {
-                    if (member.delegation && member.delegation.id) {
-                        return delegationIds.includes(member.delegation.id)
-                    }
-                    return true
-                })
-                
-                const deletedCount = members.length - validMembers.length
-                
-                if (deletedCount > 0) {
-                    localStorage.setItem('members', JSON.stringify(validMembers))
-                    // إرسال حدث لتحديث البيانات فوراً
-                    window.dispatchEvent(new CustomEvent('memberDeleted'))
-                    window.dispatchEvent(new CustomEvent('localStorageUpdated'))
-                    toast.success(`تم حذف ${deletedCount} عضو معلق`)
-                    if (onCleanup) onCleanup()
-                } else {
-                    toast.info('لا توجد أعضاء معلقة')
-                }
-            } else {
-                toast.warning('لا توجد بيانات للتنظيف')
-            }
-        } catch (error) {
-            console.error('خطأ في تنظيف الأعضاء:', error)
-            toast.error('حدث خطأ أثناء تنظيف الأعضاء')
-        }
+        // تم إزالة هذه الوظيفة لأننا نستخدم API الآن
+        toast.info('تم إزالة وظيفة تنظيف الأعضاء المعلقة لأننا نستخدم API الآن')
     }
 
     const updateMemberEventData = () => {

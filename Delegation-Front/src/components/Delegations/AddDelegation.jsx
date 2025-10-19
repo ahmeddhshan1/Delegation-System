@@ -60,6 +60,12 @@ const AddDelegation = ({ subEventId }) => {
 
     // حالات حذف العناصر
     const [deleteItem, setDeleteItem] = useState(null)
+    
+    // قوائم البيانات الكاملة من API
+    const [nationalitiesList, setNationalitiesList] = useState([])
+    const [airportsList, setAirportsList] = useState([])
+    const [airlinesList, setAirlinesList] = useState([])
+    const [citiesList, setCitiesList] = useState([])
 
     // الاستماع لتغييرات localStorage
     useEffect(() => {
@@ -133,6 +139,19 @@ const AddDelegation = ({ subEventId }) => {
                     return []
                 }
 
+                const toList = (res) => {
+                    if (res && Array.isArray(res.results)) return res.results
+                    if (Array.isArray(res)) return res
+                    return []
+                }
+
+                // حفظ البيانات الكاملة
+                setNationalitiesList(toList(nRes))
+                setAirportsList(toList(apRes))
+                setAirlinesList(toList(alRes))
+                setCitiesList(toList(cRes))
+
+                // حفظ الأسماء فقط للعرض
                 setAvailableNationalities(toArray(nRes, 'name'))
                 setAvailableAirports(toArray(apRes, 'name'))
                 setAvailableAirlines(toArray(alRes, 'name'))
@@ -307,34 +326,36 @@ const AddDelegation = ({ subEventId }) => {
         setDeleteItem({
             type: 'nationality',
             name: nationality,
-            onDelete: () => {
-                // حذف من قائمة الجنسيات
-                const updatedNationalities = availableNationalities.filter(n => n !== nationality)
-                setAvailableNationalities(updatedNationalities)
-                localStorage.setItem('nationalities', JSON.stringify(updatedNationalities))
-                
-                // مسح الجنسية من الوفود التي تستخدمها (بدون تغيير حالة الوفد)
-                const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-                const updatedDelegations = existingDelegations.map(delegation => {
-                    if (delegation.nationality === nationality) {
-                        return {
-                            ...delegation,
-                            nationality: "" // مسح الجنسية فقط
-                        }
+            onDelete: async () => {
+                try {
+                    // البحث عن ID الجنسية
+                    const nationalityId = nationalitiesList.find(n => n.name === nationality)?.id
+                    if (nationalityId) {
+                        // حذف من قاعدة البيانات
+                        await nationalityService.deleteNationality(nationalityId)
                     }
-                    return delegation
-                })
-                localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                
-                window.dispatchEvent(new CustomEvent('nationalitiesUpdated'))
-                window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                
-                if (selectedNationality === nationality) {
-                    setSelectedNationality("")
-                    setValue('nationality', "")
+                    
+                    // حذف من قائمة الجنسيات المحلية
+                    const updatedNationalities = availableNationalities.filter(n => n !== nationality)
+                    setAvailableNationalities(updatedNationalities)
+                    
+                    // تحديث قائمة الجنسيات الكاملة
+                    const updatedNationalitiesList = nationalitiesList.filter(n => n.name !== nationality)
+                    setNationalitiesList(updatedNationalitiesList)
+                    
+                    window.dispatchEvent(new CustomEvent('nationalitiesUpdated'))
+                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
+                    
+                    if (selectedNationality === nationality) {
+                        setSelectedNationality("")
+                        setValue('nationality', "")
+                    }
+                    toast.success("تم حذف الجنسية بنجاح")
+                    setDeleteItem(null)
+                } catch (error) {
+                    toast.error("حدث خطأ في حذف الجنسية")
+                    setDeleteItem(null)
                 }
-                toast.success("تم حذف الجنسية بنجاح")
-                setDeleteItem(null)
             }
         })
     }
@@ -343,37 +364,36 @@ const AddDelegation = ({ subEventId }) => {
         setDeleteItem({
             type: 'airport',
             name: airport,
-            onDelete: () => {
-                // حذف من قائمة المطارات
-                const updatedAirports = availableAirports.filter(a => a !== airport)
-                setAvailableAirports(updatedAirports)
-                localStorage.setItem('airports', JSON.stringify(updatedAirports))
-                
-                // مسح المطار من الوفود التي تستخدمه (بدون تغيير حالة الوفد)
-                const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-                const updatedDelegations = existingDelegations.map(delegation => {
-                    if (delegation.arrivalInfo && delegation.arrivalInfo.arrivalHall === airport) {
-                        return {
-                            ...delegation,
-                            arrivalInfo: {
-                                ...delegation.arrivalInfo,
-                                arrivalHall: "" // مسح المطار فقط
-                            }
-                        }
+            onDelete: async () => {
+                try {
+                    // البحث عن ID المطار
+                    const airportId = airportsList.find(a => a.name === airport)?.id
+                    if (airportId) {
+                        // حذف من قاعدة البيانات
+                        await airportService.deleteAirport(airportId)
                     }
-                    return delegation
-                })
-                localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                
-                window.dispatchEvent(new CustomEvent('airportsUpdated'))
-                window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                
-                if (selectedAirport === airport) {
-                    setSelectedAirport("")
-                    setValue('arrivalHall', "")
+                    
+                    // حذف من قائمة المطارات المحلية
+                    const updatedAirports = availableAirports.filter(a => a !== airport)
+                    setAvailableAirports(updatedAirports)
+                    
+                    // تحديث قائمة المطارات الكاملة
+                    const updatedAirportsList = airportsList.filter(a => a.name !== airport)
+                    setAirportsList(updatedAirportsList)
+                    
+                    window.dispatchEvent(new CustomEvent('airportsUpdated'))
+                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
+                    
+                    if (selectedAirport === airport) {
+                        setSelectedAirport("")
+                        setValue('arrivalHall', "")
+                    }
+                    toast.success("تم حذف المطار بنجاح")
+                    setDeleteItem(null)
+                } catch (error) {
+                    toast.error("حدث خطأ في حذف المطار")
+                    setDeleteItem(null)
                 }
-                toast.success("تم حذف المطار بنجاح")
-                setDeleteItem(null)
             }
         })
     }
@@ -382,37 +402,36 @@ const AddDelegation = ({ subEventId }) => {
         setDeleteItem({
             type: 'airline',
             name: airline,
-            onDelete: () => {
-                // حذف من قائمة شركات الطيران
-                const updatedAirlines = availableAirlines.filter(a => a !== airline)
-                setAvailableAirlines(updatedAirlines)
-                localStorage.setItem('airlines', JSON.stringify(updatedAirlines))
-                
-                // مسح شركة الطيران من الوفود التي تستخدمها (بدون تغيير حالة الوفد)
-                const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-                const updatedDelegations = existingDelegations.map(delegation => {
-                    if (delegation.arrivalInfo && delegation.arrivalInfo.arrivalAirline === airline) {
-                        return {
-                            ...delegation,
-                            arrivalInfo: {
-                                ...delegation.arrivalInfo,
-                                arrivalAirline: "" // مسح شركة الطيران فقط
-                            }
-                        }
+            onDelete: async () => {
+                try {
+                    // البحث عن ID شركة الطيران
+                    const airlineId = airlinesList.find(a => a.name === airline)?.id
+                    if (airlineId) {
+                        // حذف من قاعدة البيانات
+                        await airlineService.deleteAirline(airlineId)
                     }
-                    return delegation
-                })
-                localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                
-                window.dispatchEvent(new CustomEvent('airlinesUpdated'))
-                window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                
-                if (selectedAirline === airline) {
-                    setSelectedAirline("")
-                    setValue('arrivalAirline', "")
+                    
+                    // حذف من قائمة شركات الطيران المحلية
+                    const updatedAirlines = availableAirlines.filter(a => a !== airline)
+                    setAvailableAirlines(updatedAirlines)
+                    
+                    // تحديث قائمة شركات الطيران الكاملة
+                    const updatedAirlinesList = airlinesList.filter(a => a.name !== airline)
+                    setAirlinesList(updatedAirlinesList)
+                    
+                    window.dispatchEvent(new CustomEvent('airlinesUpdated'))
+                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
+                    
+                    if (selectedAirline === airline) {
+                        setSelectedAirline("")
+                        setValue('arrivalAirline', "")
+                    }
+                    toast.success("تم حذف شركة الطيران بنجاح")
+                    setDeleteItem(null)
+                } catch (error) {
+                    toast.error("حدث خطأ في حذف شركة الطيران")
+                    setDeleteItem(null)
                 }
-                toast.success("تم حذف شركة الطيران بنجاح")
-                setDeleteItem(null)
             }
         })
     }
@@ -421,37 +440,36 @@ const AddDelegation = ({ subEventId }) => {
         setDeleteItem({
             type: 'origin',
             name: origin,
-            onDelete: () => {
-                // حذف من قائمة المدن
-                const updatedOrigins = availableOrigins.filter(o => o !== origin)
-                setAvailableOrigins(updatedOrigins)
-                localStorage.setItem('origins', JSON.stringify(updatedOrigins))
-                
-                // مسح المدينة من الوفود التي تستخدمها (بدون تغيير حالة الوفد)
-                const existingDelegations = JSON.parse(localStorage.getItem('delegations') || '[]')
-                const updatedDelegations = existingDelegations.map(delegation => {
-                    if (delegation.arrivalInfo && delegation.arrivalInfo.arrivalOrigin === origin) {
-                        return {
-                            ...delegation,
-                            arrivalInfo: {
-                                ...delegation.arrivalInfo,
-                                arrivalOrigin: "" // مسح المدينة فقط
-                            }
-                        }
+            onDelete: async () => {
+                try {
+                    // البحث عن ID المدينة
+                    const cityId = citiesList.find(c => c.city_name === origin)?.id
+                    if (cityId) {
+                        // حذف من قاعدة البيانات
+                        await citiesService.deleteCity(cityId)
                     }
-                    return delegation
-                })
-                localStorage.setItem('delegations', JSON.stringify(updatedDelegations))
-                
-                window.dispatchEvent(new CustomEvent('originsUpdated'))
-                window.dispatchEvent(new CustomEvent('delegationUpdated'))
-                
-                if (selectedOrigin === origin) {
-                    setSelectedOrigin("")
-                    setValue('arrivalOrigin', "")
+                    
+                    // حذف من قائمة المدن المحلية
+                    const updatedOrigins = availableOrigins.filter(o => o !== origin)
+                    setAvailableOrigins(updatedOrigins)
+                    
+                    // تحديث قائمة المدن الكاملة
+                    const updatedCitiesList = citiesList.filter(c => c.city_name !== origin)
+                    setCitiesList(updatedCitiesList)
+                    
+                    window.dispatchEvent(new CustomEvent('originsUpdated'))
+                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
+                    
+                    if (selectedOrigin === origin) {
+                        setSelectedOrigin("")
+                        setValue('arrivalOrigin', "")
+                    }
+                    toast.success("تم حذف المدينة بنجاح")
+                    setDeleteItem(null)
+                } catch (error) {
+                    toast.error("حدث خطأ في حذف المدينة")
+                    setDeleteItem(null)
                 }
-                toast.success("تم حذف المدينة بنجاح")
-                setDeleteItem(null)
             }
         })
     }
