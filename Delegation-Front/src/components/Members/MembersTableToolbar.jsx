@@ -2,21 +2,35 @@ import { Input } from "@/components/ui/input"
 import MembersFilter from "./MembersFilter"
 import MembersReportExport from "./MembersReportExport"
 import AddMemberToDelegation from "./AddMemberToDelegation"
+import { useMemo } from "react"
 
 const MembersTableToolbar = ({ table, data, showDelegationInfo = true }) => {
+    const filteredData = useMemo(() => {
+        // الحصول على حالة الجدول
+        const tableState = table.getState()
+        const hasGlobalFilter = tableState.globalFilter && tableState.globalFilter.trim() !== ''
+        const hasColumnFilters = tableState.columnFilters.length > 0
+        const hasAnyFilter = hasGlobalFilter || hasColumnFilters
+        
+        if (!hasAnyFilter) {
+            return data
+        }
+        
+        // إرجاع البيانات المفلترة
+        return table.getFilteredRowModel().rows.map(row => row.original)
+    }, [table, data, table.getState().globalFilter, table.getState().columnFilters])
+
     return (
         <div className="flex items-center gap-4 justify-between py-4">
             <Input
                 placeholder="بحث ..."
-                // value={(table.getColumn("delegationHead")?.getFilterValue()) ?? ""}
-                // onChange={(event) =>table.getColumn("delegationHead")?.setFilterValue(event.target.value)}
                 value={table.getState().globalFilter ?? ""}
                 onChange={(event) => table.setGlobalFilter(event.target.value)}
                 className="max-w-sm !ring-0"
             />
             <div className="flex items-center gap-2">
                 {showDelegationInfo && <MembersFilter table={table} data={data} />}
-                <MembersReportExport data={data} />
+                <MembersReportExport data={data} filteredData={filteredData} />
                 {showDelegationInfo && <AddMemberToDelegation />}
             </div>
         </div>

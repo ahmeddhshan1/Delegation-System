@@ -13,7 +13,7 @@ export const exportMembersToExcel = (data, fileName = "EDEX - Members report.xls
             "الوظيفة": item.job_title || "",
             "حالة العضو": item.status === 'DEPARTED' ? 'غادر' :
                          item.status === 'NOT_DEPARTED' ? 'لم يغادر' : 
-                         'غير محدد',
+                         '-',
             "تاريخ الوصول": item.delegation?.arrival_date ? new Date(item.delegation.arrival_date).toLocaleDateString('en-GB') : '-',
             "تاريخ المغادرة": item.departure_date ? new Date(item.departure_date).toLocaleDateString('en-GB') : '-'
         };
@@ -31,47 +31,36 @@ export const exportMembersToExcel = (data, fileName = "EDEX - Members report.xls
 };
 
 export const exportToExcel = (data, fileName = "EDEX - Delegations report.xlsx") => {
-    // Create a mapping from English keys → Arabic headers
-    const headerMap = {
-        nationality: "الجنسية",
-        delegationHead: "رئيس الوفد",
-        membersCount: "عدد الاعضاء",
-        hall: "الصالة",
-        delegationStatus: "حالة الوفد",
-        date: "التاريخ",
-        time: "سعت",
-        receptor: "المستقبل",
-        destination: "وجهة الرحلة",
-        shipments: "الشحنات",
-    };
-
-    // Convert data keys to Arabic headers
-    const arabicData = data.map((item) => {
-        let newItem = {};
-        for (const key in item) {
-            if (headerMap[key]) {
-                // Convert delegationStatus to Arabic text
-                if (key === 'delegationStatus') {
-                    const statusMap = {
-                        'all_departed': 'تم مغادرة الوفد',
-                        'partial_departed': 'لم يغادر جزء من الوفد',
-                        'not_departed': 'لم يغادر أحد'
-                    };
-                    newItem[headerMap[key]] = statusMap[item[key]] || item[key];
-                } else {
-                    newItem[headerMap[key]] = item[key];
-                }
-            }
-        }
-        return newItem;
+    // ترتيب الأعمدة مطابق لـ PDF تماماً - من اليمين لليسار
+    const arabicData = data.map((item, index) => {
+        return {
+            "الشحنات": item.arrivalInfo?.arrivalShipments || '-',
+            "المستقبل": item.arrivalInfo?.arrivalReceptor || '-',
+            "الوجهة": item.arrivalInfo?.arrivalDestination || '-',
+            "قادمة من": item.arrivalInfo?.arrivalOrigin || '-',
+            "رقم الرحلة": item.arrivalInfo?.arrivalFlightNumber || '-',
+            "شركة الطيران": item.arrivalInfo?.arrivalAirline || '-',
+            "المطار": item.arrivalInfo?.arrivalHall || '-',
+            "سعت الوصول": item.arrivalInfo?.arrivalTime ? 
+                item.arrivalInfo.arrivalTime.replace(':', '') : '-',
+            "تاريخ الوصول": item.arrivalInfo?.arrivalDate || '-',
+            "حالة الوفد": item.delegationStatus === 'all_departed' ? 'غادر بالكامل' :
+                         item.delegationStatus === 'partial_departed' ? 'غادر جزئياً' : 'لم يغادر',
+            "عدد الأعضاء": item.membersCount || 0,
+            "رئيس الوفد": item.delegationHead || item.delegation_leader_name || '-',
+            "الجنسية": item.nationality || '-'
+        };
     });
 
     // Generate worksheet
     const worksheet = XLSX.utils.json_to_sheet(arabicData);
 
+    // Set RTL direction for the worksheet
+    worksheet['!cols'] = Object.keys(arabicData[0] || {}).map(() => ({ wch: 15 }));
+
     // Generate workbook and append worksheet
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "الجدول");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "تقرير الوفود");
 
     // Export to Excel
     XLSX.writeFile(workbook, fileName);

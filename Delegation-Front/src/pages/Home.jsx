@@ -117,7 +117,9 @@ const Home = () => {
                                     return {
                                         ...subEvent,
                                         mainEventName: mainEvent.event_name,
+                                        mainEventId: mainEvent.id,
                                         mainEventIcon: mainEvent.event_icon,
+                                        mainEventLink: mainEvent.event_link,
                                         delegationCount: delegations.length,
                                         membersCount: totalMembers
                                     }
@@ -126,7 +128,9 @@ const Home = () => {
                                     return {
                                         ...subEvent,
                                         mainEventName: mainEvent.event_name,
+                                        mainEventId: mainEvent.id,
                                         mainEventIcon: mainEvent.event_icon,
+                                        mainEventLink: mainEvent.event_link,
                                         delegationCount: 0,
                                         membersCount: 0
                                     }
@@ -196,7 +200,12 @@ const Home = () => {
                                 className="box bg-white w-full border border-neutral-300 rounded-xl flex flex-col transition-all ease-out hover:shadow cursor-pointer hover:border-primary-400"
                                 onClick={() => {
                                     // التنقل إلى صفحة وفود الحدث الفرعي
-                                    const mainEventPath = subEvent.mainEventName.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
+                                    let mainEventPath = ''
+                                    if (subEvent.mainEventLink && subEvent.mainEventLink.trim()) {
+                                        mainEventPath = subEvent.mainEventLink.toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
+                                    } else {
+                                        mainEventPath = subEvent.mainEventName.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
+                                    }
                                     navigate(`/${mainEventPath}/${subEvent.id}`)
                                 }}
                             >

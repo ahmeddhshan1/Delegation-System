@@ -4,10 +4,23 @@ import { Icon } from "@iconify/react/dist/iconify.js"
 import AllMembersFilter from "./AllMembersFilter"
 import MembersReportExport from "./MembersReportExport"
 import { toast } from "sonner"
+import { useMemo } from "react"
 
 const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
     // الحصول على البيانات المفلترة من الجدول
-    const filteredData = table.getFilteredRowModel().rows.map(row => row.original)
+    const filteredData = useMemo(() => {
+        const tableState = table.getState()
+        const hasGlobalFilter = tableState.globalFilter && tableState.globalFilter.trim() !== ''
+        const hasColumnFilters = tableState.columnFilters.length > 0
+        const hasAnyFilter = hasGlobalFilter || hasColumnFilters
+        
+        if (!hasAnyFilter) {
+            return data
+        }
+        
+        // إرجاع البيانات المفلترة
+        return table.getFilteredRowModel().rows.map(row => row.original)
+    }, [table, data, table.getState().globalFilter, table.getState().columnFilters])
     const cleanupOrphanedMembers = () => {
         try {
             const savedDelegations = localStorage.getItem('delegations')

@@ -5,18 +5,6 @@ from .models import (
 )
 
 
-class MainEventSerializer(serializers.ModelSerializer):
-    sub_events_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = MainEvent
-        fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at', 'id')
-    
-    def get_sub_events_count(self, obj):
-        return obj.sub_events.count()
-
-
 class SubEventSerializer(serializers.ModelSerializer):
     main_event_name = serializers.CharField(source='main_event_id.event_name', read_only=True)
     delegations_count = serializers.SerializerMethodField()
@@ -28,6 +16,19 @@ class SubEventSerializer(serializers.ModelSerializer):
     
     def get_delegations_count(self, obj):
         return obj.delegations.count()
+
+
+class MainEventSerializer(serializers.ModelSerializer):
+    sub_events_count = serializers.SerializerMethodField()
+    sub_events = SubEventSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = MainEvent
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at', 'id')
+    
+    def get_sub_events_count(self, obj):
+        return obj.sub_events.count()
 
 
 class NationalitySerializer(serializers.ModelSerializer):

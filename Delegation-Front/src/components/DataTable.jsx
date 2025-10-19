@@ -27,7 +27,7 @@ function DataTable({ table, columns, clickableRow = false }) {
                                 {headerGroup.headers.map((header) => {
                                     return (
                                         <TableHead key={header.id} className="h-12 break-words py-3 px-3 bg-gray-100 border-b border-gray-200">
-                                            <div className="break-words whitespace-normal text-sm font-medium text-gray-800">
+                                            <div className="break-words whitespace-normal text-sm font-medium text-gray-800 text-center">
                                                 {header.isPlaceholder
                                                     ? null
                                                     : flexRender(
@@ -63,8 +63,8 @@ function DataTable({ table, columns, clickableRow = false }) {
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="h-auto align-top break-words">
-                                            <div className="break-words whitespace-normal">
+                                        <TableCell key={cell.id} className="h-auto align-middle break-words">
+                                            <div className="break-words whitespace-normal text-center">
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext()
@@ -78,7 +78,7 @@ function DataTable({ table, columns, clickableRow = false }) {
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}
-                                    className="h-24 text-center"
+                                    className="h-24 text-center align-middle"
                                 >
                                     لا يوجد نتائج.
                                 </TableCell>

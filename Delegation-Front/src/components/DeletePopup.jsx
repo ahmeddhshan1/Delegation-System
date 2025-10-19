@@ -13,31 +13,32 @@ import { Icon } from '@iconify/react/dist/iconify.js'
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { deleteDelegationData, deleteSubEventData, deleteMainEventData } from "../utils/cascadeDelete"
+import { delegationService, memberService, departureSessionService } from "../services/api"
 
 const DeletePopup = ({item, children, onDelete}) => {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
 
-    const onSubmit = () => {
+    const onSubmit = async () => {
         setLoading(true)
         
         try {
             // تحديد الـ ID بناءً على نوع العنصر
             const itemId = item.original ? item.original.id : item.id
 
-
             
             // تحديد نوع العنصر بناءً على البيانات المتاحة
             if ((item.original && item.original.delegationHead) || item.delegationHead) {
-                // حذف وفد مع جميع البيانات المرتبطة
-                const deleteResult = deleteDelegationData(itemId)
-                
-                if (deleteResult.success) {
+                // حذف وفد من API - سيحذف تلقائياً الأعضاء وجلسات المغادرة بسبب CASCADE
+                try {
+                    await delegationService.deleteDelegation(itemId)
+                    
                     // إرسال إشعار بالحذف
                     window.dispatchEvent(new CustomEvent('delegationDeleted'))
                     toast.success('تم حذف الوفد وجميع البيانات المرتبطة به بنجاح')
-                } else {
-                    toast.error(deleteResult.message)
+                } catch (error) {
+                    console.error('خطأ في حذف الوفد:', error)
+                    toast.error('حدث خطأ أثناء حذف الوفد')
                     setLoading(false)
                     return
                 }
@@ -63,7 +64,7 @@ const DeletePopup = ({item, children, onDelete}) => {
                     return
                 }
             } else if ((item.original && item.original.name) || item.name) {
-                // حذف عضو - استدعاء API
+                // حذف عضو - استدعاء دالة الحذف الممررة من المكون الأب
                 onDelete && onDelete(itemId)
                 toast.success('تم حذف العضو بنجاح')
             } else if ((item.original && item.original.date) || item.date) {
@@ -83,12 +84,10 @@ const DeletePopup = ({item, children, onDelete}) => {
         } catch (error) {
             console.error('خطأ في الحذف:', error)
             toast.error('حدث خطأ أثناء الحذف')
-        }
-        
-        setTimeout(() => {
+        } finally {
             setLoading(false)
             setOpen(false)
-        }, 1500)
+        }
     }
 
     return (

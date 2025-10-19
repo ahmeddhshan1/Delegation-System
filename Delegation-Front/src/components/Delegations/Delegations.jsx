@@ -73,7 +73,7 @@ export const columns = [
             if (!filterValue) return true
             const nationality = row.getValue(columnId)
             
-            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            // إذا كان الفلتر "empty" (-)، نعرض فقط القيم الفارغة
             if (filterValue === "empty") {
                 return !nationality || nationality === ""
             }
@@ -130,7 +130,7 @@ export const columns = [
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-gray-100 text-gray-800'
                     }`}>
-                        {type === 'military' ? 'عسكري' : type === 'civil' ? 'مدني' : 'غير محدد'}
+                        {type === 'military' ? 'عسكري' : type === 'civil' ? 'مدني' : '-'}
                     </span>
                 </div>
             )
@@ -151,7 +151,7 @@ export const columns = [
             if (!filterValue) return true
             const hall = row.getValue(columnId)
             
-            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            // إذا كان الفلتر "empty" (-)، نعرض فقط القيم الفارغة
             if (filterValue === "empty") {
                 return !hall || hall === ""
             }
@@ -174,7 +174,7 @@ export const columns = [
             if (!filterValue) return true
             const airline = row.getValue(columnId)
             
-            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            // إذا كان الفلتر "empty" (-)، نعرض فقط القيم الفارغة
             if (filterValue === "empty") {
                 return !airline || airline === ""
             }
@@ -197,7 +197,7 @@ export const columns = [
             if (!filterValue) return true
             const origin = row.getValue(columnId)
             
-            // إذا كان الفلتر "empty" (غير محدد)، نعرض فقط القيم الفارغة
+            // إذا كان الفلتر "empty" (-)، نعرض فقط القيم الفارغة
             if (filterValue === "empty") {
                 return !origin || origin === ""
             }
@@ -470,7 +470,11 @@ const Delegations = ({ subEventId }) => {
     useEffect(() => {
         const reload = () => { loadDelegations() }
         window.addEventListener('delegationUpdated', reload)
-        return () => { window.removeEventListener('delegationUpdated', reload) }
+        window.addEventListener('delegationDeleted', reload)
+        return () => { 
+            window.removeEventListener('delegationUpdated', reload)
+            window.removeEventListener('delegationDeleted', reload)
+        }
     }, [])
     
     // استدعاء loadDelegations عند التحميل الأول

@@ -77,7 +77,8 @@ const AllMembers = () => {
                             updatedMember.subEvent = {
                                 id: subEvent.id,
                                 name: subEvent.name,
-                                mainEventId: subEvent.mainEventId
+                                mainEventId: subEvent.mainEventId,
+                                mainEventName: subEvent.mainEventName
                             }
                             
                             // البحث عن الحدث الرئيسي (البيانات موجودة بالفعل في subEvent.mainEventName)
@@ -90,6 +91,28 @@ const AllMembers = () => {
                         const delegation = delegations.find(d => d.id === member.delegation_id)
                         
                         if (delegation) {
+                            // إضافة بيانات الوفد للعضو
+                            updatedMember.delegation = {
+                                id: delegation.id,
+                                nationality: delegation.nationality || delegation.country || delegation.nationality_name || delegation.country_name || '-',
+                                delegationHead: delegation.delegation_leader_name || delegation.delegationHead,
+                                arrive_date: delegation.arrive_date,
+                                arrival_date: delegation.arrive_date, // للـ PDF
+                                arrivalDate: delegation.arrive_date,
+                                subEventId: delegation.sub_event_id,
+                                arrivalInfo: {
+                                    arrivalHall: delegation.airport_name || '',
+                                    arrivalAirline: delegation.airline_name || '',
+                                    arrivalOrigin: delegation.city_name || '',
+                                    arrivalFlightNumber: delegation.flight_number || '',
+                                    arrivalDate: delegation.arrive_date || '',
+                                    arrivalTime: delegation.arrive_time || '',
+                                    arrivalReceptor: delegation.receiver_name || '',
+                                    arrivalDestination: delegation.going_to || '',
+                                    arrivalShipments: delegation.goods || '',
+                                }
+                            }
+                            
                             // تحديث تاريخ الوصول من بيانات الوفد إذا لم يكن موجود للعضو
                             if (!member.arrivalDate && delegation.arrive_date) {
                                 updatedMember.arrivalDate = delegation.arrive_date
@@ -98,6 +121,22 @@ const AllMembers = () => {
                             // تحديث حالة المغادرة من API
                             updatedMember.memberStatus = member.status === 'DEPARTED' ? "departed" : "not_departed"
                             updatedMember.departureDate = member.departure_date
+                        } else {
+                            // محاولة البحث عن الوفد بطريقة أخرى
+                            const possibleDelegation = delegations.find(d => 
+                                d.members && d.members.some(m => m.id === member.id)
+                            )
+                            
+                            if (possibleDelegation) {
+                                updatedMember.delegation = {
+                                    id: possibleDelegation.id,
+                                    nationality: possibleDelegation.nationality || possibleDelegation.country || possibleDelegation.nationality_name || possibleDelegation.country_name || '-',
+                                    delegationHead: possibleDelegation.delegation_leader_name || possibleDelegation.delegationHead,
+                                    arrive_date: possibleDelegation.arrive_date,
+                                    arrivalDate: possibleDelegation.arrive_date,
+                                    subEventId: possibleDelegation.sub_event_id
+                                }
+                            }
                         }
                     }
                     
@@ -107,7 +146,6 @@ const AllMembers = () => {
                     
                     return updatedMember
                 })
-                
                 
                 setData(updatedMembers)
             } else {
@@ -210,13 +248,24 @@ const AllMembers = () => {
                 header: () => <div className="text-center">الرتبة</div>,
                 cell: ({ row }) => (
                     <div className="text-center">
-                        <span className="text-gray-700">{row.getValue("rank")}</span>
+                        <span className="text-gray-700">{row.getValue("rank") || "-"}</span>
                     </div>
                 ),
                 filterFn: (row, columnId, filterValue) => {
                     if (!filterValue) return true
                     const rank = row.getValue(columnId)
-                    return rank && rank.toLowerCase().includes(filterValue.toLowerCase())
+                    
+                    // إذا كان البحث عن القيم الفارغة
+                    if (filterValue === "empty") {
+                        return !rank || rank === "" || rank === "-"
+                    }
+                    
+                    // للقيم العادية، نتأكد إن القيمة موجودة ومش فارغة
+                    if (!rank || rank === "" || rank === "-") {
+                        return false
+                    }
+                    
+                    return rank.toLowerCase().includes(filterValue.toLowerCase())
                 },
             },
             {
@@ -229,31 +278,53 @@ const AllMembers = () => {
                 ),
             },
             {
-                accessorKey: "role",
+                accessorKey: "job_title",
                 header: () => <div className="text-center">الوظيفة</div>,
                 cell: ({ row }) => (
                     <div className="text-center">
-                        <span className="text-gray-700">{row.getValue("role")}</span>
+                        <span className="text-gray-700">{row.getValue("job_title")}</span>
                     </div>
                 ),
                 filterFn: (row, columnId, filterValue) => {
                     if (!filterValue) return true
                     const role = row.getValue(columnId)
-                    return role && role.toLowerCase().includes(filterValue.toLowerCase())
+                    
+                    // إذا كان البحث عن القيم الفارغة
+                    if (filterValue === "empty") {
+                        return !role || role === "" || role === "-"
+                    }
+                    
+                    // للقيم العادية، نتأكد إن القيمة موجودة ومش فارغة
+                    if (!role || role === "" || role === "-") {
+                        return false
+                    }
+                    
+                    return role.toLowerCase().includes(filterValue.toLowerCase())
                 },
             },
             {
-                accessorKey: "equivalentRole",
+                accessorKey: "equivalent_job_name",
                 header: () => <div className="text-center">المنصب العسكري المعادل</div>,
                 cell: ({ row }) => (
                     <div className="text-center">
-                        <span className="text-gray-700 font-medium">{row.getValue("equivalentRole") || "غير محدد"}</span>
+                        <span className="text-gray-700 font-medium">{row.getValue("equivalent_job_name") || "-"}</span>
                     </div>
                 ),
                 filterFn: (row, columnId, filterValue) => {
                     if (!filterValue) return true
                     const equivalentRole = row.getValue(columnId)
-                    return equivalentRole && equivalentRole.toLowerCase().includes(filterValue.toLowerCase())
+                    
+                    // إذا كان البحث عن القيم الفارغة
+                    if (filterValue === "empty") {
+                        return !equivalentRole || equivalentRole === "" || equivalentRole === "-"
+                    }
+                    
+                    // للقيم العادية، نتأكد إن القيمة موجودة ومش فارغة
+                    if (!equivalentRole || equivalentRole === "" || equivalentRole === "-") {
+                        return false
+                    }
+                    
+                    return equivalentRole.toLowerCase().includes(filterValue.toLowerCase())
                 },
             },
             {
@@ -262,11 +333,23 @@ const AllMembers = () => {
                 cell: ({ row }) => {
                     const delegationData = row.original.delegation
                     
-                    if (delegationData && delegationData.nationality && delegationData.delegationHead) {
-                        const displayText = `${delegationData.nationality} - ${delegationData.delegationHead}`
+                    if (delegationData && delegationData.delegationHead) {
+                        const nationality = delegationData.nationality || '-'
+                        const displayText = `${nationality} - ${delegationData.delegationHead}`
+                        const delegationId = delegationData.id
+                        
+                        const handleDelegationClick = () => {
+                            if (delegationId && delegationData.subEventId) {
+                                window.location.href = `/alameen/${delegationData.subEventId}/${delegationId}`
+                            }
+                        }
+                        
                         return (
                             <div className="text-center">
-                                <span className="text-gray-700 font-medium">
+                                <span 
+                                    className={`font-medium ${delegationId ? 'text-gray-700 hover:text-gray-900 cursor-pointer' : 'text-gray-700'}`}
+                                    onClick={delegationId ? handleDelegationClick : undefined}
+                                >
                                     {displayText}
                                 </span>
                             </div>
@@ -283,11 +366,12 @@ const AllMembers = () => {
                     if (!filterValue) return true
                     
                     const delegationData = row.original.delegation
-                    if (!delegationData || !delegationData.nationality || !delegationData.delegationHead) {
+                    if (!delegationData || !delegationData.delegationHead) {
                         return false
                     }
                     
-                    const delegationDisplayName = `${delegationData.nationality} - ${delegationData.delegationHead}`
+                    const nationality = delegationData.nationality || '-'
+                    const delegationDisplayName = `${nationality} - ${delegationData.delegationHead}`
                     return delegationDisplayName.toLowerCase().includes(filterValue.toLowerCase())
                 },
             },
@@ -302,34 +386,21 @@ const AllMembers = () => {
                     if (!filterValue) return true
                     const member = row.original
                     
+                    // إذا كان البحث عن القيم الفارغة
+                    if (filterValue === "empty") {
+                        return !member.subEvent?.mainEventName || member.subEvent?.mainEventName === "" || member.subEvent?.mainEventName === "-"
+                    }
+                    
+                    // للقيم العادية، نتأكد إن القيمة موجودة ومش فارغة
+                    if (!member.subEvent?.mainEventName || member.subEvent?.mainEventName === "" || member.subEvent?.mainEventName === "-") {
+                        return false
+                    }
                     
                     // البحث في الأحداث الحقيقية
                     const searchTerm = filterValue.toLowerCase()
+                    const memberMainEvent = member.subEvent.mainEventName.toLowerCase()
                     
-                    // البحث في subEvent للمعضو
-                    if (member.subEvent && member.subEvent.mainEventName) {
-                        const memberMainEvent = member.subEvent.mainEventName.toLowerCase()
-                        
-                        if (memberMainEvent.includes(searchTerm)) {
-                            return true
-                        }
-                    }
-                    
-                    // البحث في delegation.subEventId مع الأحداث الحقيقية
-                    // ملاحظة: تم إزالة البحث في localStorage لأن الأحداث تُحمل من API الآن
-                    if (member.delegation && member.delegation.subEventId) {
-                        // يمكن إضافة البحث في API هنا إذا لزم الأمر
-                        return false
-                    }
-                    
-                    // البحث المباشر في subEventId إذا كان العضو عنده
-                    // ملاحظة: تم إزالة البحث في localStorage لأن الأحداث تُحمل من API الآن
-                    if (member.subEventId) {
-                        // يمكن إضافة البحث في API هنا إذا لزم الأمر
-                        return false
-                    }
-                    
-                    return false
+                    return memberMainEvent.includes(searchTerm)
                 },
             },
             {
@@ -342,27 +413,21 @@ const AllMembers = () => {
                     if (!filterValue) return true
                     const member = row.original
                     
-                    
-                    // البحث المباشر في الأسماء
-                    const searchTerm = filterValue.toLowerCase()
-                    
-                    // البحث في subEvent للمعضو
-                    if (member.subEvent && member.subEvent.name) {
-                        const memberSubEvent = member.subEvent.name.toLowerCase()
-                        
-                        if (memberSubEvent.includes(searchTerm)) {
-                            return true
-                        }
+                    // إذا كان البحث عن القيم الفارغة
+                    if (filterValue === "empty") {
+                        return !member.subEvent?.name || member.subEvent?.name === "" || member.subEvent?.name === "-"
                     }
                     
-                    // البحث في delegation.subEventId مع الأحداث الحقيقية
-                    // ملاحظة: تم إزالة البحث في localStorage لأن الأحداث تُحمل من API الآن
-                    if (member.delegation && member.delegation.subEventId) {
-                        // يمكن إضافة البحث في API هنا إذا لزم الأمر
+                    // للقيم العادية، نتأكد إن القيمة موجودة ومش فارغة
+                    if (!member.subEvent?.name || member.subEvent?.name === "" || member.subEvent?.name === "-") {
                         return false
                     }
                     
-                    return false
+                    // البحث المباشر في الأسماء
+                    const searchTerm = filterValue.toLowerCase()
+                    const memberSubEvent = member.subEvent.name.toLowerCase()
+                    
+                    return memberSubEvent.includes(searchTerm)
                 },
             },
             {
@@ -376,14 +441,25 @@ const AllMembers = () => {
                     if (memberArrivalDate) {
                         return (
                             <div className="text-center">
-                            <span className="text-gray-700">
-                                {new Date(memberArrivalDate).toLocaleDateString('en-GB')}
-                            </span>
+                                <span className="text-gray-700">
+                                    {new Date(memberArrivalDate).toLocaleDateString('en-GB')}
+                                </span>
                             </div>
                         )
                     }
                     
-                    // إذا لم يكن للعضو تاريخ وصول، استخدم تاريخ وصول الوفد
+                    // إذا لم يكن للعضو تاريخ وصول، استخدم تاريخ وصول الوفد من arrivalInfo
+                    if (member.delegation && member.delegation.arrivalInfo && member.delegation.arrivalInfo.arrivalDate) {
+                        return (
+                            <div className="text-center">
+                                <span className="text-gray-700">
+                                    {new Date(member.delegation.arrivalInfo.arrivalDate).toLocaleDateString('en-GB')}
+                                </span>
+                            </div>
+                        )
+                    }
+                    
+                    // fallback للتاريخ القديم
                     if (member.delegation && member.delegation.arrivalDate) {
                         return (
                             <div className="text-center">
@@ -394,30 +470,10 @@ const AllMembers = () => {
                         )
                     }
                     
-                    // إذا لم يوجد تاريخ وصول للوفد أيضاً، ابحث في بيانات الوفد الكاملة
-                    try {
-                        const savedDelegations = localStorage.getItem('delegations')
-                        if (savedDelegations) {
-                            const delegations = JSON.parse(savedDelegations)
-                            const delegation = delegations.find(d => d.id === member.delegation?.id)
-                            
-                            if (delegation && delegation.arrivalInfo && delegation.arrivalInfo.arrivalDate) {
-                                return (
-                                    <div className="text-center">
-                                        <span className="text-gray-700">
-                                            {new Date(delegation.arrivalInfo.arrivalDate).toLocaleDateString('en-GB')}
-                                        </span>
-                                    </div>
-                                )
-                            }
-                        }
-                    } catch (error) {
-                        // خطأ صامت في جلب تاريخ وصول الوفد
-                    }
-                    
+                    // إذا لم يوجد أي تاريخ وصول، اعرض "-"
                     return (
                         <div className="text-center">
-                            <span className="text-gray-400">غير محدد</span>
+                            <span className="text-gray-400">-</span>
                         </div>
                     )
                 },
@@ -492,7 +548,18 @@ const AllMembers = () => {
                                             <span>تعديل</span>
                                         </DropdownMenuItem>
                                     </EditMember>
-                                    <DeletePopup item={row}>
+                                    <DeletePopup 
+                                        item={row} 
+                                        onDelete={async (memberId) => {
+                                            try {
+                                                await memberService.deleteMember(memberId)
+                                                // إطلاق إشارة لإعادة تحميل البيانات
+                                                window.dispatchEvent(new CustomEvent('memberDeleted'))
+                                            } catch (error) {
+                                                throw error // سيتم التعامل مع الخطأ في DeletePopup
+                                            }
+                                        }}
+                                    >
                                         <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
                                             <Icon icon={'mynaui:trash'} />
                                             <span>حذف</span>

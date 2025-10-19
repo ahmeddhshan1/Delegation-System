@@ -118,7 +118,7 @@ const DelegationFilter = ({ table, data }) => {
                                     <SelectValue placeholder="الجنسية" />
                                 </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="empty">غير محدد</SelectItem>
+                                        <SelectItem value="empty">-</SelectItem>
                                         {
                                             [...new Set(data.map(el => el.nationality).filter(Boolean))]
                                                 .map((nationality, index) => (
@@ -135,7 +135,7 @@ const DelegationFilter = ({ table, data }) => {
                                     <SelectValue placeholder="قادمة من" />
                                 </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="empty">غير محدد</SelectItem>
+                                        <SelectItem value="empty">-</SelectItem>
                                         {(() => {
                                             const origins = data
                                                 .map(el => el.arrivalInfo?.arrivalOrigin)

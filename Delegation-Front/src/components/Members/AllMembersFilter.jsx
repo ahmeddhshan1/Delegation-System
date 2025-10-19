@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react/dist/iconify.js"
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,12 +20,10 @@ import {
 
 const AllMembersFilter = ({ table, data }) => {
     const [open, setOpen] = useState(false)
-    const [mainEvents, setMainEvents] = useState([])
-    const [subEvents, setSubEvents] = useState([])
     const [filters, setFilters] = useState({
         rank: '',
-        role: '',
-        job: '',
+        job_title: '',
+        equivalent_job_name: '',
         memberStatus: '',
         mainEvent: '',
         subEvent: '',
@@ -33,72 +31,71 @@ const AllMembersFilter = ({ table, data }) => {
         departureDate: '',
     })
 
-    // جلب البيانات من localStorage
-    useEffect(() => {
-        const loadEventsData = () => {
-            try {
-                // جلب الأحداث الرئيسية من mainEvents (المصدر الحقيقي)
-                const savedMainEvents = localStorage.getItem('mainEvents')
-                const allSubEvents = []
-                
-                if (savedMainEvents) {
-                    const parsedMainEvents = JSON.parse(savedMainEvents)
-                    setMainEvents(parsedMainEvents)
-                    
-                    // لا نحتاج لأحداث افتراضية - نستخدم الأحداث الحقيقية فقط
-                    
-                    // إضافة أحداث فرعية من mainEvents.sub_events إذا وجدت (البيانات الحقيقية)
-                    parsedMainEvents.forEach(mainEvent => {
-                        if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events) && mainEvent.sub_events.length > 0) {
-                            mainEvent.sub_events.forEach(subEvent => {
-                                allSubEvents.push({
-                                    id: subEvent.id,
-                                    name: subEvent.name,
-                                    mainEventId: mainEvent.id,
-                                    mainEventName: mainEvent.name
-                                })
-                            })
-                        }
-                    })
-                }
-                
-                setSubEvents(allSubEvents)
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات الأحداث:', error)
-            }
+    // فلترة الأحداث الرئيسية حسب الحدث الفرعي المختار
+    const uniqueMainEvents = useMemo(() => {
+        if (filters.subEvent && filters.subEvent !== 'empty') {
+            // إذا كان هناك حدث فرعي مختار، اعرض فقط الحدث الرئيسي المرتبط به
+            const selectedSubEvent = data.find(el => el.subEvent?.name === filters.subEvent)
+            const mainEventName = selectedSubEvent?.subEvent?.mainEventName
+            return mainEventName ? [mainEventName] : []
+        } else {
+            // إذا لم يكن هناك حدث فرعي مختار، اعرض جميع الأحداث الرئيسية
+            return [...new Set(data.map(el => el.subEvent?.mainEventName).filter(Boolean))]
         }
-
-        loadEventsData()
-
-        // الاستماع لتغييرات localStorage
-        const handleStorageChange = () => {
-            loadEventsData()
+    }, [data, filters.subEvent])
+    
+    // فلترة الأحداث الفرعية حسب الحدث الرئيسي المختار
+    const uniqueSubEvents = useMemo(() => {
+        if (filters.mainEvent && filters.mainEvent !== 'empty') {
+            // إذا كان هناك حدث رئيسي مختار، اعرض فقط الأحداث الفرعية المرتبطة به
+            return [...new Set(data
+                .filter(el => el.subEvent?.mainEventName === filters.mainEvent)
+                .map(el => el.subEvent?.name)
+                .filter(Boolean)
+            )]
+        } else {
+            // إذا لم يكن هناك حدث رئيسي مختار، اعرض جميع الأحداث الفرعية
+            return [...new Set(data.map(el => el.subEvent?.name).filter(Boolean))]
         }
-
-        window.addEventListener('storage', handleStorageChange)
-        window.addEventListener('eventAdded', handleStorageChange)
-        window.addEventListener('eventUpdated', handleStorageChange)
-        window.addEventListener('eventDeleted', handleStorageChange)
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange)
-            window.removeEventListener('eventAdded', handleStorageChange)
-            window.removeEventListener('eventUpdated', handleStorageChange)
-            window.removeEventListener('eventDeleted', handleStorageChange)
-        }
-    }, [])
+    }, [data, filters.mainEvent])
 
     const applyFilter = (val, fieldName) => {
-        
-        // إذا تم اختيار حدث رئيسي جديد، امسح فلتر الحدث الفرعي
+        // تحديث الفلاتر فقط بدون تطبيقها على الجدول
         if (fieldName === 'mainEvent' && val !== filters.mainEvent) {
             setFilters({ ...filters, [fieldName]: val, subEvent: '' })
-            table.getColumn(fieldName)?.setFilterValue(val === "" ? undefined : val)
-            table.getColumn('subEvent')?.setFilterValue(undefined)
-        } else {
+        } 
+        // إذا تم اختيار حدث فرعي جديد، اختر الحدث الرئيسي تلقائياً
+        else if (fieldName === 'subEvent' && val !== filters.subEvent) {
+            // البحث عن الحدث الرئيسي للحدث الفرعي المختار
+            const selectedSubEvent = data.find(el => el.subEvent?.name === val)
+            const mainEventName = selectedSubEvent?.subEvent?.mainEventName
+            
+            setFilters({ 
+                ...filters, 
+                [fieldName]: val, 
+                mainEvent: mainEventName || '' 
+            })
+        } 
+        else {
             setFilters({ ...filters, [fieldName]: val })
-            table.getColumn(fieldName)?.setFilterValue(val === "" ? undefined : val)
         }
+    }
+
+    const applyFiltersToTable = () => {
+        // تطبيق جميع الفلاتر على الجدول
+        Object.entries(filters).forEach(([fieldName, value]) => {
+            if (value && value !== '') {
+                if (value === "empty") {
+                    // للقيم الفارغة، نبحث عن القيم الفارغة أو "-"
+                    table.getColumn(fieldName)?.setFilterValue("empty")
+                } else {
+                    table.getColumn(fieldName)?.setFilterValue(value)
+                }
+            } else {
+                table.getColumn(fieldName)?.setFilterValue(undefined)
+            }
+        })
+        setOpen(false) // إغلاق نافذة الفلتر
     }
 
 
@@ -106,8 +103,8 @@ const AllMembersFilter = ({ table, data }) => {
     const clearFilter = () => {
         setFilters({
             rank: '',
-            role: '',
-            job: '',
+            job_title: '',
+            equivalent_job_name: '',
             memberStatus: '',
             mainEvent: '',
             subEvent: '',
@@ -115,7 +112,7 @@ const AllMembersFilter = ({ table, data }) => {
             departureDate: '',
         })
         table.resetColumnFilters()
-        setOpen(false)
+        // لا نغلق النافذة - setOpen(false) تم حذفها
     }
 
     const isFiltered = table.getState().columnFilters.length > 0
@@ -152,8 +149,11 @@ const AllMembersFilter = ({ table, data }) => {
                                 <SelectValue placeholder="اختر الرتبة" />
                             </SelectTrigger>
                             <SelectContent>
+                                {data.some(el => !el.rank || el.rank === "") && (
+                                    <SelectItem value="empty">فارغ</SelectItem>
+                                )}
                                 {
-                                    [...new Set(data.map(el => el.rank))]
+                                    [...new Set(data.map(el => el.rank).filter(Boolean))]
                                         .map((rank, index) => (
                                             <SelectItem key={index} value={rank}>
                                                 {rank}
@@ -167,16 +167,19 @@ const AllMembersFilter = ({ table, data }) => {
                     {/* الوظيفة */}
                     <div className="grid grid-cols-3 items-center gap-1.5">
                         <Label className="text-sm font-medium text-right">الوظيفة</Label>
-                        <Select dir='rtl' value={filters.role} onValueChange={val => applyFilter(val, 'role')}>
+                        <Select dir='rtl' value={filters.job_title} onValueChange={val => applyFilter(val, 'job_title')}>
                             <SelectTrigger className="w-full !ring-0 col-span-2 h-8">
                                 <SelectValue placeholder="اختر الوظيفة" />
                             </SelectTrigger>
                             <SelectContent>
+                                {data.some(el => !el.job_title || el.job_title === "") && (
+                                    <SelectItem value="empty">فارغ</SelectItem>
+                                )}
                                 {
-                                    [...new Set(data.map(el => el.role).filter(Boolean))]
-                                        .map((role, index) => (
-                                            <SelectItem key={index} value={role}>
-                                                {role}
+                                    [...new Set(data.map(el => el.job_title).filter(Boolean))]
+                                        .map((jobTitle, index) => (
+                                            <SelectItem key={index} value={jobTitle}>
+                                                {jobTitle}
                                             </SelectItem>
                                         ))
                                 }
@@ -187,16 +190,19 @@ const AllMembersFilter = ({ table, data }) => {
                     {/* المنصب المعادل */}
                     <div className="grid grid-cols-3 items-center gap-1.5">
                         <Label className="text-sm font-medium text-right">المنصب المعادل</Label>
-                        <Select dir='rtl' value={filters.job} onValueChange={val => applyFilter(val, 'equivalentRole')}>
+                        <Select dir='rtl' value={filters.equivalent_job_name} onValueChange={val => applyFilter(val, 'equivalent_job_name')}>
                             <SelectTrigger className="w-full !ring-0 col-span-2 h-8">
                                 <SelectValue placeholder="اختر المنصب المعادل" />
                             </SelectTrigger>
                             <SelectContent>
+                                {data.some(el => !el.equivalent_job_name || el.equivalent_job_name === "") && (
+                                    <SelectItem value="empty">فارغ</SelectItem>
+                                )}
                                 {
-                                    [...new Set(data.map(el => el.equivalentRole).filter(Boolean))]
-                                        .map((equivalentRole, index) => (
-                                            <SelectItem key={index} value={equivalentRole}>
-                                                {equivalentRole}
+                                    [...new Set(data.map(el => el.equivalent_job_name).filter(Boolean))]
+                                        .map((equivalentJobName, index) => (
+                                            <SelectItem key={index} value={equivalentJobName}>
+                                                {equivalentJobName}
                                             </SelectItem>
                                         ))
                                 }
@@ -226,9 +232,12 @@ const AllMembersFilter = ({ table, data }) => {
                                 <SelectValue placeholder="اختر الحدث الرئيسي" />
                             </SelectTrigger>
                             <SelectContent>
-                                {mainEvents.map((event, index) => (
-                                    <SelectItem key={index} value={event.name}>
-                                        {event.name}
+                                {data.some(el => !el.subEvent?.mainEventName || el.subEvent?.mainEventName === "") && (
+                                    <SelectItem value="empty">فارغ</SelectItem>
+                                )}
+                                {uniqueMainEvents.map((mainEvent, index) => (
+                                    <SelectItem key={index} value={mainEvent}>
+                                        {mainEvent}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -243,26 +252,14 @@ const AllMembersFilter = ({ table, data }) => {
                                 <SelectValue placeholder="اختر الحدث الفرعي" />
                             </SelectTrigger>
                             <SelectContent>
-                                {(() => {
-                                    // إذا كان هناك حدث رئيسي مختار، اعرض فقط الأحداث الفرعية المرتبطة به
-                                    if (filters.mainEvent) {
-                                        const filteredSubEvents = subEvents.filter(subEvent => 
-                                            subEvent.mainEventName === filters.mainEvent
-                                        )
-                                        return filteredSubEvents.map((event, index) => (
-                                            <SelectItem key={index} value={event.name}>
-                                                {event.name}
-                                            </SelectItem>
-                                        ))
-                                    }
-                                    
-                                    // إذا لم يكن هناك حدث رئيسي مختار، اعرض جميع الأحداث الفرعية بدون الحدث الرئيسي
-                                    return subEvents.map((event, index) => (
-                                        <SelectItem key={index} value={event.name}>
-                                            {event.name}
-                                        </SelectItem>
-                                    ))
-                                })()}
+                                {data.some(el => !el.subEvent?.name || el.subEvent?.name === "") && (
+                                    <SelectItem value="empty">فارغ</SelectItem>
+                                )}
+                                {uniqueSubEvents.map((subEvent, index) => (
+                                    <SelectItem key={index} value={subEvent}>
+                                        {subEvent}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -303,17 +300,31 @@ const AllMembersFilter = ({ table, data }) => {
                         />
                     </div>
 
-                    {isFiltered && (
+                    {(filters.rank || filters.job_title || filters.equivalent_job_name || 
+                      filters.memberStatus || filters.mainEvent || filters.subEvent || 
+                      filters.arrivalDate || filters.departureDate) && (
                         <div className="pt-2 border-t mt-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="w-full h-8 text-xs bg-yellow-400 border-yellow-400 text-white hover:bg-yellow-500 hover:border-yellow-500"
-                                onClick={clearFilter}
-                            >
-                                <Icon icon="material-symbols:clear" className="ml-1" fontSize={14} />
-                                حذف جميع الفلاتر
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="flex-1 h-8 text-xs !ring-0 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                                    onClick={applyFiltersToTable}
+                                >
+                                    <Icon icon="material-symbols:filter-list" className="ml-1" fontSize={14} />
+                                    تطبيق الفلتر
+                                </Button>
+                                
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="flex-1 h-8 text-xs !ring-0 bg-yellow-400 border-yellow-400 text-white hover:bg-yellow-500 hover:border-yellow-500"
+                                    onClick={clearFilter}
+                                >
+                                    <Icon icon="material-symbols:clear" className="ml-1" fontSize={14} />
+                                    حذف جميع الفلاتر
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
