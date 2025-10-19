@@ -1,67 +1,50 @@
 #!/usr/bin/env python
 """
-Create admin user for testing
+Script to create ADMIN user
 """
 import os
 import sys
 import django
 
-# Setup Django environment
+# Setup Django
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'delegation_system.settings')
 django.setup()
 
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from accounts.models import User
 
 def create_admin_user():
-    """Create admin user"""
-    print("👤 Creating admin user...")
-    
+    """
+    Create ADMIN user
+    """
     try:
-        # Check if admin exists
-        admin_user = User.objects.filter(username='admin').first()
+        # Check if admin already exists
+        if User.objects.filter(username='admin').exists():
+            print("❌ Admin user already exists!")
+            return False
         
-        if admin_user:
-            print("✅ Admin user already exists")
-            print(f"   Username: {admin_user.username}")
-            print(f"   Full name: {admin_user.full_name}")
-            print(f"   Role: {admin_user.role}")
-            print(f"   Is active: {admin_user.is_active}")
-            
-            # Reset password
-            admin_user.set_password('admin123')
-            admin_user.save()
-            print("   ✅ Password reset to: admin123")
-            
-        else:
-            # Create new admin user
-            admin_user = User.objects.create_user(
-                username='admin',
-                password='admin123',
-                full_name='مدير النظام',
-                role='SUPER_ADMIN',
-                is_active=True
-            )
-            print("✅ Created new admin user")
-            print(f"   Username: admin")
-            print(f"   Password: admin123")
-            print(f"   Role: SUPER_ADMIN")
+        # Create admin user
+        admin_user = User.objects.create_user(
+            username='admin',
+            full_name='مدير النظام',
+            password='123456',  # Change this to a secure password
+            role='ADMIN',
+            is_active=True,
+            is_staff=True,  # ADMIN needs staff access for some features
+            is_superuser=False  # ADMIN is not superuser
+        )
         
-        # Test login
-        print("\n🧪 Testing login...")
-        if admin_user.check_password('admin123'):
-            print("✅ Password verification successful!")
-        else:
-            print("❌ Password verification failed!")
-            
+        print(f"✅ Admin user created successfully!")
+        print(f"   Username: {admin_user.username}")
+        print(f"   Full Name: {admin_user.full_name}")
+        print(f"   Role: {admin_user.role}")
+        print(f"   Password: 123456")
+        
+        return True
+        
     except Exception as e:
         print(f"❌ Error creating admin user: {e}")
-        import traceback
-        traceback.print_exc()
+        return False
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     create_admin_user()
-
-
-

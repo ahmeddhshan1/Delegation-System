@@ -40,8 +40,8 @@ const permissionsSlice = createSlice({
         name: role === USER_ROLES.SUPER_ADMIN ? 'مدير النظام' :
               role === USER_ROLES.ADMIN ? 'مدير' : 'مستخدم',
         description: role === USER_ROLES.SUPER_ADMIN ? 'صلاحيات كاملة على جميع أجزاء النظام' :
-                     role === USER_ROLES.ADMIN ? 'صلاحيات كاملة على الفرونت إند' :
-                     'صلاحيات محدودة للعرض والإضافة',
+                     role === USER_ROLES.ADMIN ? 'صلاحيات كاملة على الفرونت إند (بدون إعدادات النظام)' :
+                     'صلاحيات محدودة: إضافة وفود وأعضاء ومغادرات فقط',
         color: role === USER_ROLES.SUPER_ADMIN ? 'text-red-600' :
                role === USER_ROLES.ADMIN ? 'text-blue-600' : 'text-green-600',
         bgColor: role === USER_ROLES.SUPER_ADMIN ? 'bg-red-50' :

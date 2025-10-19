@@ -7,18 +7,25 @@ from .models import User, LoginLogs, AuditLog
 class UserAdmin(BaseUserAdmin):
     list_display = ('username', 'full_name', 'role', 'is_active', 'is_staff', 'is_superuser', 'created_at')
     list_filter = ('role', 'is_active', 'is_staff', 'is_superuser', 'created_at')
-    search_fields = ('username', 'full_name', 'email')
+    search_fields = ('username', 'full_name')
     ordering = ('-created_at',)
     
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('معلومات شخصية', {'fields': ('full_name', 'email', 'role')}),
-        ('الصلاحيات', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('معلومات شخصية', {'fields': ('full_name', 'role')}),
+        ('الصلاحيات', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         ('تواريخ مهمة', {'fields': ('last_login', 'date_joined', 'created_at', 'updated_at')}),
         ('معلومات إضافية', {'fields': ('created_by', 'updated_by', 'device_info')}),
     )
     
     readonly_fields = ('created_at', 'updated_at', 'last_login', 'date_joined')
+    
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'full_name', 'role', 'password1', 'password2'),
+        }),
+    )
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('created_by', 'updated_by')

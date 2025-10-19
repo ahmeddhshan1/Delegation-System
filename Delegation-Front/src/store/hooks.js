@@ -64,7 +64,23 @@ export const usePermissions = () => {
       return true
     }
     
-    // التحقق من الصلاحيات المحفوظة
+    // إذا كان المستخدم Admin، لديه نفس صلاحيات SUPER_ADMIN عدا إعدادات النظام
+    if (userRole === 'ADMIN') {
+      // ADMIN له كل الصلاحيات عدا SYSTEM_SETTINGS
+      const restrictedPermissions = ['SYSTEM_SETTINGS']
+      return !restrictedPermissions.includes(permission)
+    }
+    
+    // إذا كان المستخدم User، لديه صلاحيات محدودة
+    if (userRole === 'USER') {
+      const userPermissions = [
+        'VIEW_EVENTS', 'VIEW_DELEGATIONS', 'ADD_DELEGATIONS', 'VIEW_MEMBERS',
+        'ADD_MEMBERS', 'VIEW_DEPARTURES', 'ADD_DEPARTURES', 'USE_FILTERS'
+      ]
+      return userPermissions.includes(permission)
+    }
+    
+    // التحقق من الصلاحيات المحفوظة كـ fallback
     return permissions.permissions.includes(permission)
   }, [permissions.permissions, userRole])
   
@@ -74,8 +90,8 @@ export const usePermissions = () => {
       return true
     }
     
-    return permissionsList.every(permission => permissions.permissions.includes(permission))
-  }, [permissions.permissions, userRole])
+    return permissionsList.every(permission => checkPermission(permission))
+  }, [userRole, checkPermission])
   
   const checkAnyPermission = useCallback((permissionsList) => {
     // إذا كان المستخدم Super Admin، لديه جميع الصلاحيات
@@ -83,12 +99,48 @@ export const usePermissions = () => {
       return true
     }
     
-    return permissionsList.some(permission => permissions.permissions.includes(permission))
-  }, [permissions.permissions, userRole])
+    return permissionsList.some(permission => checkPermission(permission))
+  }, [userRole, checkPermission])
   
+  // Get role info
+  const getRoleInfo = () => {
+    const roleInfo = {
+      'SUPER_ADMIN': {
+        name: 'مدير النظام',
+        description: 'صلاحيات كاملة على جميع أجزاء النظام',
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        icon: 'material-symbols:admin-panel-settings'
+      },
+      'ADMIN': {
+        name: 'مدير',
+        description: 'صلاحيات كاملة على الفرونت إند (بدون إعدادات النظام)',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+        icon: 'material-symbols:shield-person'
+      },
+      'USER': {
+        name: 'مستخدم',
+        description: 'صلاحيات محدودة: إضافة وفود وأعضاء ومغادرات فقط',
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        icon: 'material-symbols:person'
+      }
+    }
+    
+    return roleInfo[userRole] || {
+      name: 'غير محدد',
+      description: 'دور غير معروف',
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50',
+      icon: 'material-symbols:help'
+    }
+  }
+
   return {
     ...permissions,
     userRole,
+    roleInfo: getRoleInfo(),
     dispatch,
     checkPermission,
     checkAllPermissions,

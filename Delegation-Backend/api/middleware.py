@@ -54,3 +54,27 @@ class AdminSessionMiddleware(MiddlewareMixin):
                 pass
         
         return None
+
+
+class AdminAccessMiddleware(MiddlewareMixin):
+    """
+    Middleware to prevent ADMIN role users from accessing Django Admin
+    """
+    
+    def process_request(self, request):
+        # Check if this is an admin request
+        if request.path.startswith('/admin/'):
+            # Skip middleware for admin_token requests (handled by AdminSessionMiddleware)
+            if request.GET.get('admin_token'):
+                return None
+            
+            # Check if user is authenticated and has ADMIN role
+            if hasattr(request, 'user') and request.user.is_authenticated:
+                # If user is ADMIN (not SUPER_ADMIN), redirect to frontend
+                if request.user.role == 'ADMIN':
+                    from django.http import HttpResponseRedirect
+                    from django.urls import reverse
+                    # Redirect to frontend with message
+                    return HttpResponseRedirect('/?message=admin_access_denied')
+        
+        return None

@@ -59,45 +59,32 @@ export const ROLE_PERMISSIONS = {
     ],
     
     [USER_ROLES.ADMIN]: [
-        // إدارة الأحداث
+        // نفس صلاحيات SUPER_ADMIN تماماً عدا إعدادات النظام
         PERMISSIONS.MANAGE_EVENTS,
         PERMISSIONS.VIEW_EVENTS,
-        
-        // إدارة الوفود
         PERMISSIONS.MANAGE_DELEGATIONS,
         PERMISSIONS.VIEW_DELEGATIONS,
         PERMISSIONS.ADD_DELEGATIONS,
         PERMISSIONS.EDIT_DELEGATIONS,
         PERMISSIONS.DELETE_DELEGATIONS,
-        
-        // إدارة الأعضاء
         PERMISSIONS.MANAGE_MEMBERS,
         PERMISSIONS.VIEW_MEMBERS,
         PERMISSIONS.ADD_MEMBERS,
         PERMISSIONS.EDIT_MEMBERS,
         PERMISSIONS.DELETE_MEMBERS,
-        
-        // إدارة المغادرات
         PERMISSIONS.MANAGE_DEPARTURES,
         PERMISSIONS.VIEW_DEPARTURES,
         PERMISSIONS.ADD_DEPARTURES,
         PERMISSIONS.EDIT_DEPARTURES,
         PERMISSIONS.DELETE_DEPARTURES,
-        
-        // التقارير والتصدير
         PERMISSIONS.VIEW_REPORTS,
         PERMISSIONS.EXPORT_REPORTS,
         PERMISSIONS.PRINT_REPORTS,
-        
-        // الفلترة والبحث
         PERMISSIONS.USE_FILTERS,
         PERMISSIONS.ADVANCED_SEARCH,
-        
-        // إدارة النظام
-        PERMISSIONS.SYSTEM_SETTINGS,
         PERMISSIONS.AUDIT_LOGS
         
-        // ملاحظة: لا توجد إدارة مستخدمين في الفرونت إند
+        // ملاحظة: ADMIN له كل الصلاحيات عدا SYSTEM_SETTINGS (Django Admin)
     ],
     
     [USER_ROLES.USER]: [
@@ -116,9 +103,8 @@ export const ROLE_PERMISSIONS = {
         PERMISSIONS.VIEW_DEPARTURES,
         PERMISSIONS.ADD_DEPARTURES,
         
-        // الفلترة والبحث
-        PERMISSIONS.USE_FILTERS,
-        PERMISSIONS.ADVANCED_SEARCH
+        // الفلترة والبحث (محدود - الفلترة الأساسية فقط)
+        PERMISSIONS.USE_FILTERS
     ]
 }
 
@@ -189,14 +175,14 @@ export const getRoleInfo = (userRole) => {
         },
         [USER_ROLES.ADMIN]: {
             name: 'مدير',
-            description: 'صلاحيات كاملة على الفرونت إند',
+            description: 'صلاحيات كاملة على الفرونت إند (بدون إعدادات النظام)',
             color: 'text-blue-600',
             bgColor: 'bg-blue-50',
             icon: 'material-symbols:shield-person'
         },
         [USER_ROLES.USER]: {
             name: 'مستخدم',
-            description: 'صلاحيات محدودة للعرض والإضافة',
+            description: 'صلاحيات محدودة: إضافة وفود وأعضاء ومغادرات فقط',
             color: 'text-green-600',
             bgColor: 'bg-green-50',
             icon: 'material-symbols:person'

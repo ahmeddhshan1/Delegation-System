@@ -3,13 +3,16 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Count, Q
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.utils import timezone
+from rest_framework.authtoken.models import Token
+from .permissions import (
+    IsSuperAdminOrReadOnly, IsAdminOrReadOnly, IsUserOrReadOnly,
+    IsSuperAdminOnly, IsAdminOrSuperAdmin, CanManageUsers, CanViewReports, CanDeleteData
+)
 import json
 
 User = get_user_model()
-from django.utils import timezone
-from rest_framework.authtoken.models import Token
 from .models import (
     MainEvent, SubEvent, Nationality, Cities,
     AirLine, AirPort, EquivalentJob, Delegation, Member, CheckOut
@@ -25,7 +28,19 @@ from .serializers import (
 class MainEventViewSet(viewsets.ModelViewSet):
     queryset = MainEvent.objects.all()
     serializer_class = MainEventSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperAdmin]  # فقط ADMIN و SUPER_ADMIN يمكنهم إدارة الأحداث
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action == 'list' or self.action == 'retrieve':
+            # للعرض فقط، أي مستخدم مصادق عليه يمكنه رؤية الأحداث
+            permission_classes = [IsAuthenticated]
+        else:
+            # للإنشاء والتعديل والحذف، فقط ADMIN و SUPER_ADMIN
+            permission_classes = [IsAdminOrSuperAdmin]
+        return [permission() for permission in permission_classes]
     
     def get_queryset(self):
         queryset = MainEvent.objects.all().prefetch_related('sub_events')
@@ -47,7 +62,19 @@ class MainEventViewSet(viewsets.ModelViewSet):
 class SubEventViewSet(viewsets.ModelViewSet):
     queryset = SubEvent.objects.all()
     serializer_class = SubEventSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperAdmin]  # فقط ADMIN و SUPER_ADMIN يمكنهم إدارة الأحداث الفرعية
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action == 'list' or self.action == 'retrieve':
+            # للعرض فقط، أي مستخدم مصادق عليه يمكنه رؤية الأحداث الفرعية
+            permission_classes = [IsAuthenticated]
+        else:
+            # للإنشاء والتعديل والحذف، فقط ADMIN و SUPER_ADMIN
+            permission_classes = [IsAdminOrSuperAdmin]
+        return [permission() for permission in permission_classes]
     
     def get_queryset(self):
         queryset = SubEvent.objects.all().select_related('main_event_id')
@@ -65,7 +92,7 @@ class SubEventViewSet(viewsets.ModelViewSet):
 class NationalityViewSet(viewsets.ModelViewSet):
     queryset = Nationality.objects.all()
     serializer_class = NationalitySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperAdmin]  # فقط ADMIN و SUPER_ADMIN يمكنهم إدارة الجنسيات
     
     def get_queryset(self):
         queryset = Nationality.objects.all()
@@ -82,7 +109,7 @@ class NationalityViewSet(viewsets.ModelViewSet):
 class CitiesViewSet(viewsets.ModelViewSet):
     queryset = Cities.objects.all()
     serializer_class = CitiesSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperAdmin]  # فقط ADMIN و SUPER_ADMIN يمكنهم إدارة المدن
     
     def get_queryset(self):
         queryset = Cities.objects.all()
@@ -99,7 +126,7 @@ class CitiesViewSet(viewsets.ModelViewSet):
 class AirLineViewSet(viewsets.ModelViewSet):
     queryset = AirLine.objects.all()
     serializer_class = AirLineSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperAdmin]  # فقط ADMIN و SUPER_ADMIN يمكنهم إدارة شركات الطيران
     
     def get_queryset(self):
         queryset = AirLine.objects.all()
@@ -116,7 +143,7 @@ class AirLineViewSet(viewsets.ModelViewSet):
 class AirPortViewSet(viewsets.ModelViewSet):
     queryset = AirPort.objects.all()
     serializer_class = AirPortSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperAdmin]  # فقط ADMIN و SUPER_ADMIN يمكنهم إدارة المطارات
     
     def get_queryset(self):
         queryset = AirPort.objects.all()
@@ -133,7 +160,7 @@ class AirPortViewSet(viewsets.ModelViewSet):
 class EquivalentJobViewSet(viewsets.ModelViewSet):
     queryset = EquivalentJob.objects.all()
     serializer_class = EquivalentJobSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSuperAdmin]  # فقط ADMIN و SUPER_ADMIN يمكنهم إدارة المهن المكافئة
     
     def get_queryset(self):
         queryset = EquivalentJob.objects.all()
@@ -146,7 +173,7 @@ class EquivalentJobViewSet(viewsets.ModelViewSet):
 class DelegationViewSet(viewsets.ModelViewSet):
     queryset = Delegation.objects.all()
     serializer_class = DelegationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUserOrReadOnly]  # USER يمكنه الإضافة، ADMIN/SUPER_ADMIN يمكنهم التعديل/الحذف
     
     def get_queryset(self):
         queryset = Delegation.objects.all().select_related(
@@ -186,7 +213,7 @@ class DelegationViewSet(viewsets.ModelViewSet):
 class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUserOrReadOnly]  # USER يمكنه الإضافة، ADMIN/SUPER_ADMIN يمكنهم التعديل/الحذف
     
     def get_queryset(self):
         queryset = Member.objects.all().select_related(
@@ -248,7 +275,7 @@ class MemberViewSet(viewsets.ModelViewSet):
 class CheckOutViewSet(viewsets.ModelViewSet):
     queryset = CheckOut.objects.all()
     serializer_class = CheckOutSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsUserOrReadOnly]  # USER يمكنه الإضافة، ADMIN/SUPER_ADMIN يمكنهم التعديل/الحذف
     
     def get_queryset(self):
         queryset = CheckOut.objects.all().select_related(
@@ -312,30 +339,49 @@ class DashboardViewSet(viewsets.ViewSet):
     def stats(self, request):
         """Get dashboard statistics"""
         
+        # Optimize queries using single aggregation
+        from django.db.models import Count, Q
+        
+        # Get all counts in optimized queries
+        delegation_counts = Delegation.objects.aggregate(
+            total=Count('id'),
+            military=Count('id', filter=Q(type='MILITARY')),
+            civilian=Count('id', filter=Q(type='CIVILIAN')),
+            not_departed=Count('id', filter=Q(status='NOT_DEPARTED')),
+            partially_departed=Count('id', filter=Q(status='PARTIALLY_DEPARTED')),
+            fully_departed=Count('id', filter=Q(status='FULLY_DEPARTED'))
+        )
+        
+        member_counts = Member.objects.aggregate(
+            total=Count('id'),
+            not_departed=Count('id', filter=Q(status='NOT_DEPARTED')),
+            departed=Count('id', filter=Q(status='DEPARTED'))
+        )
+        
         # Event stats
         event_stats = {
             'total_main_events': MainEvent.objects.count(),
             'total_sub_events': SubEvent.objects.count(),
-            'total_delegations': Delegation.objects.count(),
-            'total_members': Member.objects.count(),
+            'total_delegations': delegation_counts['total'],
+            'total_members': member_counts['total'],
             'total_check_outs': CheckOut.objects.count(),
         }
         
         # Delegation stats
         delegation_stats = {
-            'total_delegations': Delegation.objects.count(),
-            'military_delegations': Delegation.objects.filter(type='MILITARY').count(),
-            'civilian_delegations': Delegation.objects.filter(type='CIVILIAN').count(),
-            'not_departed': Delegation.objects.filter(status='NOT_DEPARTED').count(),
-            'partially_departed': Delegation.objects.filter(status='PARTIALLY_DEPARTED').count(),
-            'fully_departed': Delegation.objects.filter(status='FULLY_DEPARTED').count(),
+            'total_delegations': delegation_counts['total'],
+            'military_delegations': delegation_counts['military'],
+            'civilian_delegations': delegation_counts['civilian'],
+            'not_departed': delegation_counts['not_departed'],
+            'partially_departed': delegation_counts['partially_departed'],
+            'fully_departed': delegation_counts['fully_departed'],
         }
         
         # Member stats
         member_stats = {
-            'total_members': Member.objects.count(),
-            'not_departed_members': Member.objects.filter(status='NOT_DEPARTED').count(),
-            'departed_members': Member.objects.filter(status='DEPARTED').count(),
+            'total_members': member_counts['total'],
+            'not_departed_members': member_counts['not_departed'],
+            'departed_members': member_counts['departed'],
         }
         
         # Recent data

@@ -4,9 +4,11 @@ import { Icon } from "@iconify/react/dist/iconify.js"
 import EventsList from '../components/Events/EventsList'
 import Stats from '../components/Stats'
 import { dashboardService, eventService, delegationService } from '../services/api'
+import { usePermissions } from '../store/hooks'
 
 const Home = () => {
     const navigate = useNavigate()
+    const { checkPermission } = usePermissions()
     const [latestSubEvents, setLatestSubEvents] = useState([])
     const [statsData, setStatsData] = useState(null)
     const [statsLoading, setStatsLoading] = useState(true)
@@ -262,15 +264,18 @@ const Home = () => {
                         <Icon icon="material-symbols:event" fontSize={64} className="mx-auto mb-6 text-neutral-400" />
                         <h3 className="text-xl font-semibold mb-2 text-neutral-700">لا توجد أحداث</h3>
                         <p className="text-neutral-500 mb-6">
-                            لم يتم إنشاء أي أحداث بعد. ابدأ بإنشاء أول حدث لك من خلال صفحة إدارة الأحداث.
+                            لم يتم إنشاء أي أحداث بعد.
+                            {checkPermission('MANAGE_EVENTS') && ' ابدأ بإنشاء أول حدث لك من خلال صفحة إدارة الأحداث.'}
                         </p>
-                        <button 
-                            onClick={() => navigate('/events-management')}
-                            className="bg-primary-400 hover:bg-primary-500 text-primary-foreground px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:shadow-lg"
-                        >
-                            <Icon icon="material-symbols:add" className="inline-block ml-2" />
-                            إنشاء حدث جديد
-                        </button>
+                        {checkPermission('MANAGE_EVENTS') && (
+                            <button 
+                                onClick={() => navigate('/events-management')}
+                                className="bg-primary-400 hover:bg-primary-500 text-primary-foreground px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:shadow-lg"
+                            >
+                                <Icon icon="material-symbols:add" className="inline-block ml-2" />
+                                إنشاء حدث جديد
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

@@ -74,19 +74,12 @@ const UserProfile = () => {
                             <span>الملف الشخصي</span>
                         </DropdownMenuItem>
                     </NavLink>
-                    {/* زر إعدادات النظام - يفتح Django Admin للـ Super Admin أو صفحة عادية للآخرين */}
-                    {currentUser?.is_super_admin && authService.hasAdminSession() ? (
+                    {/* زر إعدادات النظام - فقط للـ SUPER_ADMIN */}
+                    {currentUser?.is_super_admin && authService.hasAdminSession() && (
                         <DropdownMenuItem onClick={handleOpenAdminDashboard}>
                             <Icon icon="material-symbols:admin-panel-settings-outline" />
                             <span>إعدادات النظام</span>
                         </DropdownMenuItem>
-                    ) : (
-                        <NavLink to='/'>
-                            <DropdownMenuItem>
-                                <Icon icon="material-symbols:settings-outline-rounded" />
-                                <span>إعدادات النظام</span>
-                            </DropdownMenuItem>
-                        </NavLink>
                     )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

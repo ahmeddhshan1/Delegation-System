@@ -5,6 +5,7 @@ import AllMembersFilter from "./AllMembersFilter"
 import MembersReportExport from "./MembersReportExport"
 import { toast } from "sonner"
 import { useMemo } from "react"
+import { PermissionElement } from "../Permissions/PermissionGuard"
 
 const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
     // الحصول على البيانات المفلترة من الجدول
@@ -41,8 +42,12 @@ const AllMembersTableToolbar = ({ table, data, onCleanup }) => {
                 className="w-full sm:max-w-sm !ring-0"
             />
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <AllMembersFilter table={table} data={data} />
-                <MembersReportExport data={data} filteredData={filteredData} />
+                <PermissionElement permission="USE_FILTERS">
+                    <AllMembersFilter table={table} data={data} />
+                </PermissionElement>
+                <PermissionElement permission="EXPORT_REPORTS">
+                    <MembersReportExport data={data} filteredData={filteredData} />
+                </PermissionElement>
             </div>
         </div>
     )
