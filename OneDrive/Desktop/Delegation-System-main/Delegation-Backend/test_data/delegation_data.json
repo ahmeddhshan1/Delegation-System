@@ -1,0 +1,22 @@
+{
+  "sub_event": 1,
+  "nationality": 1,
+  "type": "MILITARY",
+  "status": "NOT_DEPARTED",
+  "max_members": 5,
+  "arrival_info": {
+    "arrival_hall": "قاعة الوصول الرئيسية",
+    "arrival_airline": "طيران الإمارات",
+    "arrival_flight_number": "EK123",
+    "arrival_origin": "دبي",
+    "arrival_date": "2024-01-15",
+    "arrival_time": "1430",
+    "arrival_receptor": "وزارة الدفاع",
+    "arrival_destination": "القاهرة",
+    "arrival_shipments": "أمتعة شخصية",
+    "delegation_head": "اللواء أحمد محمد"
+  }
+}
+
+
+
