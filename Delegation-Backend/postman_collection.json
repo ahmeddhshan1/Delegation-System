@@ -1,0 +1,303 @@
+{
+  "info": {
+    "name": "Delegation System API",
+    "description": "API collection for testing Delegation Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{login_data}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me", ""]
+            }
+          }
+        },
+        {
+          "name": "Get User Permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/user_permissions/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "user_permissions", ""]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Main Events",
+      "item": [
+        {
+          "name": "Get All Main Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/main-events/",
+              "host": ["{{base_url}}"],
+              "path": ["main-events", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Main Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{main_event_data}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/main-events/",
+              "host": ["{{base_url}}"],
+              "path": ["main-events", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sub Events",
+      "item": [
+        {
+          "name": "Get All Sub Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/sub-events/",
+              "host": ["{{base_url}}"],
+              "path": ["sub-events", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Sub Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{sub_event_data}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sub-events/",
+              "host": ["{{base_url}}"],
+              "path": ["sub-events", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Nationalities",
+      "item": [
+        {
+          "name": "Get All Nationalities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/nationalities/",
+              "host": ["{{base_url}}"],
+              "path": ["nationalities", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Nationality",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{nationality_data}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/nationalities/",
+              "host": ["{{base_url}}"],
+              "path": ["nationalities", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delegations",
+      "item": [
+        {
+          "name": "Get All Delegations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/delegations/",
+              "host": ["{{base_url}}"],
+              "path": ["delegations", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Delegation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{delegation_data}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/delegations/",
+              "host": ["{{base_url}}"],
+              "path": ["delegations", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Members",
+      "item": [
+        {
+          "name": "Get All Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/members/",
+              "host": ["{{base_url}}"],
+              "path": ["members", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{member_data}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/members/",
+              "host": ["{{base_url}}"],
+              "path": ["members", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/stats/",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "stats", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+
