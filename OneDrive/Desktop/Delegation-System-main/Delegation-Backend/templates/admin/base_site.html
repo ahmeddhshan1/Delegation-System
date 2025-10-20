@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+    <a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a>
+    <div style="margin-top: 10px;">
+        <a href="http://localhost:5173/" style="background: #007cba; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px;">
+            🏠 العودة للوحة التحكم الرئيسية
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block nav-breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    {% if title %} &rsaquo; {{ title }}{% endif %}
+</div>
+{% endblock %}
