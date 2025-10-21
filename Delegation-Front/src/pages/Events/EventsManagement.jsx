@@ -161,7 +161,7 @@ const EventsManagement = () => {
                 </div>
             }
         >
-                   <div className="content h-screen flex flex-col" style={{ overflow: 'hidden' }}>
+                   <div className="content h-screen flex flex-col overflow-y-auto">
                    {/* الإحصائيات */}
                    <div className="flex gap-2 justify-between flex-shrink-0">
                        <div className="box w-full bg-white p-6 rounded-2xl border border-neutral-300 flex items-center gap-2 justify-between">

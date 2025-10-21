@@ -187,10 +187,10 @@ ADMIN_INDEX_TITLE = "لوحة تحكم إدارة الوفود"
 ADMIN_SHOW_USER_PERMISSIONS = True
 ADMIN_SHOW_FULL_RESULT_COUNT = True
 
-# CORS Settings
+# CORS Settings for LAN deployment
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://10.10.10.35:3000,http://10.10.10.35:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development only
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 # CORS Headers
 CORS_ALLOW_HEADERS = [

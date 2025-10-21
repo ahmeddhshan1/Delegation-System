@@ -1,41 +1,33 @@
 @echo off
 echo ========================================
-echo    تشغيل Frontend للشبكة المحلية (LAN)
+echo    تشغيل Frontend للشبكة المحلية
 echo ========================================
 echo.
 
-REM التحقق من وجود Node.js
+REM التحقق من Node.js
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo خطأ: Node.js غير مثبت أو غير موجود في PATH
+    echo خطأ: Node.js غير مثبت
     pause
     exit /b 1
 )
 
-REM التحقق من وجود node_modules
+REM تثبيت المتطلبات إذا لزم الأمر
 if not exist "node_modules" (
     echo تثبيت المتطلبات...
     npm install
 )
 
-REM تشغيل خادم التطوير للشبكة المحلية
+REM تشغيل الخادم
 echo.
 echo ========================================
-echo    تشغيل Frontend للشبكة المحلية
+echo    Frontend جاهز للاستخدام
 echo ========================================
 echo.
-echo يمكن الوصول للتطبيق عبر:
-echo   - المحلي: http://localhost:5173
-echo   - الشبكة المحلية: http://10.10.10.35:5173
-echo.
-echo الأجهزة الأخرى على نفس الشبكة يمكنها الوصول عبر:
-echo   http://10.10.10.35:5173
-echo.
-echo تأكد من تشغيل Backend أولاً عبر start_lan_fixed.bat
+echo الوصول المحلي: http://localhost:5173
+echo الوصول من الشبكة: http://10.10.10.35:5173
 echo.
 echo اضغط Ctrl+C لإيقاف الخادم
 echo.
 
 npm run dev
-
-pause
