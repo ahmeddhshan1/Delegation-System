@@ -289,7 +289,10 @@ export const authService = {
             }
             
             // استخدام الـ admin URL الذي يحتوي على الـ token
-            const adminFullUrl = `http://localhost:8000${adminUrl}`
+            const adminBaseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                ? 'http://localhost:8000' 
+                : `http://${window.location.hostname}:8000`
+            const adminFullUrl = `${adminBaseUrl}${adminUrl}`
             
             // فتح في تبويب جديد مباشرة
             window.open(adminFullUrl, '_blank')

@@ -52,8 +52,11 @@ const Login = () => {
                     try {
                         const adminUrl = localStorage.getItem('adminUrl')
                         if (adminUrl) {
-                            // توجيه مباشر إلى Django Admin
-                            window.location.href = `http://localhost:8000${adminUrl}`
+                        // توجيه مباشر إلى Django Admin
+                        const adminBaseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                            ? 'http://localhost:8000' 
+                            : `http://${window.location.hostname}:8000`
+                        window.location.href = `${adminBaseUrl}${adminUrl}`
                         } else {
                             // إذا لم يتم إنشاء admin session، توجيه للصفحة الرئيسية
                             navigate(from, { replace: true })

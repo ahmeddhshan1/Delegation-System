@@ -1,8 +1,17 @@
 // خدمة API للتواصل مع الباك إند
 import axios from 'axios'
 
-// Temporary explicit base URL to avoid hitting the frontend dev server (5173)
-const API_BASE_URL = 'http://localhost:8000/api'
+// Dynamic API base URL - will use LAN IP when available, fallback to localhost
+const getApiBaseUrl = () => {
+    // Check if we're running on LAN (not localhost)
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        return `http://${hostname}:8000/api`;
+    }
+    return 'http://localhost:8000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // إنشاء instance من axios مع الإعدادات الافتراضية
 const api = axios.create({

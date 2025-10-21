@@ -37,7 +37,10 @@ const UserProfile = () => {
             const adminUrl = localStorage.getItem('adminUrl')
             if (adminUrl) {
                 // فتح في نفس التبويب
-                window.location.href = `http://localhost:8000${adminUrl}`
+                const adminBaseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                    ? 'http://localhost:8000' 
+                    : `http://${window.location.hostname}:8000`
+                window.location.href = `${adminBaseUrl}${adminUrl}`
             } else {
                 toast.error("Admin session not found. Please login again.")
             }
