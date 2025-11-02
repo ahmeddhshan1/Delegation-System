@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from './ui/Icon';
 
 const DeleteConfirm = ({ 
     isOpen, 
@@ -27,7 +27,7 @@ const DeleteConfirm = ({
                 <div className="bg-red-50 px-6 py-4 rounded-t-lg">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-full bg-red-100">
-                            <Icon icon="material-symbols:delete" className="text-xl text-red-600" />
+                            <Icon name="Trash2" size={20} className="text-xl text-red-600" />
                         </div>
                         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
                     </div>

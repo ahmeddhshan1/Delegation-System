@@ -10,7 +10,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
@@ -81,7 +81,7 @@ const AddEventCategory = ({ onCategoryAdded }) => {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button className="cursor-pointer w-full mt-4">
-                    <Icon icon="qlementine-icons:plus-16" />
+                    <Icon name="Plus" size={20} />
                     <span>إضافة فئة حدث</span>
                 </Button>
             </DialogTrigger>
@@ -107,7 +107,7 @@ const AddEventCategory = ({ onCategoryAdded }) => {
                                 />
                                 {errors.name && (
                                     <div className="flex items-center gap-2 text-rose-400 text-sm">
-                                        <Icon icon="material-symbols:error-rounded" fontSize={16} />
+                                        <Icon name="AlertCircle" size={16} />
                                         <span>{errors.name.message}</span>
                                     </div>
                                 )}
@@ -125,7 +125,7 @@ const AddEventCategory = ({ onCategoryAdded }) => {
                                 />
                                 {errors.englishName && (
                                     <div className="flex items-center gap-2 text-rose-400 text-sm">
-                                        <Icon icon="material-symbols:error-rounded" fontSize={16} />
+                                        <Icon name="AlertCircle" size={16} />
                                         <span>{errors.englishName.message}</span>
                                     </div>
                                 )}
@@ -147,13 +147,13 @@ const AddEventCategory = ({ onCategoryAdded }) => {
                                             title={emoji.name}
                                         >
                                             <Icon 
-                                                icon={emoji.icon} 
-                                                fontSize={24} 
+                                                name={emoji.icon} 
+                                                size={24} 
                                                 onError={(e) => {
                                                     console.warn(`Failed to load icon: ${emoji.icon}`);
                                                     // استبدال الأيقونة المعطلة بأيقونة بديلة
-                                                    e.target.setAttribute('data-icon', 'material-symbols:star');
-                                                    e.target.setAttribute('icon', 'material-symbols:star');
+                                                    e.target.setAttribute('data-icon', 'Star');
+                                                    e.target.setAttribute('icon', 'Star');
                                                 }}
                                             />
                                         </button>
@@ -161,7 +161,7 @@ const AddEventCategory = ({ onCategoryAdded }) => {
                                 </div>
                                 {selectedEmoji && (
                                     <div className="flex items-center gap-2 text-sm text-green-600">
-                                        <Icon icon="material-symbols:check-circle" fontSize={16} />
+                                        <Icon name="CheckCircle" size={16} />
                                         <span>تم اختيار: {selectedEmoji.name}</span>
                                     </div>
                                 )}
@@ -175,12 +175,12 @@ const AddEventCategory = ({ onCategoryAdded }) => {
                         <Button disabled={loading} type="button" className="cursor-pointer flex-1 h-11" onClick={onSubmit}>
                             {loading ? (
                                 <>
-                                    <Icon icon="jam:refresh" className="animate-spin mr-2" />
+                                    <Icon name="RefreshCw" size={20} className="animate-spin mr-2" />
                                     <span>جاري الإضافة...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Icon icon="material-symbols:add-rounded" className="mr-2" />
+                                    <Icon name="Plus" size={20} className="mr-2" />
                                     <span>إضافة الفئة</span>
                                 </>
                             )}

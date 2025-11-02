@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -47,7 +47,7 @@ const EquivalentPositionSelector = ({ selectedPosition, onPositionSelect, onEqui
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full">
-                    <Icon icon="material-symbols:work" fontSize={16} />
+                    <Icon name="Briefcase" size={16} />
                     <span>اختيار ما يعادلها</span>
                 </Button>
             </DialogTrigger>
@@ -90,7 +90,7 @@ const EquivalentPositionSelector = ({ selectedPosition, onPositionSelect, onEqui
                         disabled={!selectedEquivalent}
                         className="cursor-pointer flex-1 h-11"
                     >
-                        <Icon icon="material-symbols:check" className="mr-2" />
+                        <Icon name="Check" size={20} className="mr-2" />
                         <span>تأكيد</span>
                     </Button>
                 </DialogFooter>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable, getPaginationRowModel } from "@tanstack/react-table"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import { useSelector, useDispatch } from 'react-redux'
+import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable, getPaginationRowModel } from "@tanstack/react-table"
+import Icon from '../components/ui/Icon';
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -13,160 +14,154 @@ import DataTable from "../components/DataTable"
 import AllMembersTableToolbar from "../components/Members/AllMembersTableToolbar"
 import DeletePopup from "../components/DeletePopup"
 import EditMember from "../components/Members/EditMember"
-// import { members } from "../data" // تم إزالة البيانات الوهمية
-import { toast } from "sonner"
-import { memberService, delegationService, eventService } from "../services/api"
+import { fetchAllMembers, deleteMember, fetchAllDepartureSessions } from '../store/slices/membersSlice'
+import { fetchDelegations } from '../store/slices/delegationsSlice'
+import { fetchMainEvents } from '../store/slices/eventsSlice'
 
 const AllMembers = () => {
-    const [data, setData] = useState([])
+    const dispatch = useDispatch()
     
-    // دالة محسنة لتحميل الأعضاء من API
-    const loadMembers = useCallback(async () => {
-        try {
-            // جلب الأعضاء من API
-            const membersResponse = await memberService.getMembers()
-            const members = Array.isArray(membersResponse?.results) ? membersResponse.results : Array.isArray(membersResponse) ? membersResponse : []
+    // Redux state
+    const { members = [], allMembers = [], departureSessions = [] } = useSelector(state => state.members || {})
+    const { delegations = [] } = useSelector(state => state.delegations || {})
+    const { mainEvents = [] } = useSelector(state => state.events || {})
+    
+    // Use Redux state directly instead of local state
+    const rawData = allMembers.length > 0 ? allMembers : members
+    
+    
+    // Process data for display
+    const data = useMemo(() => {
+        if (rawData.length === 0) return []
+        
+        return rawData.map(member => {
+            // البحث عن الوفد المرتبط - تحقق من delegation_id أولاً
+            let delegation = delegations.find(d => d.id === member.delegation_id)
             
-            if (members.length > 0) {
-                // جلب الوفود من API
-                const delegationsResponse = await delegationService.getDelegations()
-                const delegations = Array.isArray(delegationsResponse?.results) ? delegationsResponse.results : Array.isArray(delegationsResponse) ? delegationsResponse : []
-                
-                // جلب الأحداث من API
-                const eventsResponse = await eventService.getMainEvents()
-                const mainEvents = Array.isArray(eventsResponse?.results) ? eventsResponse.results : Array.isArray(eventsResponse) ? eventsResponse : []
-                
-                // استخراج الأحداث الفرعية
-                let parsedSubEvents = []
-                mainEvents.forEach(mainEvent => {
-                    if (mainEvent.sub_events && Array.isArray(mainEvent.sub_events)) {
-                        mainEvent.sub_events.forEach(subEvent => {
-                            parsedSubEvents.push({
-                                id: subEvent.id,
-                                name: subEvent.event_name,
-                                mainEventId: mainEvent.id,
-                                mainEventName: mainEvent.event_name
-                            })
-                        })
-                    }
-                })
-
-                // تحديث حالة الأعضاء وتواريخ الوصول
-                const updatedMembers = members.map(member => {
-                    // تحديث حالة المغادرة من البيانات المحفوظة مسبقاً
-                    if (member.memberStatus && member.departureDate) {
-                        return member // البيانات محدثة بالفعل
-                    }
-
-                    let updatedMember = { ...member }
-
-                    // البحث عن معلومات الحدث الرئيسي والفرعي من خلال الوفد
-                    let subEventId = member.sub_event_id // من العضو مباشرة
-                    
-                    // إذا لم يوجد subEventId في العضو، ابحث في الوفد
-                    if (!subEventId && member.delegation_id) {
-                        const delegation = delegations.find(d => d.id === member.delegation_id)
-                        if (delegation && delegation.sub_event_id) {
-                            subEventId = delegation.sub_event_id
-                        }
-                    }
-                    
-                    if (subEventId) {
-                        const subEvent = parsedSubEvents.find(se => se.id == subEventId) // استخدام == للتحويل بين string و number
-                        if (subEvent) {
-                            updatedMember.subEvent = {
-                                id: subEvent.id,
-                                name: subEvent.name,
-                                mainEventId: subEvent.mainEventId,
-                                mainEventName: subEvent.mainEventName
-                            }
-                            
-                            // البحث عن الحدث الرئيسي (البيانات موجودة بالفعل في subEvent.mainEventName)
-                            // لا حاجة للبحث في parsedMainEvents
-                        }
-                    }
-
-                    // البحث عن حالة المغادرة من جلسات المغادرة
-                    if (member.delegation_id) {
-                        const delegation = delegations.find(d => d.id === member.delegation_id)
-                        
-                        if (delegation) {
-                            // إضافة بيانات الوفد للعضو
-                            updatedMember.delegation = {
-                                id: delegation.id,
-                                nationality: delegation.nationality || delegation.country || delegation.nationality_name || delegation.country_name || '-',
-                                delegationHead: delegation.delegation_leader_name || delegation.delegationHead,
-                                arrive_date: delegation.arrive_date,
-                                arrival_date: delegation.arrive_date, // للـ PDF
-                                arrivalDate: delegation.arrive_date,
-                                subEventId: delegation.sub_event_id,
-                                arrivalInfo: {
-                                    arrivalHall: delegation.airport_name || '',
-                                    arrivalAirline: delegation.airline_name || '',
-                                    arrivalOrigin: delegation.city_name || '',
-                                    arrivalFlightNumber: delegation.flight_number || '',
-                                    arrivalDate: delegation.arrive_date || '',
-                                    arrivalTime: delegation.arrive_time || '',
-                                    arrivalReceptor: delegation.receiver_name || '',
-                                    arrivalDestination: delegation.going_to || '',
-                                    arrivalShipments: delegation.goods || '',
-                                }
-                            }
-                            
-                            // تحديث تاريخ الوصول من بيانات الوفد إذا لم يكن موجود للعضو
-                            if (!member.arrivalDate && delegation.arrive_date) {
-                                updatedMember.arrivalDate = delegation.arrive_date
-                            }
-                            
-                            // تحديث حالة المغادرة من API
-                            updatedMember.memberStatus = member.status === 'DEPARTED' ? "departed" : "not_departed"
-                            updatedMember.departureDate = member.departure_date
-                        } else {
-                            // محاولة البحث عن الوفد بطريقة أخرى
-                            const possibleDelegation = delegations.find(d => 
-                                d.members && d.members.some(m => m.id === member.id)
-                            )
-                            
-                            if (possibleDelegation) {
-                                updatedMember.delegation = {
-                                    id: possibleDelegation.id,
-                                    nationality: possibleDelegation.nationality || possibleDelegation.country || possibleDelegation.nationality_name || possibleDelegation.country_name || '-',
-                                    delegationHead: possibleDelegation.delegation_leader_name || possibleDelegation.delegationHead,
-                                    arrive_date: possibleDelegation.arrive_date,
-                                    arrivalDate: possibleDelegation.arrive_date,
-                                    subEventId: possibleDelegation.sub_event_id
-                                }
-                            }
-                        }
-                    }
-                    
-                    // تعيين القيم الافتراضية
-                    updatedMember.memberStatus = updatedMember.memberStatus || "not_departed"
-                    updatedMember.departureDate = updatedMember.departureDate || null
-                    
-                    return updatedMember
-                })
-                
-                setData(updatedMembers)
-            } else {
-                setData([])
+            // إذا لم يوجد، جرب البحث بـ delegation
+            if (!delegation) {
+                delegation = delegations.find(d => d.id === member.delegation)
             }
-        } catch (error) {
-            console.error('خطأ في تحميل بيانات الأعضاء:', error)
-            setData([])
-        }
-    }, [])
+            
+            // إذا لم يوجد، جرب البحث في members array
+            if (!delegation) {
+                delegation = delegations.find(d => 
+                    d.members && d.members.some(m => m.id === member.id)
+                )
+            }
+            
+            
+            // البحث عن الحدث الرئيسي المرتبط
+            const mainEvent = mainEvents.find(e => e.id === delegation?.main_event_id)
+            
+            // تحديث حالة المغادرة من API أو من جلسات المغادرة
+            let isDeparted = member.status === 'DEPARTED'
+            let departureDate = member.departure_date
+            
+            // إذا لم يكن العضو محدد كمغادر في API، تحقق من جلسات المغادرة
+            if (!isDeparted) {
+                const memberInDepartureSession = departureSessions.find(session => 
+                    session.members && session.members.some(m => 
+                        m.id === member.id || 
+                        m.id === member.id?.toString() || 
+                        m.id?.toString() === member.id?.toString() ||
+                        m.member_id === member.id ||
+                        m.member_id === member.id?.toString()
+                    )
+                )
+                
+                if (memberInDepartureSession) {
+                    isDeparted = true
+                    departureDate = memberInDepartureSession.checkout_date
+                }
+            }
+            
+            return {
+                ...member,
+                // إضافة بيانات الوفد الكاملة
+                delegation: delegation ? {
+                    id: delegation.id,
+                    delegationHead: delegation.delegationHead || delegation.delegation_leader_name || 'غير محدد',
+                    nationality: delegation.nationality || delegation.country || delegation.nationality_name || delegation.country_name || '-',
+                    arrive_date: delegation.arrive_date,
+                    arrival_date: delegation.arrive_date,
+                    arrivalDate: delegation.arrive_date,
+                    subEventId: delegation.sub_event_id,
+                    main_event_id: delegation.main_event_id,
+                    arrivalInfo: {
+                        arrivalHall: delegation.airport_name || '',
+                        arrivalAirline: delegation.airline_name || '',
+                        arrivalOrigin: delegation.city_name || '',
+                        arrivalFlightNumber: delegation.flight_number || '',
+                        arrivalDate: delegation.arrive_date || '',
+                        arrivalTime: delegation.arrive_time || '',
+                        arrivalReceptor: delegation.receiver_name || '',
+                        arrivalDestination: delegation.going_to || '',
+                        arrivalShipments: delegation.goods || '',
+                    }
+                } : null,
+                delegation_name: delegation?.delegationHead || delegation?.delegation_leader_name || 'غير محدد',
+                main_event_name: mainEvent?.event_name || 'غير محدد',
+                sub_event_name: delegation?.sub_event?.event_name || 'غير محدد',
+                // إضافة معلومات إضافية للعرض
+                display_name: member.name || 'غير محدد',
+                display_nationality: member.nationality?.name || 'غير محدد',
+                display_job: member.job || 'غير محدد',
+                display_rank: member.rank || 'غير محدد',
+                display_phone: member.phone || 'غير محدد',
+                display_email: member.email || 'غير محدد',
+                display_passport: member.passport_number || 'غير محدد',
+                display_status: member.status || 'غير محدد',
+                display_created_at: member.created_at ? new Date(member.created_at).toLocaleDateString('ar-EG') : 'غير محدد',
+                // إضافة حالة المغادرة وتاريخ المغادرة
+                memberStatus: isDeparted ? "departed" : "not_departed",
+                departureDate: departureDate,
+                // إضافة تاريخ الوصول من الوفد
+                arrivalDate: member.arrivalDate || delegation?.arrive_date || null
+            }
+        })
+    }, [rawData, delegations, mainEvents, departureSessions])
+    
+    // دالة تحديث فوري للبيانات
+    const refreshData = useCallback(() => {
+        dispatch(fetchAllMembers())
+        dispatch(fetchDelegations())
+        dispatch(fetchMainEvents())
+        
+        // إطلاق event للتحديث الفوري
+        window.dispatchEvent(new CustomEvent('dataUpdated'))
+    }, [dispatch])
+
 
     // تحميل البيانات عند تشغيل المكون
     useEffect(() => {
-        loadMembers()
-    }, [loadMembers])
+        dispatch(fetchAllMembers())
+        dispatch(fetchDelegations())
+        dispatch(fetchMainEvents())
+        dispatch(fetchAllDepartureSessions())
+    }, [dispatch])
+    
+    
+    // تم إزالة auto-refresh - التحديث الفوري كافي
 
-    // الاستماع للتحديثات الفورية - تحديث فوري بدون refresh
+    // الاستماع للتحديثات الفورية - تحديث فوري بدون refresh مع debouncing
     useEffect(() => {
-        // دالة موحدة للتعامل مع جميع التحديثات
+        let debounceTimeout = null
+        
+        // دالة موحدة للتعامل مع جميع التحديثات مع debouncing
         const handleDataUpdate = () => {
-            loadMembers()
+            // Clear previous debounce timeout
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout)
+            }
+            
+            // Debounce the update to prevent rapid-fire requests
+            debounceTimeout = setTimeout(() => {
+                dispatch(fetchAllMembers())
+                dispatch(fetchDelegations())
+                dispatch(fetchMainEvents())
+                dispatch(fetchAllDepartureSessions())
+            }, 100) // 100ms debounce - أسرع
         }
 
         // إضافة جميع event listeners للتحديث الفوري
@@ -176,9 +171,14 @@ const AllMembers = () => {
             'memberUpdated',
             'memberDeleted',
             'delegationAdded',
-            'delegationUpdated',
+            'delegationUpdated', 
             'delegationDeleted',
-            'localStorageUpdated'
+            'departureSessionAdded',
+            'departureSessionUpdated',
+            'departureSessionDeleted',
+            'localStorageUpdated',
+            'dataUpdated',
+            'refreshData'
         ]
 
         // إضافة جميع الـ event listeners
@@ -188,11 +188,14 @@ const AllMembers = () => {
 
         // تنظيف الـ event listeners عند إلغاء المكون
         return () => {
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout)
+            }
             eventListeners.forEach(eventName => {
                 window.removeEventListener(eventName, handleDataUpdate)
             })
         }
-    }, [loadMembers])
+    }, [dispatch]) // استخدام dispatch بدلاً من loadMembers
     
     const [sorting, setSorting] = useState([])
     const [columnFilters, setColumnFilters] = useState([])
@@ -202,7 +205,6 @@ const AllMembers = () => {
     })
     const [rowSelection, setRowSelection] = useState({})
     const [globalFilter, setGlobalFilter] = useState('')
-    const [mainEventFilter, setMainEventFilter] = useState('')
 
     const columns = useMemo(
         () => {
@@ -217,22 +219,22 @@ const AllMembers = () => {
                     
                     switch(status) {
                         case "departed":
-                            statusIcon = "material-symbols:check-circle"
+                            statusIcon = "CheckCircle"
                             iconColor = "text-green-600"
                             break
                         case "not_departed":
-                            statusIcon = "material-symbols:cancel"
+                            statusIcon = "X"
                             iconColor = "text-red-600"
                             break
                         default:
-                            statusIcon = "material-symbols:cancel"
+                            statusIcon = "X"
                             iconColor = "text-red-600"
                     }
                     
                     return (
                         <div className="flex justify-center">
                             <div className="px-1 py-1 rounded-lg text-lg font-medium text-center bg-gray-200 w-fit">
-                                <Icon icon={statusIcon} fontSize={20} className={iconColor} />
+                                <Icon name={statusIcon} size={20} className={iconColor} />
                             </div>
                         </div>
                     )
@@ -248,7 +250,7 @@ const AllMembers = () => {
                 header: () => <div className="text-center">الرتبة</div>,
                 cell: ({ row }) => (
                     <div className="text-center">
-                        <span className="text-gray-700">{row.getValue("rank") || "-"}</span>
+                        <span className="text-gray-700 font-medium">{row.getValue("rank") || "-"}</span>
                     </div>
                 ),
                 filterFn: (row, columnId, filterValue) => {
@@ -282,7 +284,7 @@ const AllMembers = () => {
                 header: () => <div className="text-center">الوظيفة</div>,
                 cell: ({ row }) => (
                     <div className="text-center">
-                        <span className="text-gray-700">{row.getValue("job_title")}</span>
+                        <span className="text-gray-700 font-medium">{row.getValue("job_title")}</span>
                     </div>
                 ),
                 filterFn: (row, columnId, filterValue) => {
@@ -542,9 +544,11 @@ const AllMembers = () => {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <EditMember member={row.original}>
+                                    <EditMember 
+                                        member={row.original}
+                                    >
                                         <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                            <Icon icon={'material-symbols:edit-outline-rounded'} />
+                                            <Icon name="Edit" size={20} />
                                             <span>تعديل</span>
                                         </DropdownMenuItem>
                                     </EditMember>
@@ -552,7 +556,8 @@ const AllMembers = () => {
                                         item={row} 
                                         onDelete={async (memberId) => {
                                             try {
-                                                await memberService.deleteMember(memberId)
+                                                await dispatch(deleteMember(memberId)).unwrap()
+                                                // Redux state will be updated automatically
                                                 // إطلاق إشارة لإعادة تحميل البيانات
                                                 window.dispatchEvent(new CustomEvent('memberDeleted'))
                                             } catch (error) {
@@ -561,7 +566,7 @@ const AllMembers = () => {
                                         }}
                                     >
                                         <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
-                                            <Icon icon={'mynaui:trash'} />
+                                            <Icon name="Trash2" size={20} />
                                             <span>حذف</span>
                                         </DropdownMenuItem>
                                     </DeletePopup>
@@ -621,7 +626,7 @@ const AllMembers = () => {
                         </span>
                     </div>
                     <div className="w-12 h-12 rounded-full bg-blue-100 grid place-items-center">
-                        <Icon icon="fa:users" fontSize={28} className="text-blue-600" />
+                        <Icon name="Users" size={28} className="text-blue-600" />
                     </div>
                 </div>
                 <div className="box w-full bg-white p-6 rounded-2xl border border-neutral-300 flex items-center gap-2 justify-between">
@@ -633,7 +638,7 @@ const AllMembers = () => {
                         </span>
                     </div>
                     <div className="w-12 h-12 rounded-full bg-green-100 grid place-items-center">
-                        <Icon icon="material-symbols:check-circle" fontSize={28} className="text-green-600" />
+                        <Icon name="CheckCircle" size={28} className="text-green-600" />
                     </div>
                 </div>
                 <div className="box w-full bg-white p-6 rounded-2xl border border-neutral-300 flex items-center gap-2 justify-between">
@@ -645,14 +650,14 @@ const AllMembers = () => {
                         </span>
                     </div>
                     <div className="w-12 h-12 rounded-full bg-red-100 grid place-items-center">
-                        <Icon icon="material-symbols:cancel" fontSize={28} className="text-red-600" />
+                        <Icon name="X" size={28} className="text-red-600" />
                     </div>
                 </div>
             </div>
 
             {/* Table */}
             <div className='border p-4 mt-8 border-neutral-300 rounded-2xl bg-white'>
-                <AllMembersTableToolbar table={table} data={data} onCleanup={loadMembers} />
+                <AllMembersTableToolbar table={table} data={data} onCleanup={refreshData} />
                 <DataTable table={table} columns={columns} clickableRow={false} />
             </div>
             </div>
@@ -661,3 +666,4 @@ const AllMembers = () => {
 }
 
 export default AllMembers
+

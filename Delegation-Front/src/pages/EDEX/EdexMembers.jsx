@@ -2,78 +2,85 @@ import Members from "../../components/Members/Members"
 import { useParams } from "react-router"
 import { formatTime } from "../../utils"
 import DepartureManager from "../../components/Delegations/DepartureManager"
-import { useState, useEffect } from "react"
-import { delegationService, memberService } from "../../services/api"
+import { useEffect, useMemo } from "react"
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchDelegations } from '../../store/slices/delegationsSlice'
+import { fetchMembers } from '../../store/slices/membersSlice'
 
 const DelegationMembers = () => {
     const { eventName, subEventId, delegationId } = useParams()
-    const [delegationMembers, setDelegationMembers] = useState([])
-    const [selectedDelegation, setSelectedDelegation] = useState(null)
+    const dispatch = useDispatch()
     
-    // تحميل البيانات الحقيقية
+    const { delegations = [] } = useSelector(state => state.delegations || {})
+    const { members = [] } = useSelector(state => state.members || {})
+    
+    // تحميل البيانات من Redux
     useEffect(() => {
-        const loadData = async () => {
-            let mappedDelegation = null
-            
-            try {
-                // جلب تفاصيل الوفد من API
-                const delResp = await delegationService.getDelegation(delegationId)
-                const d = delResp
-                const toHHMM = (timeStr) => {
-                    if (!timeStr) return ''
-                    const s = String(timeStr).replace(/:/g, '')
-                    return s.slice(0, 4)
-                }
-                mappedDelegation = d ? {
-                    id: d.id,
-                    type: d.type,
-                    delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
-                    nationality: d.nationality_name || '',
-                    delegationHead: d.delegation_leader_name || '',
-                    membersCount: d.member_count || 0,
-                    arrival_date: d.arrive_date || '',
-                    arrival_time: d.arrive_time || '',
-                    arrival_destination: d.city_name || '',
-                    arrival_flight_number: d.flight_number || '',
-                    arrival_airline: d.airline_name || '',
-                    arrivalInfo: {
-                        arrivalHall: d.airport_name || '',
-                        arrivalAirline: d.airline_name || '',
-                        arrivalOrigin: d.going_to || '',
-                        arrivalFlightNumber: d.flight_number || '',
-                        arrivalDate: d.arrive_date || '',
-                        arrivalTime: toHHMM(d.arrive_time),
-                        arrivalReceptor: d.receiver_name || '',
-                        arrivalDestination: d.city_name || '',
-                        arrivalShipments: d.goods || '',
-                    },
-                } : null
-                setSelectedDelegation(mappedDelegation)
-            } catch (e) {
-                setSelectedDelegation(null)
-            }
-
-            try {
-                // جلب أعضاء الوفد من API
-                const memResp = await memberService.getMembers({ delegation_id: delegationId })
-                const list = Array.isArray(memResp?.results) ? memResp.results : Array.isArray(memResp) ? memResp : []
-                
-                // إضافة بيانات الوفد لكل عضو
-                const enrichedMembers = list.map(member => ({
-                    ...member,
-                    delegation: mappedDelegation
-                }))
-                
-                setDelegationMembers(enrichedMembers)
-            } catch (e) {
-                setDelegationMembers([])
+        dispatch(fetchDelegations())
+        if (delegationId) {
+            dispatch(fetchMembers(delegationId))
+        }
+    }, [dispatch, delegationId])
+    
+    // Find and map the selected delegation from Redux store
+    const selectedDelegation = useMemo(() => {
+        const d = delegations.find(del => del.id === delegationId || del.id?.toString() === delegationId)
+        
+        if (!d) return null
+        
+        const toHHMM = (timeStr) => {
+            if (!timeStr) return ''
+            const s = String(timeStr).replace(/:/g, '')
+            return s.slice(0, 4)
+        }
+        
+        return {
+            id: d.id,
+            type: d.type,
+            delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
+            nationality: d.nationality_name || '',
+            delegationHead: d.delegation_leader_name || '',
+            membersCount: d.member_count || 0,
+            arrival_date: d.arrive_date || '',
+            arrival_time: d.arrive_time || '',
+            arrival_destination: d.city_name || '',
+            arrival_flight_number: d.flight_number || '',
+            arrival_airline: d.airline_name || '',
+            arrivalInfo: {
+                arrivalHall: d.airport_name || '',
+                arrivalAirline: d.airline_name || '',
+                arrivalOrigin: d.going_to || '',
+                arrivalFlightNumber: d.flight_number || '',
+                arrivalDate: d.arrive_date || '',
+                arrivalTime: toHHMM(d.arrive_time),
+                arrivalReceptor: d.receiver_name || '',
+                arrivalDestination: d.city_name || '',
+                arrivalShipments: d.goods || '',
+            },
+        }
+    }, [delegations, delegationId])
+    
+    // Filter and enrich members for this delegation
+    const delegationMembers = useMemo(() => {
+        const filtered = members.filter(m => m.delegation_id === delegationId || m.delegation_id?.toString() === delegationId)
+        
+        return filtered.map(member => ({
+            ...member,
+            delegation: selectedDelegation
+        }))
+    }, [members, delegationId, selectedDelegation])
+    
+    // Reload on delegation updates
+    useEffect(() => {
+        const reload = () => {
+            dispatch(fetchDelegations())
+            if (delegationId) {
+                dispatch(fetchMembers(delegationId))
             }
         }
-        loadData()
-        const reload = () => loadData()
         window.addEventListener('delegationUpdated', reload)
         return () => window.removeEventListener('delegationUpdated', reload)
-    }, [delegationId])
+    }, [dispatch, delegationId])
     
     return (
         <div className="content">

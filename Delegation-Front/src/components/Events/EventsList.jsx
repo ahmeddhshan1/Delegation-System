@@ -1,30 +1,31 @@
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { NavLink, useNavigate } from "react-router"
 import { events } from "../../constants"
 import { useState, useEffect } from "react"
-import { delegationService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchDelegations } from '../../store/slices/delegationsSlice'
 
 
 const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEventEnglishName }) => {
     const navigate = useNavigate()
+    const dispatch = useDispatch()
     const [eventsWithStats, setEventsWithStats] = useState([])
+    
+    // Redux state
+    const { delegations, loading: delegationsLoading } = useSelector(state => state.delegations)
     
     // استخدام البيانات الممررة أو البيانات الافتراضية
     const eventsData = customEvents || events;
     
-    // حساب الإحصائيات الحقيقية لكل حدث من API
+    // حساب الإحصائيات الحقيقية لكل حدث من Redux state
     useEffect(() => {
         const calculateStats = async () => {
             try {
-                // جلب جميع الوفود من API
-                const delegationsResponse = await delegationService.getDelegations()
-                let allDelegations = []
+                // تحميل الوفود باستخدام Redux
+                dispatch(fetchDelegations())
                 
-                if (delegationsResponse && delegationsResponse.results && Array.isArray(delegationsResponse.results)) {
-                    allDelegations = delegationsResponse.results
-                } else if (Array.isArray(delegationsResponse)) {
-                    allDelegations = delegationsResponse
-                }
+                // استخدام الوفود من Redux state
+                let allDelegations = delegations || []
                 
                 // حساب الإحصائيات لكل حدث
                 const updatedEvents = eventsData.map(event => {
@@ -59,7 +60,7 @@ const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEvent
         }
         
         calculateStats()
-    }, [eventsData])
+    }, [eventsData, delegations, dispatch])
     
     return (
         <div className="flex flex-col gap-4">
@@ -91,7 +92,7 @@ const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEvent
                     >
                         <div className="w-full border-b p-6 border-neutral-300 flex items-center gap-4 pb-6">
                             <div className="w-18 h-18 rounded-full grid place-items-center bg-gradient-to-b from-[#F4CB00] to-[#F4B400]">
-                                <Icon icon="stash:calendar-star-solid" fontSize={42} className="text-white" />
+                                <Icon name="Calendar" size={42} className="text-white" />
                             </div>
                             <div className="flex flex-col gap-1">
                                 <h2 className="font-bold text-xl">{event.event_name || event.name}</h2>
@@ -100,7 +101,7 @@ const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEvent
                         <div className="w-full flex items-center gap-6 p-6 justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-full bg-neutral-100 grid place-items-center text-neutral-800">
-                                    <Icon icon="solar:calendar-bold" fontSize={26} />
+                                    <Icon name="Calendar" size={26} />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <span className="text-sm text-neutral-400">التاريخ</span>
@@ -109,7 +110,7 @@ const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEvent
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-full bg-neutral-100 grid place-items-center text-neutral-800">
-                                    <Icon icon={'fa:globe'} fontSize={26} />
+                                    <Icon name="Globe" size={26} />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <span className="text-sm text-neutral-400">عدد الوفود</span>
@@ -118,7 +119,7 @@ const EventsList = ({ events: customEvents, categoryId, mainEventName, mainEvent
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-full bg-neutral-100 grid place-items-center text-neutral-800">
-                                    <Icon icon={'fa:users'} fontSize={22} />
+                                    <Icon name="Users" size={22} />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <span className="text-sm text-neutral-400">عدد الاعضاء</span>

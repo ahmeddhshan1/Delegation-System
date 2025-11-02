@@ -10,7 +10,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
@@ -18,12 +18,18 @@ import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import { usePermissions } from "../../store/hooks"
 import { useParams } from "react-router"
-import { eventService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { createSubEvent } from '../../store/slices/subEventsSlice'
+import { fetchMainEvents } from '../../store/slices/eventsSlice'
 
 
 const AddEvent = ({ onEventAdded }) => {
+    const dispatch = useDispatch()
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false)
+    
+    // Redux state
+    const { mainEvents: mainEventsFromRedux } = useSelector(state => state.events)
     const { eventName } = useParams()
     
     // جلب صلاحيات المستخدم من Redux
@@ -50,15 +56,9 @@ const AddEvent = ({ onEventAdded }) => {
         setLoading(true)
         
         try {
-            // جلب جميع الأحداث الرئيسية من API للعثور على الحدث الصحيح
-            const mainEventsResponse = await eventService.getMainEvents()
-            let mainEvents = []
-            
-            if (mainEventsResponse && mainEventsResponse.results && Array.isArray(mainEventsResponse.results)) {
-                mainEvents = mainEventsResponse.results
-            } else if (Array.isArray(mainEventsResponse)) {
-                mainEvents = mainEventsResponse
-            }
+            // جلب جميع الأحداث الرئيسية من Redux state
+            dispatch(fetchMainEvents())
+            const mainEvents = mainEventsFromRedux || []
             
             // البحث عن الحدث الرئيسي المطابق للـ URL
             const targetEvent = mainEvents.find(event => {
@@ -84,7 +84,7 @@ const AddEvent = ({ onEventAdded }) => {
             }
             
             // إضافة الحدث الفرعي عبر API
-            const newSubEvent = await eventService.createSubEvent(newSubEventData)
+                const newSubEvent = await dispatch(createSubEvent(newSubEventData)).unwrap()
             
             toast.success("تم إضافة الحدث الفرعي بنجاح")
                 reset()
@@ -109,7 +109,7 @@ const AddEvent = ({ onEventAdded }) => {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button className="cursor-pointer">
-                    <Icon icon="qlementine-icons:plus-16" />
+                    <Icon name="Plus" size={20} />
                     <span>اضافة حدث جديد</span>
                 </Button>
             </DialogTrigger>
@@ -135,7 +135,7 @@ const AddEvent = ({ onEventAdded }) => {
                                 />
                                 {errors.name && (
                                     <div className="flex items-center gap-2 text-rose-400 text-sm">
-                                        <Icon icon="material-symbols:error-rounded" fontSize={16} />
+                                        <Icon name="AlertCircle" size={16} />
                                         <span>{errors.name.message}</span>
                                     </div>
                                 )}
@@ -149,12 +149,12 @@ const AddEvent = ({ onEventAdded }) => {
                         <Button disabled={loading} type="button" className="cursor-pointer flex-1 h-11" onClick={onSubmit}>
                             {loading ? (
                                 <>
-                                    <Icon icon="jam:refresh" className="animate-spin mr-2" />
+                                    <Icon name="RefreshCw" size={20} className="animate-spin mr-2" />
                                     <span>اضافة ...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Icon icon="material-symbols:add-rounded" className="mr-2" />
+                                    <Icon name="Plus" size={20} className="mr-2" />
                                     <span>اضافة الحدث</span>
                                 </>
                             )}

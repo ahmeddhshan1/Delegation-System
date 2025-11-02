@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from './ui/Icon';
 
 const SimpleAlert = ({ 
     isOpen, 
@@ -15,28 +15,28 @@ const SimpleAlert = ({
         switch (type) {
             case 'success':
                 return {
-                    icon: 'material-symbols:check-circle',
+                    icon: 'CheckCircle',
                     color: 'text-green-600',
                     bgColor: 'bg-green-50',
                     borderColor: 'border-green-200'
                 }
             case 'warning':
                 return {
-                    icon: 'material-symbols:warning',
+                    icon: 'AlertTriangle',
                     color: 'text-yellow-600',
                     bgColor: 'bg-yellow-50',
                     borderColor: 'border-yellow-200'
                 }
             case 'info':
                 return {
-                    icon: 'material-symbols:info',
+                    icon: 'Info',
                     color: 'text-blue-600',
                     bgColor: 'bg-blue-50',
                     borderColor: 'border-blue-200'
                 }
             default: // error
                 return {
-                    icon: 'material-symbols:error',
+                    icon: 'AlertCircle',
                     color: 'text-red-600',
                     bgColor: 'bg-red-50',
                     borderColor: 'border-red-200'
@@ -60,7 +60,7 @@ const SimpleAlert = ({
                 <div className={`${bgColor} px-6 py-4 rounded-t-lg`}>
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${bgColor}`}>
-                            <Icon icon={icon} className={`text-xl ${color}`} />
+                            <Icon name={icon} size={20} className="text-xl ${color}" />
                         </div>
                         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
                     </div>

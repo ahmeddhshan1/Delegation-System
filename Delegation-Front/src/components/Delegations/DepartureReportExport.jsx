@@ -1,6 +1,6 @@
 import { exportToPDF } from '../../utils'
 import DepartureReportPDF from '../PDF Templates/DepartureReportPDF'
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from '../ui/Icon';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,13 +25,13 @@ const DepartureReportExport = ({ delegation, departureSessions = [] }) => {
         <DropdownMenu dir='rtl'>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="!ring-0">
-                    <Icon icon={'mi:export'} />
+                    <Icon name="Download" size={20} />
                     <span>تصدير تقرير المغادرات</span>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={e => exportDepartureReport()}>
-                    <Icon icon={'hugeicons:pdf-02'} className="text-[#ef5350]" />
+                    <Icon name="FileText" size={20} className="text-[#ef5350]" />
                     <span>تقرير PDF</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>

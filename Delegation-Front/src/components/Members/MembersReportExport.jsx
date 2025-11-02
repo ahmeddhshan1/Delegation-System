@@ -1,5 +1,5 @@
 import { exportToExcel, exportToPDF, exportMembersToExcel } from '../../utils'
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from '../ui/Icon';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,17 +14,17 @@ const MembersReportExport = ({data, filteredData}) => {
         <DropdownMenu dir='rtl'>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="!ring-0">
-                    <Icon icon={'mi:export'} />
+                    <Icon name="Download" size={20} />
                     <span>تصدير تقرير</span>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={e => exportToPDF(<MembersReportPDF data={filteredData || data} />, "EDEX - Members report.pdf")}>
-                    <Icon icon={'hugeicons:pdf-02'} className="text-[#ef5350]" />
+                    <Icon name="FileText" size={20} className="text-[#ef5350]" />
                     <span>PDF file</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={e => exportMembersToExcel(filteredData || data)}>
-                    <Icon icon={'hugeicons:xls-02'} className="text-[#33c481]" />
+                    <Icon name="FileSpreadsheet" size={20} className="text-[#33c481]" />
                     <span>Excel file</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>

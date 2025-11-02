@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../../components/ui/Icon';
 import { Button } from "@/components/ui/button"
 import { getEventCategories, addEventToCategory } from '../../utils/eventCategories'
 import EventsList from '../../components/Events/EventsList'
@@ -38,7 +38,7 @@ const CategoryPage = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <Icon icon="jam:refresh" className="animate-spin text-4xl text-primary-600" />
+                <Icon name="RefreshCw" size={20} className="animate-spin text-4xl text-primary-600" />
             </div>
         )
     }
@@ -46,11 +46,11 @@ const CategoryPage = () => {
     if (!category) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-center">
-                <Icon icon="material-symbols:error-outline" className="text-6xl text-rose-400 mb-4" />
+                <Icon name="AlertCircle" size={20} className="text-6xl text-rose-400 mb-4" />
                 <h2 className="text-2xl font-bold text-neutral-700 mb-2">الفئة غير موجودة</h2>
                 <p className="text-neutral-600 mb-4">الفئة المطلوبة غير موجودة أو تم حذفها</p>
                 <Button onClick={() => navigate('/')} className="cursor-pointer">
-                    <Icon icon="material-symbols:home" className="mr-2" />
+                    <Icon name="Home" size={20} className="mr-2" />
                     العودة للرئيسية
                 </Button>
             </div>
@@ -64,7 +64,7 @@ const CategoryPage = () => {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-full bg-gradient-to-b from-primary-400 to-primary-600 grid place-items-center">
-                            <Icon icon={category.icon} fontSize={32} className="text-white" />
+                            <Icon name={category.icon} size={32} className="text-white" />
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold text-neutral-800">{category.name}</h1>
@@ -79,7 +79,7 @@ const CategoryPage = () => {
                             variant="outline" 
                             className="cursor-pointer"
                         >
-                            <Icon icon="material-symbols:arrow-back" className="mr-2" />
+                            <Icon name="ArrowLeft" size={20} className="mr-2" />
                             العودة
                         </Button>
                     </div>
@@ -104,7 +104,7 @@ const CategoryPage = () => {
                     <EventsList events={category.events} categoryId={categoryId} />
                 ) : (
                     <div className="text-center py-12">
-                        <Icon icon="material-symbols:event-busy" className="text-6xl text-neutral-400 mb-4" />
+                        <Icon name="CalendarX" size={20} className="text-6xl text-neutral-400 mb-4" />
                         <h3 className="text-xl font-medium text-neutral-600 mb-2">لا توجد أحداث بعد</h3>
                         <p className="text-neutral-500">ابدأ بإضافة أول حدث لهذه الفئة</p>
                     </div>

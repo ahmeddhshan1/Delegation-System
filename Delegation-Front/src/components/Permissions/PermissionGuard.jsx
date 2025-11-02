@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router'
 import { useEffect, useState } from 'react'
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { Button } from "@/components/ui/button"
 import { usePermissions, useAuth } from '../../store/hooks'
 
@@ -48,7 +48,7 @@ const PermissionGuard = ({
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <Icon icon="jam:refresh" className="animate-spin text-4xl mb-4" />
+                    <Icon name="RefreshCw" size={20} className="animate-spin text-4xl mb-4" />
                     <p>جاري التحقق من الصلاحيات...</p>
                 </div>
             </div>
@@ -59,7 +59,7 @@ const PermissionGuard = ({
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <Icon icon="material-symbols:error" className="text-4xl text-red-500 mb-4" />
+                    <Icon name="AlertCircle" size={20} className="text-4xl text-red-500 mb-4" />
                     <h2 className="text-xl font-bold mb-2">خطأ في المصادقة</h2>
                     <p className="text-neutral-600 mb-4">لم يتم العثور على معلومات المستخدم</p>
                     <Button onClick={() => navigate('/login')}>
@@ -84,18 +84,18 @@ const PermissionGuard = ({
             return (
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center max-w-md">
-                        <Icon icon="material-symbols:block" className="text-6xl text-red-500 mb-4" />
+                        <Icon name="Ban" size={20} className="text-6xl text-red-500 mb-4" />
                         <h2 className="text-2xl font-bold mb-2">غير مصرح لك بالوصول</h2>
                         <p className="text-neutral-600 mb-6">
                             ليس لديك الصلاحيات المطلوبة للوصول إلى هذه الصفحة
                         </p>
                         <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 mb-6">
                             <div className="flex items-center gap-2 mb-2">
-                                <Icon icon="material-symbols:info" className="text-blue-500" />
+                                <Icon name="Info" size={20} className="text-blue-500" />
                                 <span className="font-medium">دورك الحالي:</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Icon icon={roleInfo?.icon} className={roleInfo?.color} />
+                                <Icon name={roleInfo?.icon} size={20} className={roleInfo?.color} />
                                 <span className={roleInfo?.color}>{roleInfo?.name}</span>
                             </div>
                         </div>
@@ -144,7 +144,7 @@ const UserRoleInfo = () => {
 
     return (
         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${roleInfo.bgColor}`}>
-            <Icon icon={roleInfo.icon} className={roleInfo.color} fontSize={16} />
+            <Icon name={roleInfo.icon} size={16} className={roleInfo.color} />
             <span className={roleInfo.color}>{roleInfo.name}</span>
         </div>
     )
@@ -159,7 +159,7 @@ const PermissionsList = () => {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-3">
-                <Icon icon={roleInfo.icon} className={roleInfo.color} fontSize={24} />
+                <Icon name={roleInfo.icon} size={24} className={roleInfo.color} />
                 <div>
                     <h3 className="font-semibold">{roleInfo.name}</h3>
                     <p className="text-sm text-neutral-600">{roleInfo.description}</p>

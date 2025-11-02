@@ -6,6 +6,14 @@ import eventsSlice from './slices/eventsSlice'
 import delegationsSlice from './slices/delegationsSlice'
 import membersSlice from './slices/membersSlice'
 import permissionsSlice from './slices/permissionsSlice'
+import statsSlice from './slices/statsSlice'
+import subEventsSlice from './slices/subEventsSlice'
+import nationalitiesSlice from './slices/nationalitiesSlice'
+import usersSlice from './slices/usersSlice'
+import airportsSlice from './slices/airportsSlice'
+import airlinesSlice from './slices/airlinesSlice'
+import citiesSlice from './slices/citiesSlice'
+import equivalentJobsSlice from './slices/equivalentJobsSlice'
 import { 
   authPersistConfig, 
   permissionsPersistConfig, 
@@ -28,6 +36,14 @@ const rootReducer = combineReducers({
   delegations: persistedDelegationsReducer,
   members: persistedMembersReducer,
   permissions: persistedPermissionsReducer,
+  stats: statsSlice,
+  subEvents: subEventsSlice,
+  nationalities: nationalitiesSlice,
+  users: usersSlice,
+  airports: airportsSlice,
+  airlines: airlinesSlice,
+  cities: citiesSlice,
+  equivalentJobs: equivalentJobsSlice,
 })
 
 export const store = configureStore({

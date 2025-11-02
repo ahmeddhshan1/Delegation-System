@@ -7,6 +7,7 @@ import { Toaster } from 'sonner'
 import { Buffer } from 'buffer'
 import AuthProvider from './components/Auth/AuthProvider'
 import ReduxProvider from './components/ReduxProvider'
+import { WebSocketProvider } from './contexts/WebSocketContext'
 import { autoClearOldData } from './utils/clearOldData'
 
 // Polyfill for Buffer
@@ -20,8 +21,10 @@ createRoot(document.getElementById('root')).render(
     <ReduxProvider>
       <BrowserRouter>
         <AuthProvider>
-          <AppRouter />
-          <Toaster richColors closeButton />
+          <WebSocketProvider>
+            <AppRouter />
+            <Toaster richColors closeButton />
+          </WebSocketProvider>
         </AuthProvider>
       </BrowserRouter>
     </ReduxProvider>

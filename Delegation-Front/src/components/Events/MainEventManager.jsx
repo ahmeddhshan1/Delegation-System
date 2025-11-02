@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import {
     Dialog,
     DialogContent,
@@ -14,13 +14,14 @@ import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
-import { toast } from "sonner"
 import { availableEmojis } from "../../utils/eventCategories"
 import { deleteMainEventData } from "../../utils/cascadeDelete"
 import DeletePopup from "../DeletePopup"
-import { eventService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchMainEvents, createMainEvent, updateMainEvent, deleteMainEvent } from '../../store/slices/eventsSlice'
 
 const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDeleted, onEventSelected, selectedEvent }) => {
+    const dispatch = useDispatch()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [editingEvent, setEditingEvent] = useState(null)
@@ -74,7 +75,6 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
         )
         
         if (existingEvent) {
-            toast.error("الاسم الإنجليزي مستخدم بالفعل. يرجى اختيار اسم آخر.")
             return
         }
         
@@ -89,9 +89,8 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                     event_icon: data.icon
                 }
                 
-                await eventService.updateMainEvent(editingEvent.id, updateData)
+                await dispatch(updateMainEvent({ id: editingEvent.id, eventData: updateData })).unwrap()
                 
-                toast.success("تم تحديث الحدث بنجاح")
                 if (onEventUpdated) onEventUpdated(editingEvent.id, updateData)
             } else {
                 // إضافة حدث جديد
@@ -101,9 +100,8 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                     event_icon: data.icon
                 }
                 
-                const newEvent = await eventService.createMainEvent(newEventData)
+                const newEvent = await dispatch(createMainEvent(newEventData)).unwrap()
                 
-                toast.success("تم إضافة الحدث بنجاح")
                 if (onEventAdded) onEventAdded(newEvent)
             }
             
@@ -113,7 +111,6 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
             setOpen(false)
         } catch (error) {
             console.error('خطأ في حفظ الحدث:', error)
-            toast.error("حدث خطأ أثناء حفظ الحدث")
             setLoading(false)
         }
     })
@@ -129,7 +126,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
     const handleDelete = async (eventId) => {
         try {
             // حذف الحدث من API
-            await eventService.deleteMainEvent(eventId)
+            await dispatch(deleteMainEvent(eventId)).unwrap()
             
             // إلغاء تحديد الحدث إذا كان محذوف
             if (selectedEvent && selectedEvent.id === eventId) {
@@ -138,11 +135,8 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
             
             // استدعاء دالة الحذف في المكون الأب
             onEventDeleted && onEventDeleted(eventId)
-            
-            toast.success("تم حذف الحدث الرئيسي بنجاح")
         } catch (error) {
             console.error('خطأ في حذف الحدث:', error)
-            toast.error("حدث خطأ أثناء حذف الحدث")
         }
     }
 
@@ -157,14 +151,14 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                        <Icon icon="material-symbols:event" className="text-primary-600" />
+                        <Icon name="Calendar" size={20} className="text-primary-600" />
                     </div>
                     <h3 className="text-lg font-semibold">الأحداث الرئيسية</h3>
                 </div>
                        <Dialog open={open} onOpenChange={setOpen}>
                            <DialogTrigger asChild>
                                <Button onClick={() => setEditingEvent(null)} className="w-10 h-10 p-0">
-                                   <Icon icon="qlementine-icons:plus-16" fontSize={20} />
+                                   <Icon name="Plus" size={20} />
                                </Button>
                            </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
@@ -226,7 +220,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                                                 onClick={() => setValue('icon', emoji.icon, { shouldValidate: true })}
                                                 title={emoji.name}
                                             >
-                                                <Icon icon={emoji.icon} fontSize={24} />
+                                                <Icon name={emoji.icon} size={24} />
                                                 <p className="text-xs mt-1 truncate">{emoji.name}</p>
                                             </div>
                                         ))}
@@ -239,7 +233,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                                 {watch('icon') && (
                                     <div className="p-3 bg-primary-50 border border-primary-200 rounded-lg">
                                         <div className="flex items-center gap-2">
-                                            <Icon icon={watch('icon')} fontSize={24} className="text-primary-600" />
+                                            <Icon name={watch('icon')} size={24} className="text-primary-600" />
                                             <span className="text-sm font-medium">الأيقونة المختارة</span>
                                         </div>
                                     </div>
@@ -258,7 +252,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                                 >
                                     {loading ? (
                                         <>
-                                            <Icon icon="jam:refresh" className="animate-spin" />
+                                            <Icon name="RefreshCw" size={20} className="animate-spin" />
                                             <span>جاري الحفظ...</span>
                                         </>
                                     ) : (
@@ -290,7 +284,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
-                                        {event.event_icon && <Icon icon={event.event_icon} fontSize={24} className="text-primary-600" />}
+                                        {event.event_icon && <Icon name={event.event_icon} size={24} className="text-primary-600" />}
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-lg text-neutral-800">{event.event_name}</h4>
@@ -306,7 +300,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                                         onClick={(e) => { e.stopPropagation(); handleEdit(event) }}
                                         className="h-8 w-8 p-0"
                                     >
-                                        <Icon icon="material-symbols:edit" fontSize={16} />
+                                        <Icon name="Edit" size={16} />
                                     </Button>
                                     <DeletePopup
                                         item={event}
@@ -318,7 +312,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
                                             className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <Icon icon="material-symbols:delete" fontSize={16} />
+                                            <Icon name="Trash2" size={16} />
                                         </Button>
                                     </DeletePopup>
                                 </div>
@@ -330,7 +324,7 @@ const MainEventManager = ({ events = [], onEventAdded, onEventUpdated, onEventDe
 
             {mainEvents.length === 0 && (
                 <div className="text-center py-8 text-neutral-500">
-                    <Icon icon="material-symbols:event" fontSize={48} className="mx-auto mb-4" />
+                    <Icon name="Calendar" size={48} className="mx-auto mb-4" />
                     <p>لا توجد أحداث رئيسية</p>
                     <p className="text-sm">اضغط على "إضافة حدث رئيسي" لبدء إضافة الأحداث</p>
                 </div>

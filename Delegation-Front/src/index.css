@@ -284,3 +284,21 @@ div[role="menu"]::-webkit-scrollbar,
 div[role="combobox"]::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
 }
+
+/* Fix for aria-hidden accessibility warning */
+[data-radix-popper-content-wrapper] {
+  pointer-events: auto;
+}
+
+[data-radix-popper-content-wrapper][aria-hidden="true"] {
+  pointer-events: none;
+}
+
+/* Ensure focus is properly managed */
+[data-radix-dropdown-menu-content] {
+  outline: none;
+}
+
+[data-radix-select-content] {
+  outline: none;
+}

@@ -8,12 +8,12 @@ export const randomImages = [
 export const navLinks = [
     {
         name: "لوحة التحكم",
-        icon: "material-symbols:dashboard-rounded",
+        icon: "LayoutDashboard",
         to: "/",
     },
     {
         name: "إدارة الأحداث",
-        icon: "material-symbols:event",
+        icon: "Calendar",
         to: "/events-management",
     },
 ]

@@ -1,99 +1,51 @@
-import { useState, useEffect } from "react";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { useState, useEffect, useMemo } from "react";
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from '../../components/ui/Icon';
 import AddEvent from "../../components/Events/AddEvent";
 import EmptyEvent from "../../components/Events/EmptyEvent";
 import EventsList from "../../components/Events/EventsList";
 import { Button } from "@/components/ui/button"
 import Stats from "../../components/Stats";
-import { eventService, delegationService, memberService } from "../../services/api";
+import { fetchMainEvents } from '../../store/slices/eventsSlice'
+import { fetchSubEvents } from '../../store/slices/subEventsSlice'
+import { fetchDelegations } from '../../store/slices/delegationsSlice'
 
 const Edex = () => {
-    const [subEvents, setSubEvents] = useState([]);
+    const dispatch = useDispatch()
     const [currentEvent, setCurrentEvent] = useState(null);
-    const [stats, setStats] = useState({
-        delegationNum: 0,
-        militaryDelegationNum: 0,
-        civilDelegationNum: 0,
-        memebersNum: 0
-    });
+    
+    // Redux state
+    const { mainEvents = [], loading: eventsLoading } = useSelector(state => state.events || {})
+    const { subEvents = [], loading: subEventsLoading } = useSelector(state => state.subEvents || {})
+    const { delegations = [], loading: delegationsLoading } = useSelector(state => state.delegations || {})
+    
+    // حساب الإحصائيات مع useMemo
+    const stats = useMemo(() => ({
+        delegationNum: delegations?.length || 0,
+        militaryDelegationNum: delegations?.filter(d => d.delegation_type === 'military').length || 0,
+        civilDelegationNum: delegations?.filter(d => d.delegation_type === 'civilian').length || 0,
+        memebersNum: delegations?.reduce((total, d) => total + (d.current_members || 0), 0) || 0
+    }), [delegations])
 
     useEffect(() => {
-        const loadEvents = async () => {
-            try {
-                // جلب الأحداث من API
-                const eventsResponse = await eventService.getMainEvents();
-                const events = Array.isArray(eventsResponse?.results) ? eventsResponse.results : Array.isArray(eventsResponse) ? eventsResponse : [];
-                
-                // البحث عن حدث ايديكس بالـ ID أو الاسم
-                const edexEvent = events.find(event => 
-                    event.id === 1 || // ID الخاص بايديكس
-                    event.event_name === 'ايديكس' || 
-                    event.event_name === 'EDEX'
-                );
-                
-                if (edexEvent) {
-                    // جلب الأحداث الفرعية
-                    const subEventsResponse = await eventService.getSubEvents(edexEvent.id);
-                    const subEvents = Array.isArray(subEventsResponse?.results) ? subEventsResponse.results : Array.isArray(subEventsResponse) ? subEventsResponse : [];
-                    
-                    setSubEvents(subEvents);
-                    setCurrentEvent(edexEvent);
-                    
-                    // حساب الإحصائيات الحقيقية
-                    const subEventIds = subEvents.map(se => se.id);
-                    
-                    // جلب الوفود
-                    const delegationsResponse = await delegationService.getDelegations();
-                    const delegations = Array.isArray(delegationsResponse?.results) ? delegationsResponse.results : Array.isArray(delegationsResponse) ? delegationsResponse : [];
-                    
-                    const filteredDelegations = delegations.filter(d => 
-                        subEventIds.includes(d.sub_event_id)
-                    );
-                    
-                    const delegationCount = filteredDelegations.length;
-                    const militaryCount = filteredDelegations.filter(d => d.type === 'MILITARY').length;
-                    const civilCount = filteredDelegations.filter(d => d.type === 'CIVILIAN').length;
-                    
-                    // جلب الأعضاء
-                    const membersResponse = await memberService.getMembers();
-                    const members = Array.isArray(membersResponse?.results) ? membersResponse.results : Array.isArray(membersResponse) ? membersResponse : [];
-                    
-                    const filteredMembers = members.filter(m => 
-                        subEventIds.includes(m.sub_event_id)
-                    );
-                    const memberCount = filteredMembers.length;
-                    
-                    setStats({
-                        delegationNum: delegationCount,
-                        militaryDelegationNum: militaryCount,
-                        civilDelegationNum: civilCount,
-                        memebersNum: memberCount
-                    });
-                } else {
-                    setSubEvents([]);
-                    setCurrentEvent(null);
-                    setStats({
-                        delegationNum: 0,
-                        militaryDelegationNum: 0,
-                        civilDelegationNum: 0,
-                        memebersNum: 0
-                    });
-                }
-            } catch (error) {
-                console.error('خطأ في تحميل بيانات الأحداث:', error);
-                setSubEvents([]);
-                setCurrentEvent(null);
-                setStats({
-                    delegationNum: 0,
-                    militaryDelegationNum: 0,
-                    civilDelegationNum: 0,
-                    memebersNum: 0
-                });
-            }
-        }
+        // تحميل البيانات باستخدام Redux
+        dispatch(fetchMainEvents())
+        dispatch(fetchDelegations())
         
-        loadEvents()
-    }, []);
+        // البحث عن حدث ايديكس من Redux state
+        const edexEvent = mainEvents.find(event => 
+            event.id === 1 || // ID الخاص بايديكس
+            event.event_name === 'ايديكس' || 
+            event.event_name === 'EDEX'
+        );
+        
+        if (edexEvent) {
+            setCurrentEvent(edexEvent);
+            dispatch(fetchSubEvents(edexEvent.id));
+        } else {
+            setCurrentEvent(null);
+        }
+    }, [dispatch, mainEvents]);
 
     return (
         <div className="content">
@@ -110,12 +62,12 @@ const Edex = () => {
                     <>
                         <div className="flex items-center gap-4 justify-between mb-6">
                             <Button variant="outline" className="!ring-0">
-                                <Icon icon={'fluent:filter-32-filled'} />
+                                <Icon name="Filter" size={20} />
                                 <span>فلتر</span>
                             </Button>
                             <AddEvent />
                         </div>
-                        <EventsList events={subEvents} mainEventName={currentEvent?.name} mainEventEnglishName={currentEvent?.englishName} />
+                        <EventsList events={subEvents} mainEventName={currentEvent?.event_name} mainEventEnglishName={currentEvent?.event_link} />
                     </>
                 )}
             </div>

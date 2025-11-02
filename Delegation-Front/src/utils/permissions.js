@@ -119,8 +119,8 @@ export const hasPermissionLocal = (userRole, permission) => {
 // دالة للتحقق من الصلاحية عبر API (الجديدة)
 export const hasPermission = async (permission) => {
     try {
-        const { userService } = await import('../services/api')
-        const response = await userService.checkPermission(permission)
+        const { authService } = await import('../plugins/auth')
+        const response = await authService.checkPermission(permission)
         return response.has_permission
     } catch (error) {
         console.error('Error checking permission:', error)
@@ -171,21 +171,21 @@ export const getRoleInfo = (userRole) => {
             description: 'صلاحيات كاملة على جميع أجزاء النظام',
             color: 'text-red-600',
             bgColor: 'bg-red-50',
-            icon: 'material-symbols:admin-panel-settings'
+            icon: 'Settings'
         },
         [USER_ROLES.ADMIN]: {
             name: 'مدير',
             description: 'صلاحيات كاملة على الفرونت إند (بدون إعدادات النظام)',
             color: 'text-blue-600',
             bgColor: 'bg-blue-50',
-            icon: 'material-symbols:shield-person'
+            icon: 'Shield'
         },
         [USER_ROLES.USER]: {
             name: 'مستخدم',
             description: 'صلاحيات محدودة: إضافة وفود وأعضاء ومغادرات فقط',
             color: 'text-green-600',
             bgColor: 'bg-green-50',
-            icon: 'material-symbols:person'
+            icon: 'User'
         }
     }
     
@@ -194,7 +194,7 @@ export const getRoleInfo = (userRole) => {
         description: 'دور غير معروف',
         color: 'text-gray-600',
         bgColor: 'bg-gray-50',
-        icon: 'material-symbols:help'
+        icon: 'HelpCircle'
     }
 }
 

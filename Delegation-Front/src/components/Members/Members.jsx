@@ -15,16 +15,17 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useState, useEffect } from "react"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import DataTable from "../DataTable"
 import DeletePopup from "../DeletePopup"
 import EditMember from "./EditMember"
 import MembersTableToolbar from "./MembersTableToolbar"
 // import { members } from "../../data" // تم إزالة البيانات الوهمية
 import { usePermissions } from "../../store/hooks"
-import { memberService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchMembers, deleteMember } from '../../store/slices/membersSlice'
 
-export const columns = [
+export const createColumns = (dispatch) => [
     {
         accessorKey: "status",
         header: () => <div className="text-center">حالة العضو</div>,
@@ -35,21 +36,21 @@ export const columns = [
             
             switch(status) {
                 case "DEPARTED":
-                    statusIcon = "material-symbols:check-circle"
+                    statusIcon = "CheckCircle"
                     iconColor = "text-lime-600"
                     break
                 case "NOT_DEPARTED":
-                    statusIcon = "material-symbols:cancel"
+                    statusIcon = "X"
                     iconColor = "text-red-600"
                     break
                 default:
-                    statusIcon = "material-symbols:cancel"
+                    statusIcon = "X"
                     iconColor = "text-red-600"
             }
             
             return (
                 <div className="flex justify-center">
-                    <Icon icon={statusIcon} fontSize={20} className={iconColor} />
+                    <Icon name={statusIcon} size={20} className={iconColor} />
                 </div>
             )
         },
@@ -178,7 +179,7 @@ export const columns = [
                         {checkPermission('EDIT_MEMBERS') && (
                             <EditMember member={row.original}>
                                 <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                    <Icon icon={'material-symbols:edit-outline-rounded'} />
+                                    <Icon name="Edit" size={20} />
                                     <span>تعديل</span>
                                 </DropdownMenuItem>
                             </EditMember>
@@ -188,7 +189,7 @@ export const columns = [
                                 item={row} 
                                 onDelete={async (memberId) => {
                                     try {
-                                        await memberService.deleteMember(memberId)
+                                        await dispatch(deleteMember(memberId)).unwrap()
                                         // إطلاق إشارة لإعادة تحميل البيانات
                                         window.dispatchEvent(new CustomEvent('delegationUpdated'))
                                     } catch (error) {
@@ -197,7 +198,7 @@ export const columns = [
                                 }}
                             >
                                 <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
-                                    <Icon icon={'material-symbols:delete-outline-rounded'} />
+                                    <Icon name="Trash2" size={20} />
                                     <span>حذف</span>
                                 </DropdownMenuItem>
                             </DeletePopup>
@@ -210,11 +211,14 @@ export const columns = [
 ]
 
 const Members = ({ members: data = [], showDelegationInfo = false }) => {
+    const dispatch = useDispatch()
     const [sorting, setSorting] = useState([])
     const [columnFilters, setColumnFilters] = useState([])
     const [columnVisibility, setColumnVisibility] = useState({})
     const [rowSelection, setRowSelection] = useState({})
     const [globalFilter, setGlobalFilter] = useState("")
+
+    const columns = createColumns(dispatch)
 
     const table = useReactTable({
         data,

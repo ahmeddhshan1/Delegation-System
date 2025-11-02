@@ -21,12 +21,12 @@ Django==5.2.7
 djangorestframework==3.15.2
 
 # Database Drivers
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.11
 
 # WebSocket & Real-time Communication
 channels==4.0.0
-channels-redis==4.0.0
-daphne==4.1.0
+channels-redis==4.2.0
+daphne==4.2.1
 
 # Configuration & Environment
 python-decouple==3.8
@@ -37,7 +37,7 @@ django-cors-headers==4.3.1
 
 # Static Files & Media
 whitenoise==6.6.0
-Pillow==10.0.0
+Pillow==10.4.0
 
 # Development Tools
 django-extensions==3.2.3
@@ -127,7 +127,8 @@ gunicorn==21.2.0
 # ================================================================
 #
 # Backend (Python):
-#   - عدد الحزم: 13 حزمة أساسية
+#   - عدد الحزم: 13 حزمة أساسية (+ dependencies)
+#   - إجمالي الحزم المثبتة: 38 حزمة
 #   - طريقة التثبيت: pip install -r requirements_all.txt
 #
 # Frontend (Node.js):

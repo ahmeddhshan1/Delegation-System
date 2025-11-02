@@ -30,24 +30,24 @@ const permissionsPersistConfig = {
 const eventsPersistConfig = {
   key: 'events',
   storage,
-  whitelist: ['currentMainEvent', 'currentSubEvent', 'selectedMainEvent', 'selectedSubEvent'], // حفظ الأحداث المحددة
-  blacklist: ['mainEvents', 'subEvents', 'isLoading', 'error'] // عدم حفظ البيانات الكبيرة
+  whitelist: ['mainEvents', 'subEvents', 'currentMainEvent', 'currentSubEvent', 'selectedMainEvent', 'selectedSubEvent'], // حفظ البيانات المهمة
+  blacklist: ['isLoading', 'error'] // عدم حفظ الحالات المؤقتة
 }
 
 // إعدادات تخزين الوفود (اختياري - لحفظ الوفد المفتوح)
 const delegationsPersistConfig = {
   key: 'delegations',
   storage,
-  whitelist: ['currentDelegation', 'selectedDelegation'], // حفظ الوفد المحدد
-  blacklist: ['delegations', 'departureSessions', 'isLoading', 'error', 'stats'] // عدم حفظ البيانات الكبيرة
+  whitelist: ['delegations', 'departureSessions', 'currentDelegation', 'selectedDelegation'], // حفظ البيانات المهمة
+  blacklist: ['isLoading', 'error', 'stats'] // عدم حفظ الحالات المؤقتة
 }
 
 // إعدادات تخزين الأعضاء (اختياري - لحفظ العضو المفتوح)
 const membersPersistConfig = {
   key: 'members',
   storage,
-  whitelist: ['currentMember', 'selectedMember'], // حفظ العضو المحدد
-  blacklist: ['members', 'allMembers', 'isLoading', 'error', 'stats'] // عدم حفظ البيانات الكبيرة
+  whitelist: ['members', 'allMembers', 'currentMember', 'selectedMember'], // حفظ البيانات المهمة
+  blacklist: ['isLoading', 'error', 'stats'] // عدم حفظ الحالات المؤقتة
 }
 
 export {

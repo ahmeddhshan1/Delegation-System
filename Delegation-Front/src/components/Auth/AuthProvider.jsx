@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router'
-import { authService } from '../../services/auth'
+import { authService } from '../../plugins/auth'
 import Loading from '../Loading'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { setUser, setUserRole, setToken, clearAuth } from '../../store/slices/authSlice'
@@ -29,19 +29,19 @@ export const AuthProvider = ({ children }) => {
                 const token = authService.getToken()
                 
                 if (token) {
-                    // التحقق من صحة الرمز
-                    const verification = await authService.verifyToken(token)
-                    
-                    if (verification.valid) {
-                        const currentUser = verification.user || authService.getCurrentUser()
+                    // Try to get current user instead of verifying token
+                    try {
+                        const currentUser = await authService.getCurrentUser()
                         dispatch(setUser(currentUser))
-                        dispatch(setUserRole(currentUser.role))
-                        dispatch(setPermissionsRole(currentUser.role))
+                        dispatch(setUserRole(currentUser.role || currentUser.user_role))
+                        dispatch(setPermissionsRole(currentUser.role || currentUser.user_role))
                         dispatch(setToken(token))
-                    } else {
-                        // الرمز غير صالح، مسح البيانات
-                        await authService.logout()
+                    } catch (error) {
+                        // If getting user fails, token is invalid
+                        console.log('Token invalid, clearing auth')
                         dispatch(clearAuth())
+                        localStorage.removeItem('authToken')
+                        sessionStorage.removeItem('authToken')
                     }
                 } else {
                     dispatch(clearAuth())
@@ -60,15 +60,37 @@ export const AuthProvider = ({ children }) => {
     const login = async (credentials) => {
         try {
             const response = await authService.login(credentials)
-            if (response.success) {
-                dispatch(setUser(response.user))
-                dispatch(setUserRole(response.user.role))
-                dispatch(setPermissionsRole(response.user.role))
-                dispatch(setToken(response.token))
-                return response
+            
+            // Check if response has data (successful login)
+            if (response && (response.success || response.token || response.user)) {
+                const userData = response.user || response
+                const token = response.token || response.key
+                
+                dispatch(setUser(userData))
+                dispatch(setUserRole(userData.role || userData.user_role))
+                dispatch(setPermissionsRole(userData.role || userData.user_role))
+                dispatch(setToken(token))
+                
+                // Store token based on rememberMe
+                if (credentials.rememberMe) {
+                    localStorage.setItem('authToken', token)
+                } else {
+                    sessionStorage.setItem('authToken', token)
+                }
+                
+                return { success: true, user: userData, token }
             }
+            
             throw new Error(response.message || 'فشل في تسجيل الدخول')
         } catch (error) {
+            // Handle axios error response
+            if (error.response) {
+                const errorMessage = error.response.data?.message 
+                    || error.response.data?.error 
+                    || error.response.data?.detail
+                    || 'اسم المستخدم أو كلمة المرور غير صحيحة'
+                throw new Error(errorMessage)
+            }
             throw error
         }
     }

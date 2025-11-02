@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from './ui/Icon';
 import { useNavigate } from 'react-router'
 
 const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebersNum, loading = false}) => {
@@ -17,7 +17,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-sky-100 grid place-items-center'>
-                    <Icon icon={'fa:globe'} fontSize={28} className='text-sky-600' />
+                    <Icon name="Globe" size={28} className='text-sky-600' />
                 </div>
             </div>
             <div className='box w-full bg-white p-6 rounded-2xl border border-neutral-300 flex items-center gap-2 justify-between'>
@@ -29,7 +29,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-orange-100 grid place-items-center'>
-                    <Icon icon={'healthicons:officer'} fontSize={28} className='text-orange-600' />
+                    <Icon name="Shield" size={28} className='text-orange-600' />
                 </div>
             </div>
             <div className='box w-full bg-white p-6 rounded-2xl border border-neutral-300 flex items-center gap-2 justify-between'>
@@ -41,7 +41,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-lime-100 grid place-items-center'>
-                    <Icon icon={'flowbite:user-solid'} fontSize={32} className='text-lime-600' />
+                    <Icon name="User" size={32} className='text-lime-600' />
                 </div>
             </div>
             <div 
@@ -56,7 +56,7 @@ const Stats = ({delegationNum, militaryDelegationNum, civilDelegationNum, memebe
                     </span>
                 </div>
                 <div className='w-12 h-12 rounded-full bg-purple-100 grid place-items-center'>
-                    <Icon icon={'fa:users'} fontSize={28} className='text-purple-600' />
+                    <Icon name="Users" size={28} className='text-purple-600' />
                 </div>
             </div>
         </div>

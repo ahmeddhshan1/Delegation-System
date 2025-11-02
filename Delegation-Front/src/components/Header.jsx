@@ -1,46 +1,21 @@
 import { useLocation } from 'react-router'
 import { useState, useEffect } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
 import UserProfile from './UserProfile'
-import { eventService } from '../services/api'
+import { fetchMainEvents } from '../store/slices/eventsSlice'
 
 const Header = () => {
+    const dispatch = useDispatch()
     const navigation = useLocation()
-    const [events, setEvents] = useState([])
     const [title, setTitle] = useState('لوحة التحكم')
+    
+    // Redux state
+    const { mainEvents, loading: eventsLoading } = useSelector(state => state.events)
 
     useEffect(() => {
-        let isMounted = true // flag لتتبع حالة المكون
-        
-        const loadEventsFromAPI = async () => {
-            try {
-                const eventsResponse = await eventService.getMainEvents()
-                let list = []
-                
-                if (eventsResponse && eventsResponse.results && Array.isArray(eventsResponse.results)) {
-                    list = eventsResponse.results
-                } else if (Array.isArray(eventsResponse)) {
-                    list = eventsResponse
-                } else {
-                    console.warn('API لم يرجع array للأحداث:', eventsResponse)
-                }
-                
-                if (isMounted) {
-                    setEvents(list)
-                }
-            } catch (error) {
-                console.error('خطأ في جلب الأحداث من API:', error)
-                if (isMounted) {
-                    setEvents([])
-                }
-            }
-        }
-
-        loadEventsFromAPI()
-
-        return () => {
-            isMounted = false // تعيين flag إلى false عند cleanup
-        }
-    }, [])
+        // تحميل البيانات باستخدام Redux
+        dispatch(fetchMainEvents())
+    }, [dispatch])
 
     // حساب عنوان الهيدر حسب الصفحة الحالية
     useEffect(() => {
@@ -62,7 +37,7 @@ const Header = () => {
             const segments = navigation.pathname.split('/').filter(Boolean)
             if (segments.length === 1) {
                 const eventPath = segments[0]
-                const event = events.find(e => {
+                const event = mainEvents.find(e => {
                     const byLink = (e.event_link || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
                     const byName = e.event_name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
                     return byLink === eventPath || byName === eventPath
@@ -72,7 +47,7 @@ const Header = () => {
             }
             if (segments.length >= 2) {
                 const [eventPath, subEventId] = segments
-                const event = events.find(e => {
+                const event = mainEvents.find(e => {
                     const byLink = (e.event_link || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')
                     const byName = e.event_name.toLowerCase().replace(/\s+/g, '').replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, '')
                     return byLink === eventPath || byName === eventPath
@@ -90,7 +65,7 @@ const Header = () => {
         }
 
         computeTitle()
-    }, [navigation.pathname, events])
+    }, [navigation.pathname, mainEvents])
     return (
         <header className='p-2 rounded-xl w-full bg-white flex items-center justify-between shadow-md'>
             <h1 className='font-bold text-xl ms-8'>

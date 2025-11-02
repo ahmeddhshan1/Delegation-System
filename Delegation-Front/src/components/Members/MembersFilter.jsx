@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,7 @@ const MembersFilter = ({ table, data }) => {
         <Popover>
             <PopoverTrigger asChild>
                 <Button variant="outline" className="mr-auto !ring-0">
-                    <Icon icon={'fluent:filter-32-filled'} />
+                    <Icon name="Filter" size={20} />
                     <span>فلتر</span>
                 </Button>
             </PopoverTrigger>

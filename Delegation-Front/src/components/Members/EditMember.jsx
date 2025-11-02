@@ -17,24 +17,30 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
-import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import { militaryPositions } from "../../utils/militaryPositions"
-import { memberService, equivalentJobService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { updateMember } from '../../store/slices/membersSlice'
+import { fetchNationalities } from '../../store/slices/nationalitiesSlice'
+import { fetchEquivalentJobs, createEquivalentJob, deleteEquivalentJob } from '../../store/slices/equivalentJobsSlice'
 
-const EditMember = ({ member, children }) => {
+const EditMember = ({ member, children, onEdit }) => {
+    const dispatch = useDispatch()
+    const { jobs: equivalentJobs } = useSelector(state => state.equivalentJobs)
+    
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false)
     const [selectedEquivalentPosition, setSelectedEquivalentPosition] = useState("")
     const [showAddPosition, setShowAddPosition] = useState(false)
     const [newPosition, setNewPosition] = useState("")
-    const [availablePositions, setAvailablePositions] = useState([])
     const [searchTerm, setSearchTerm] = useState("")
     const [deleteItem, setDeleteItem] = useState(null)
+    
+    const availablePositions = equivalentJobs.map(job => job.name)
 
     const validationSchema = yup.object({
         rank: yup.string().required("هذا الحقل لا يمكن ان يكون فارغا"),
@@ -60,28 +66,20 @@ const EditMember = ({ member, children }) => {
 
     const handleAddNewPosition = async () => {
         const position = newPosition.trim()
-        if (!position) {
-            toast.error("يرجى إدخال اسم الوظيفة المعادلة")
-            return
-        }
-        if (availablePositions.includes(position)) {
-            toast.error("هذه الوظيفة المعادلة موجودة بالفعل")
+        if (!position || availablePositions.includes(position)) {
             return
         }
         
         try {
-            const created = await equivalentJobService.createEquivalentJob({ name: position })
-            const updatedPositions = [...availablePositions, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailablePositions(updatedPositions)
+            const created = await dispatch(createEquivalentJob({ name: position })).unwrap()
             
             setSelectedEquivalentPosition(created.name)
             setValue('equivalentRole', created.name)
             setNewPosition("")
             setShowAddPosition(false)
             setSearchTerm("")
-            toast.success("تم إضافة الوظيفة المعادلة الجديدة بنجاح")
         } catch (error) {
-            toast.error("تعذر إضافة الوظيفة المعادلة. تأكد أن الاسم غير مكرر")
+            // Handle error silently
         }
     }
 
@@ -91,26 +89,19 @@ const EditMember = ({ member, children }) => {
             name: position,
             onDelete: async () => {
                 try {
-                    // البحث عن ID الوظيفة المعادلة
-                    const jobs = await equivalentJobService.getEquivalentJobs()
-                    const jobToDelete = jobs.find(job => job.name === position)
+                    const jobToDelete = equivalentJobs.find(job => job.name === position)
                     
                     if (jobToDelete) {
-                        await equivalentJobService.deleteEquivalentJob(jobToDelete.id)
-                        const updatedPositions = availablePositions.filter(p => p !== position)
-                        setAvailablePositions(updatedPositions)
+                        await dispatch(deleteEquivalentJob(jobToDelete.id)).unwrap()
                         
-                        // إذا كانت الوظيفة المحذوفة مختارة، امسح الاختيار
                         if (selectedEquivalentPosition === position) {
                             setSelectedEquivalentPosition("")
                             setValue('equivalentRole', "")
                         }
                         
-                        toast.success("تم حذف الوظيفة المعادلة بنجاح")
                         setDeleteItem(null)
                     }
                 } catch (error) {
-                    toast.error("تعذر حذف الوظيفة المعادلة")
                     setDeleteItem(null)
                 }
             }
@@ -126,17 +117,12 @@ const EditMember = ({ member, children }) => {
         setLoading(true)
         
         try {
-            // البحث عن ID الوظيفة المعادلة المختارة
+            // البحث عن ID الوظيفة المعادلة المختارة من Redux store
             let equivalent_job_id = null
             if (data.equivalentRole) {
-                try {
-                    const jobs = await equivalentJobService.getEquivalentJobs()
-                    const selectedJob = jobs.find(job => job.name === data.equivalentRole)
-                    if (selectedJob) {
-                        equivalent_job_id = selectedJob.id
-                    }
-                } catch (error) {
-                    console.error('خطأ في جلب الوظائف المعادلة:', error)
+                const selectedJob = equivalentJobs.find(job => job.name === data.equivalentRole)
+                if (selectedJob) {
+                    equivalent_job_id = selectedJob.id
                 }
             }
             
@@ -148,39 +134,33 @@ const EditMember = ({ member, children }) => {
                 equivalent_job_id: equivalent_job_id
             }
             
-            await memberService.updateMember(member.id, payload)
+            const updatedMember = await dispatch(updateMember({ memberId: member.id, memberData: payload })).unwrap()
+            
+            // تحديث فوري للبيانات المحلية
+            if (onEdit) {
+                onEdit(updatedMember)
+            }
             
             // إطلاق إشارة لإعادة تحميل البيانات
+            window.dispatchEvent(new CustomEvent('memberUpdated'))
             window.dispatchEvent(new CustomEvent('delegationUpdated'))
+            window.dispatchEvent(new CustomEvent('dataUpdated'))
+            window.dispatchEvent(new CustomEvent('refreshData'))
             
-            toast.success('تم تحديث بيانات العضو بنجاح')
             setOpen(false)
         } catch (error) {
             console.error('خطأ في تحديث العضو:', error)
-            toast.error('حدث خطأ أثناء تحديث العضو')
         } finally {
             setLoading(false)
         }
     })
 
-    // جلب الوظائف المعادلة من API
+    // جلب الوظائف المعادلة من Redux
     useEffect(() => {
-        const loadEquivalentJobs = async () => {
-            try {
-                const jobs = await equivalentJobService.getEquivalentJobs()
-                const jobNames = jobs.map(job => job.name)
-                setAvailablePositions(jobNames)
-            } catch (error) {
-                console.error('خطأ في جلب الوظائف المعادلة:', error)
-                // fallback إلى البيانات المحلية
-                setAvailablePositions(militaryPositions)
-            }
-        }
-        
         if (open) {
-            loadEquivalentJobs()
+            dispatch(fetchEquivalentJobs())
         }
-    }, [open])
+    }, [open, dispatch])
 
     // تحديث البيانات عند فتح الحوار
     useEffect(() => {
@@ -203,32 +183,19 @@ const EditMember = ({ member, children }) => {
         }
     }, [open, reset])
 
-    // تحميل الوظائف المعادلة من API
-    const loadEquivalentJobs = async () => {
-        try {
-            const jobs = await equivalentJobService.getEquivalentJobs()
-            const jobNames = jobs.map(job => job.name)
-            setAvailablePositions(jobNames)
-        } catch (error) {
-            console.error('خطأ في تحميل الوظائف المعادلة:', error)
-            // استخدام البيانات الافتراضية كـ fallback
-            setAvailablePositions(militaryPositions)
-        }
-    }
-
     // تحميل الوظائف المعادلة عند فتح المكون
     useEffect(() => {
-        loadEquivalentJobs()
-    }, [])
+        dispatch(fetchEquivalentJobs())
+    }, [dispatch])
 
     // الاستماع لتحديث الوظائف المعادلة
     useEffect(() => {
         const handlePositionsUpdated = () => {
-            loadEquivalentJobs()
+            dispatch(fetchEquivalentJobs())
         }
 
         const handleMemberUpdate = () => {
-            loadEquivalentJobs()
+            dispatch(fetchEquivalentJobs())
         }
 
         window.addEventListener('positionsUpdated', handlePositionsUpdated)
@@ -292,7 +259,7 @@ const EditMember = ({ member, children }) => {
                                     onClick={() => setShowAddPosition(!showAddPosition)}
                                     className="text-xs"
                                 >
-                                    <Icon icon="qlementine-icons:plus-16" fontSize={14} />
+                                    <Icon name="Plus" size={14} />
                                     <span>إضافة منصب جديد</span>
                                 </Button>
                             </div>
@@ -312,7 +279,7 @@ const EditMember = ({ member, children }) => {
                                         onClick={handleAddNewPosition}
                                         disabled={!newPosition.trim()}
                                     >
-                                        <Icon icon="material-symbols:check" fontSize={16} />
+                                        <Icon name="Check" size={16} />
                                     </Button>
                                     <Button 
                                         type="button"
@@ -323,7 +290,7 @@ const EditMember = ({ member, children }) => {
                                             setNewPosition("")
                                         }}
                                     >
-                                        <Icon icon="material-symbols:close" fontSize={16} />
+                                        <Icon name="X" size={16} />
                                     </Button>
                                 </div>
                             )}
@@ -360,7 +327,7 @@ const EditMember = ({ member, children }) => {
                                                         className="text-neutral-500 hover:text-neutral-700 p-1 rounded flex-shrink-0"
                                                         title="حذف المنصب العسكري"
                                                     >
-                                                        <Icon icon="material-symbols:close" fontSize={16} />
+                                                        <Icon name="X" size={16} />
                                                     </button>
                                                 </div>
                                             ))
@@ -384,7 +351,7 @@ const EditMember = ({ member, children }) => {
                                 loading
                                     ?
                                     <>
-                                        <Icon icon="jam:refresh" className="animate-spin" />
+                                        <Icon name="RefreshCw" size={20} className="animate-spin" />
                                         <span>حفظ ...</span>
                                     </>
                                     :

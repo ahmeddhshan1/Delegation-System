@@ -10,11 +10,10 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
-import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import {
     Select,
@@ -23,51 +22,62 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { hallOptions } from "../../constants"
-import { nationalities } from "../../utils/nationalities"
-import { nationalityService, airportService, airlineService, citiesService, delegationService } from "../../services/api"
-// import DeleteConfirm from "../ui/delete-confirm"
+import { useSelector, useDispatch } from 'react-redux'
+import { updateDelegation } from '../../store/slices/delegationsSlice'
+import { fetchNationalities, createNationality } from '../../store/slices/nationalitiesSlice'
+import { fetchAirports, createAirport } from '../../store/slices/airportsSlice'
+import { fetchAirlines, createAirline } from '../../store/slices/airlinesSlice'
+import { fetchCities, createCity } from '../../store/slices/citiesSlice'
 
 const EditDelegation = ({ delegation, children }) => {
+    const dispatch = useDispatch()
+    
+    // Redux selectors
+    const { nationalities: nationalitiesList } = useSelector(state => state.nationalities)
+    const { airports: airportsList } = useSelector(state => state.airports)
+    const { airlines: airlinesList } = useSelector(state => state.airlines)
+    const { cities: citiesList } = useSelector(state => state.cities)
+    
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false)
     const [selectedNationality, setSelectedNationality] = useState("")
     const [showAddNationality, setShowAddNationality] = useState(false)
     const [newNationality, setNewNationality] = useState("")
-    const [availableNationalities, setAvailableNationalities] = useState([])
-    const [nationalitiesList, setNationalitiesList] = useState([])
     const [searchTerm, setSearchTerm] = useState("")
     
     // مطارات
     const [selectedAirport, setSelectedAirport] = useState("")
     const [showAddAirport, setShowAddAirport] = useState(false)
     const [newAirport, setNewAirport] = useState("")
-    const [availableAirports, setAvailableAirports] = useState([])
-    const [airportsList, setAirportsList] = useState([])
     const [airportSearchTerm, setAirportSearchTerm] = useState("")
     
     // شركات الطيران
     const [selectedAirline, setSelectedAirline] = useState("")
     const [showAddAirline, setShowAddAirline] = useState(false)
     const [newAirline, setNewAirline] = useState("")
-    const [availableAirlines, setAvailableAirlines] = useState([])
-    const [airlinesList, setAirlinesList] = useState([])
     const [airlineSearchTerm, setAirlineSearchTerm] = useState("")
 
     // قادمة من
     const [selectedOrigin, setSelectedOrigin] = useState("")
     const [showAddOrigin, setShowAddOrigin] = useState(false)
     const [newOrigin, setNewOrigin] = useState("")
-    const [availableOrigins, setAvailableOrigins] = useState([])
-    const [citiesList, setCitiesList] = useState([])
     const [originSearchTerm, setOriginSearchTerm] = useState("")
+    
+    // Derived state from Redux
+    const availableNationalities = nationalitiesList.map(n => n.name).filter(Boolean)
+    const availableAirports = airportsList.map(a => a.name).filter(Boolean)
+    const availableAirlines = airlinesList.map(a => a.name).filter(Boolean)
+    const availableOrigins = citiesList.map(c => c.city_name).filter(Boolean)
 
     // تحميل البيانات المرجعية عند فتح النموذج
     useEffect(() => {
         if (open) {
-            loadReferenceData()
+            dispatch(fetchNationalities())
+            dispatch(fetchAirports())
+            dispatch(fetchAirlines())
+            dispatch(fetchCities())
         }
-    }, [open])
+    }, [open, dispatch])
 
     const validationSchema = yup.object({
         delegationHead: yup.string().required("هذا الحقل لا يمكن ان يكون فارغا"),
@@ -106,44 +116,6 @@ const EditDelegation = ({ delegation, children }) => {
     const mapApiTypeToSelect = (apiType) => {
         if (!apiType) return ""
         return apiType === 'MILITARY' ? 'military' : apiType === 'CIVILIAN' ? 'civil' : ''
-    }
-
-    // تحميل البيانات المرجعية من API
-    const loadReferenceData = async () => {
-        try {
-            const [nationalitiesRes, airportsRes, airlinesRes, citiesRes] = await Promise.all([
-                nationalityService.getNationalities(),
-                airportService.getAirports(),
-                airlineService.getAirlines(),
-                citiesService.getCities(),
-            ])
-
-            // تحويل البيانات إلى مصفوفات من الأسماء
-            const toArray = (res, nameKey) => {
-                if (res && Array.isArray(res.results)) return res.results.map(r => r[nameKey]).filter(Boolean)
-                if (Array.isArray(res)) return res.map(r => r[nameKey]).filter(Boolean)
-                return []
-            }
-
-            const nationalities = toArray(nationalitiesRes, 'name')
-            const airports = toArray(airportsRes, 'name')
-            const airlines = toArray(airlinesRes, 'name')
-            const origins = toArray(citiesRes, 'city_name')
-
-            setAvailableNationalities(nationalities)
-            setAvailableAirports(airports)
-            setAvailableAirlines(airlines)
-            setAvailableOrigins(origins)
-            
-            // حفظ البيانات الكاملة للاستخدام في onSubmit
-            setNationalitiesList(Array.isArray(nationalitiesRes?.results) ? nationalitiesRes.results : Array.isArray(nationalitiesRes) ? nationalitiesRes : [])
-            setAirportsList(Array.isArray(airportsRes?.results) ? airportsRes.results : Array.isArray(airportsRes) ? airportsRes : [])
-            setAirlinesList(Array.isArray(airlinesRes?.results) ? airlinesRes.results : Array.isArray(airlinesRes) ? airlinesRes : [])
-            setCitiesList(Array.isArray(citiesRes?.results) ? citiesRes.results : Array.isArray(citiesRes) ? citiesRes : [])
-        } catch (error) {
-            console.error('خطأ في تحميل البيانات المرجعية:', error)
-            toast.error('فشل في تحميل البيانات المرجعية')
-        }
     }
 
 
@@ -187,70 +159,54 @@ const EditDelegation = ({ delegation, children }) => {
 
     const handleAddOrigin = async () => {
         const name = newOrigin.trim()
-        if (!name) { toast.error("يرجى إدخال اسم المدينة"); return }
+        if (!name) { return }
         try {
-            const created = await citiesService.createCity({ city_name: name })
-            const updated = [...availableOrigins, created.city_name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setCitiesList(prev => [...prev, created])
-            setAvailableOrigins(updated)
-            setSelectedOrigin(created.city_name)
-            setValue('arrivalOrigin', created.city_name)
+            const result = await dispatch(createCity({ city_name: name })).unwrap()
+            setSelectedOrigin(result.city_name)
+            setValue('arrivalOrigin', result.city_name)
             setNewOrigin("")
             setShowAddOrigin(false)
             setOriginSearchTerm("")
-            toast.success("تم إضافة المدينة الجديدة بنجاح")
-        } catch { toast.error("تعذر إضافة المدينة. تأكد أن الاسم غير مكرر") }
+        } catch { }
     }
 
     const handleAddNewNationality = async () => {
         const name = newNationality.trim()
-        if (!name) { toast.error("يرجى إدخال اسم الجنسية"); return }
+        if (!name) { return }
         try {
-            const created = await nationalityService.createNationality({ name })
-            const updated = [...availableNationalities, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setNationalitiesList(prev => [...prev, created])
-            setAvailableNationalities(updated)
-            setSelectedNationality(created.name)
-            setValue('nationality', created.name)
+            const result = await dispatch(createNationality({ name })).unwrap()
+            setSelectedNationality(result.name)
+            setValue('nationality', result.name)
             setNewNationality("")
             setShowAddNationality(false)
             setSearchTerm("")
-            toast.success("تم إضافة الجنسية الجديدة بنجاح")
-        } catch { toast.error("تعذر إضافة الجنسية. تأكد أن الاسم غير مكرر") }
+        } catch { }
     }
 
     const handleAddNewAirport = async () => {
         const name = newAirport.trim()
-        if (!name) { toast.error("يرجى إدخال اسم المطار"); return }
+        if (!name) { return }
         try {
-            const created = await airportService.createAirport({ name })
-            const updated = [...availableAirports, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAirportsList(prev => [...prev, created])
-            setAvailableAirports(updated)
-            setSelectedAirport(created.name)
-            setValue('arrivalHall', created.name)
+            const result = await dispatch(createAirport({ name })).unwrap()
+            setSelectedAirport(result.name)
+            setValue('arrivalHall', result.name)
             setNewAirport("")
             setShowAddAirport(false)
             setAirportSearchTerm("")
-            toast.success("تم إضافة المطار الجديد بنجاح")
-        } catch { toast.error("تعذر إضافة المطار. تأكد أن الاسم غير مكرر") }
+        } catch { }
     }
 
     const handleAddNewAirline = async () => {
         const name = newAirline.trim()
-        if (!name) { toast.error("يرجى إدخال اسم شركة الطيران"); return }
+        if (!name) { return }
         try {
-            const created = await airlineService.createAirline({ name })
-            const updated = [...availableAirlines, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAirlinesList(prev => [...prev, created])
-            setAvailableAirlines(updated)
-            setSelectedAirline(created.name)
-            setValue('arrivalAirline', created.name)
+            const result = await dispatch(createAirline({ name })).unwrap()
+            setSelectedAirline(result.name)
+            setValue('arrivalAirline', result.name)
             setNewAirline("")
             setShowAddAirline(false)
             setAirlineSearchTerm("")
-            toast.success("تم إضافة شركة الطيران الجديدة بنجاح")
-        } catch { toast.error("تعذر إضافة شركة الطيران. تأكد أن الاسم غير مكرر") }
+        } catch { }
     }
 
 
@@ -278,26 +234,7 @@ const EditDelegation = ({ delegation, children }) => {
         setLoading(true)
         
         // التحقق من الجنسية والمطار وشركة الطيران وقادمة من
-        if (!selectedNationality) {
-            toast.error("يرجى اختيار الجنسية")
-            setLoading(false)
-            return
-        }
-        
-        if (!selectedAirport) {
-            toast.error("يرجى اختيار المطار")
-            setLoading(false)
-            return
-        }
-        
-        if (!selectedAirline) {
-            toast.error("يرجى اختيار شركة الطيران")
-            setLoading(false)
-            return
-        }
-        
-        if (!selectedOrigin) {
-            toast.error("يرجى اختيار قادمة من")
+        if (!selectedNationality || !selectedAirport || !selectedAirline || !selectedOrigin) {
             setLoading(false)
             return
         }
@@ -332,7 +269,6 @@ const EditDelegation = ({ delegation, children }) => {
             console.log('Validation check:', { newMemberCount, currentMembers, delegation })
             
             if (newMemberCount < currentMembers) {
-                toast.error(`لا يمكن تقليل العدد أقل من ${currentMembers} عضو`)
                 setLoading(false)
                 return
             }
@@ -353,13 +289,11 @@ const EditDelegation = ({ delegation, children }) => {
                 goods: data.arrivalShipments,
             }
 
-            await delegationService.updateDelegation(delegation.id, payload)
+            await dispatch(updateDelegation({ delegationId: delegation.id, delegationData: payload })).unwrap()
 
-            toast.success("تم تحديث الوفد بنجاح")
             setLoading(false)
             setOpen(false)
         } catch (error) {
-            toast.error("حدث خطأ أثناء تحديث الوفد")
             setLoading(false)
         }
     })
@@ -428,7 +362,7 @@ const EditDelegation = ({ delegation, children }) => {
                 <DialogHeader className="!text-start !py-6 border-b border-neutral-200">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center">
-                            <Icon icon="material-symbols:edit-outline-rounded" fontSize={24} className="text-white" />
+                            <Icon name="Edit" size={24} className="text-white" />
                         </div>
                         <div>
                             <DialogTitle className="text-2xl font-bold text-primary-600">
@@ -446,14 +380,14 @@ const EditDelegation = ({ delegation, children }) => {
                         <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center">
-                                    <Icon icon="material-symbols:person" fontSize={16} className="text-white" />
+                                    <Icon name="User" size={16} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-neutral-800">المعلومات الأساسية</h3>
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="delegationHead" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:person" fontSize={16} className="text-primary-500" />
+                                        <Icon name="User" size={16} className="text-primary-500" />
                                         رئيس الوفد
                                     </Label>
                                     <input 
@@ -465,13 +399,13 @@ const EditDelegation = ({ delegation, children }) => {
                                         {...register('delegationHead')} 
                                     />
                                     {errors.delegationHead && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.delegationHead.message}
                                     </span>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:public" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Globe" size={16} className="text-primary-500" />
                                         الجنسية
                                     </Label>
                                 
@@ -491,7 +425,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                 disabled={!newNationality.trim()}
                                                 className="bg-primary-600 hover:bg-primary-700 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:check" fontSize={16} />
+                                                <Icon name="Check" size={16} />
                                             </Button>
                                             <Button 
                                                 type="button"
@@ -503,7 +437,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                 }}
                                                 className="border-primary-300 text-primary-600 hover:bg-primary-50 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
@@ -547,7 +481,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                           ))}
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة جنسية جديدة
                                                             </div>
                                                         </SelectItem>
@@ -559,7 +493,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                         </div>
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة جنسية جديدة
                                                             </div>
                                                         </SelectItem>
@@ -569,7 +503,7 @@ const EditDelegation = ({ delegation, children }) => {
                                         </SelectContent>
                                     </Select>
                                     {errors.nationality && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.nationality.message}
                                     </span>}
                             </div>
@@ -579,14 +513,14 @@ const EditDelegation = ({ delegation, children }) => {
                         <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center">
-                                    <Icon icon="material-symbols:group" fontSize={16} className="text-white" />
+                                    <Icon name="Users" size={16} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-neutral-800">معلومات الوفد</h3>
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:flight" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Plane" size={16} className="text-primary-500" />
                                         المطار
                                     </Label>
                                     
@@ -606,7 +540,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                 disabled={!newAirport.trim()}
                                                 className="bg-primary-600 hover:bg-primary-700 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:check" fontSize={16} />
+                                                <Icon name="Check" size={16} />
                                             </Button>
                                             <Button 
                                                 type="button"
@@ -618,7 +552,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                 }}
                                                 className="border-primary-300 text-primary-600 hover:bg-primary-50 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
@@ -662,7 +596,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                           ))}
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مطار جديد
                                                             </div>
                                                         </SelectItem>
@@ -674,7 +608,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                         </div>
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مطار جديد
                                                             </div>
                                                         </SelectItem>
@@ -684,7 +618,7 @@ const EditDelegation = ({ delegation, children }) => {
                                         </SelectContent>
                                     </Select>
                                     {errors.arrivalHall && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalHall.message}
                                     </span>}
                                 </div>
@@ -692,7 +626,7 @@ const EditDelegation = ({ delegation, children }) => {
                                 <div className="space-y-2">
                                     <div className="h-6 flex items-center">
                                         <Label htmlFor="membersCount" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                            <Icon icon="material-symbols:people" fontSize={16} className="text-primary-500" />
+                                            <Icon name="Users" size={16} className="text-primary-500" />
                                             عدد الأعضاء
                                         </Label>
                                     </div>
@@ -705,7 +639,7 @@ const EditDelegation = ({ delegation, children }) => {
                                         {...register('membersCount')} 
                                     />
                                     {errors.membersCount && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.membersCount.message}
                                     </span>}
                                 </div>
@@ -713,7 +647,7 @@ const EditDelegation = ({ delegation, children }) => {
                                 <div className="space-y-2">
                                     <div className="h-6 flex items-center">
                                         <Label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                            <Icon icon="material-symbols:badge" fontSize={16} className="text-primary-500" />
+                                            <Icon name="Badge" size={16} className="text-primary-500" />
                                             نوع الوفد
                                         </Label>
                                     </div>
@@ -727,7 +661,7 @@ const EditDelegation = ({ delegation, children }) => {
                                     </SelectContent>
                                 </Select>
                                     {errors.delegationType && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.delegationType.message}
                                     </span>}
                             </div>
@@ -737,14 +671,14 @@ const EditDelegation = ({ delegation, children }) => {
                         <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center">
-                                    <Icon icon="material-symbols:flight-takeoff" fontSize={16} className="text-white" />
+                                    <Icon name="PlaneTakeoff" size={16} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-neutral-800">معلومات الرحلة</h3>
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalFlightNumber" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:confirmation-number" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Ticket" size={16} className="text-primary-500" />
                                         رقم الرحلة
                                     </Label>
                                     <input 
@@ -756,14 +690,14 @@ const EditDelegation = ({ delegation, children }) => {
                                         {...register('arrivalFlightNumber')} 
                                     />
                                     {errors.arrivalFlightNumber && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalFlightNumber.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalAirline" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:airline" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Plane" size={16} className="text-primary-500" />
                                         شركة الطيران
                                     </Label>
                                     <Select value={selectedAirline} onValueChange={handleAirlineChange} onOpenChange={(open) => {
@@ -793,7 +727,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                   ))}
                                                 <SelectItem value="add_new" className="text-primary-600 font-medium text-right">
                                                     <div className="flex items-center gap-2 justify-end">
-                                                        <Icon icon="material-symbols:add" fontSize={16} />
+                                                        <Icon name="Plus" size={16} />
                                                         إضافة شركة طيران جديدة
                                                     </div>
                                                 </SelectItem>
@@ -801,7 +735,7 @@ const EditDelegation = ({ delegation, children }) => {
                                         </SelectContent>
                                     </Select>
                                     {errors.arrivalAirline && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalAirline.message}
                                     </span>}
                                     
@@ -832,7 +766,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                 size="sm"
                                                 className="px-4"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
@@ -840,7 +774,7 @@ const EditDelegation = ({ delegation, children }) => {
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalOrigin" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:place" fontSize={16} className="text-primary-500" />
+                                        <Icon name="MapPin" size={16} className="text-primary-500" />
                                         قادمة من
                                     </Label>
                                     <Select value={selectedOrigin} onValueChange={handleOriginChange} onOpenChange={(open) => {
@@ -882,7 +816,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                           ))}
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مدينة جديدة
                                                             </div>
                                                         </SelectItem>
@@ -894,7 +828,7 @@ const EditDelegation = ({ delegation, children }) => {
                                                         </div>
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مدينة جديدة
                                                             </div>
                                                         </SelectItem>
@@ -930,19 +864,19 @@ const EditDelegation = ({ delegation, children }) => {
                                                 size="sm"
                                                 className="px-4"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
                                     {errors.arrivalOrigin && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalOrigin.message}
                                     </span>}
                         </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalTime" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:schedule" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Clock" size={16} className="text-primary-500" />
                                         سعت (HHMM)
                                     </Label>
                                 <input 
@@ -965,14 +899,14 @@ const EditDelegation = ({ delegation, children }) => {
                                     className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 bg-neutral-50 focus:bg-white"
                                 />
                                     {errors.arrivalTime && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalTime.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalDate" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:calendar-month" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Calendar" size={16} className="text-primary-500" />
                                         التاريخ (يوم/شهر/سنة)
                                     </Label>
                                     <input 
@@ -984,14 +918,14 @@ const EditDelegation = ({ delegation, children }) => {
                                         {...register('arrivalDate')} 
                                     />
                                     {errors.arrivalDate && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalDate.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalReceptor" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:person-pin" fontSize={16} className="text-primary-500" />
+                                        <Icon name="MapPin" size={16} className="text-primary-500" />
                                         المستقبل
                                     </Label>
                                     <input 
@@ -1003,14 +937,14 @@ const EditDelegation = ({ delegation, children }) => {
                                         {...register('arrivalReceptor')} 
                                     />
                                     {errors.arrivalReceptor && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalReceptor.message}
                                     </span>}
                         </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalDestination" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:place" fontSize={16} className="text-primary-500" />
+                                        <Icon name="MapPin" size={16} className="text-primary-500" />
                                         وجهة الرحلة
                                     </Label>
                                     <input 
@@ -1022,14 +956,14 @@ const EditDelegation = ({ delegation, children }) => {
                                         {...register('arrivalDestination')} 
                                     />
                                     {errors.arrivalDestination && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalDestination.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-3 md:col-span-2">
                                     <Label htmlFor="arrivalShipments" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:inventory" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Package" size={16} className="text-primary-500" />
                                         الشحنات
                                     </Label>
                                     <input 
@@ -1041,7 +975,7 @@ const EditDelegation = ({ delegation, children }) => {
                                         {...register('arrivalShipments')} 
                                     />
                                     {errors.arrivalShipments && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalShipments.message}
                                     </span>}
                             </div>
@@ -1051,19 +985,19 @@ const EditDelegation = ({ delegation, children }) => {
                     <DialogFooter className="mt-6 pt-4 border-t border-neutral-200 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl">
                         <DialogClose asChild>
                             <Button disabled={loading} variant="outline" className="cursor-pointer min-w-28 h-10 border-neutral-300 text-neutral-600 hover:bg-neutral-50 hover:border-neutral-400">
-                                <Icon icon="material-symbols:close" className="mr-2" />
+                                <Icon name="X" size={20} className="mr-2" />
                                 إلغاء
                             </Button>
                         </DialogClose>
                         <Button disabled={loading} type="button" className="cursor-pointer min-w-28 h-10 bg-primary-500 hover:bg-primary-600 text-white shadow-lg" onClick={onSubmit}>
                             {loading ? (
                                 <>
-                                    <Icon icon="jam:refresh" className="animate-spin mr-2" />
+                                    <Icon name="RefreshCw" size={20} className="animate-spin mr-2" />
                                     <span>جاري التحديث...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Icon icon="material-symbols:save" className="mr-2" />
+                                    <Icon name="Save" size={20} className="mr-2" />
                                     <span>حفظ التعديلات</span>
                                 </>
                             )}

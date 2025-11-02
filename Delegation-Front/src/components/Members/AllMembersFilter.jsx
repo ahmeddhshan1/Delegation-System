@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useState, useMemo } from "react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -121,7 +121,7 @@ const AllMembersFilter = ({ table, data }) => {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline" className="mr-auto !ring-0">
-                    <Icon icon={'fluent:filter-32-filled'} />
+                    <Icon name="Filter" size={20} />
                     <span>فلتر</span>
                 </Button>
             </DialogTrigger>
@@ -134,7 +134,7 @@ const AllMembersFilter = ({ table, data }) => {
                         className="h-6 w-6 p-0 hover:bg-gray-100"
                         onClick={() => setOpen(false)}
                     >
-                        <Icon icon="material-symbols:close" fontSize={16} />
+                        <Icon name="X" size={16} />
                     </Button>
                 </div>
                 <DialogDescription className="text-right text-sm text-gray-600" style={{ marginBottom: '8px' }}>
@@ -311,7 +311,7 @@ const AllMembersFilter = ({ table, data }) => {
                                     className="flex-1 h-8 text-xs !ring-0 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
                                     onClick={applyFiltersToTable}
                                 >
-                                    <Icon icon="material-symbols:filter-list" className="ml-1" fontSize={14} />
+                                    <Icon name="Filter" size={20} className="ml-1" />
                                     تطبيق الفلتر
                                 </Button>
                                 
@@ -321,7 +321,7 @@ const AllMembersFilter = ({ table, data }) => {
                                     className="flex-1 h-8 text-xs !ring-0 bg-yellow-400 border-yellow-400 text-white hover:bg-yellow-500 hover:border-yellow-500"
                                     onClick={clearFilter}
                                 >
-                                    <Icon icon="material-symbols:clear" className="ml-1" fontSize={14} />
+                                    <Icon name="X" size={20} className="ml-1" />
                                     حذف جميع الفلاتر
                                 </Button>
                             </div>

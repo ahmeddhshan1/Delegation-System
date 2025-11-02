@@ -17,7 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
@@ -26,10 +26,20 @@ import { useEffect, useState } from "react"
 import { militaryPositions } from "../../utils/militaryPositions"
 import { useParams } from "react-router"
 import EquivalentPositionSelector from "./EquivalentPositionSelector"
-import { memberService, delegationService, equivalentJobService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { createMember, fetchMembers } from '../../store/slices/membersSlice'
+import { fetchEquivalentJobs, createEquivalentJob, deleteEquivalentJob } from '../../store/slices/equivalentJobsSlice'
+import { fetchDelegations } from '../../store/slices/delegationsSlice'
+import { fetchNationalities } from '../../store/slices/nationalitiesSlice'
 
 const AddMemberToDelegation = () => {
     const { delegationId } = useParams()
+    const dispatch = useDispatch()
+    
+    // Redux selectors - يجب أن يكونوا في البداية
+    const { jobs: equivalentJobs = [] } = useSelector(state => state.equivalentJobs || {})
+    const { delegations = [] } = useSelector(state => state.delegations || {})
+    const { members = [] } = useSelector(state => state.members || {})
     
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false)
@@ -82,9 +92,7 @@ const AddMemberToDelegation = () => {
         }
         
         try {
-            const created = await equivalentJobService.createEquivalentJob({ name: position })
-            const updatedPositions = [...availablePositions, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailablePositions(updatedPositions)
+            const created = await dispatch(createEquivalentJob({ name: position })).unwrap()
             
             setSelectedEquivalentPosition(created.name)
             setValue('equivalentRole', created.name)
@@ -103,27 +111,23 @@ const AddMemberToDelegation = () => {
             name: position,
             onDelete: async () => {
                 try {
-                    // البحث عن ID الوظيفة المعادلة
-                    const jobs = await equivalentJobService.getEquivalentJobs()
-                    const jobToDelete = jobs.find(job => job.name === position)
+                    const jobToDelete = equivalentJobs.find(job => job.name === position)
                     
                     if (jobToDelete) {
-                        await equivalentJobService.deleteEquivalentJob(jobToDelete.id)
-                const updatedPositions = availablePositions.filter(p => p !== position)
-                setAvailablePositions(updatedPositions)
-                
+                        await dispatch(deleteEquivalentJob(jobToDelete.id)).unwrap()
+                        
                         // إذا كانت الوظيفة المحذوفة مختارة، امسح الاختيار
-                if (selectedEquivalentPosition === position) {
-                    setSelectedEquivalentPosition("")
-                    setValue('equivalentRole', "")
-                }
-                
+                        if (selectedEquivalentPosition === position) {
+                            setSelectedEquivalentPosition("")
+                            setValue('equivalentRole', "")
+                        }
+                        
                         toast.success("تم حذف الوظيفة المعادلة بنجاح")
                         setDeleteItem(null)
                     }
                 } catch (error) {
                     toast.error("تعذر حذف الوظيفة المعادلة")
-                setDeleteItem(null)
+                    setDeleteItem(null)
                 }
             }
         })
@@ -136,28 +140,23 @@ const AddMemberToDelegation = () => {
     const onSubmit = handleSubmit(async (data) => {
         setLoading(true)
         try {
-            // تحقق بسيط قبل الإرسال (يمكن الاعتماد على الـ backend أيضاً)
+            // تحقق بسيط قبل الإرسال
             if (!data.rank || !data.name || !data.role) {
-            toast.error("يرجى ملء جميع الحقول المطلوبة")
-            setLoading(false)
-            return
-        }
+                toast.error("يرجى ملء جميع الحقول المطلوبة")
+                setLoading(false)
+                return
+            }
         
             // البحث عن ID الوظيفة المعادلة المختارة
             let equivalent_job_id = null
             if (data.equivalentRole) {
-                try {
-                    const jobs = await equivalentJobService.getEquivalentJobs()
-                    const selectedJob = jobs.find(job => job.name === data.equivalentRole)
-                    if (selectedJob) {
-                        equivalent_job_id = selectedJob.id
-                    }
-                } catch (error) {
-                    console.error('خطأ في جلب الوظائف المعادلة:', error)
+                const selectedJob = equivalentJobs.find(job => job.name === data.equivalentRole)
+                if (selectedJob) {
+                    equivalent_job_id = selectedJob.id
                 }
             }
         
-            // إنشاء العضو عبر API
+            // إنشاء العضو عبر Redux
             const payload = {
                 delegation_id: delegationId,
                 rank: data.rank,
@@ -165,7 +164,7 @@ const AddMemberToDelegation = () => {
                 job_title: data.role,
                 equivalent_job_id: equivalent_job_id
             }
-            await memberService.createMember(payload)
+            await dispatch(createMember(payload)).unwrap()
             toast.success("تم إضافة العضو بنجاح")
 
             // إطلاق إشارة عامة لإعادة التحميل لباقي المكونات
@@ -183,36 +182,25 @@ const AddMemberToDelegation = () => {
         }
     })
 
-    // جلب الوظائف المعادلة من API
-    useEffect(() => {
-        const loadEquivalentJobs = async () => {
-            try {
-                const jobs = await equivalentJobService.getEquivalentJobs()
-                const jobNames = jobs.map(job => job.name)
-                setAvailablePositions(jobNames)
-            } catch (error) {
-                console.error('خطأ في جلب الوظائف المعادلة:', error)
-                // fallback إلى البيانات المحلية
-                setAvailablePositions(militaryPositions)
-            }
-        }
-        
-        if (open) {
-            loadEquivalentJobs()
-        }
-    }, [open])
+    // تم نقل تحميل الوظائف المعادلة إلى Redux (انظر أسفل)
 
-    // تحديث معلومات عدد الأعضاء عبر API
-    const updateMemberCountInfo = async () => {
+    // تحديث معلومات عدد الأعضاء من Redux
+    const updateMemberCountInfo = () => {
         if (!delegationId) return
         try {
-            const [delegation, members] = await Promise.all([
-                delegationService.getDelegation(delegationId),
-                memberService.getMembers({ delegation_id: delegationId })
-            ])
-            const list = Array.isArray(members) ? members : []
+            // البحث بالـ UUID مباشرة (string comparison)
+            const delegation = delegations.find(d => 
+                d.id === delegationId || d.id?.toString() === delegationId?.toString()
+            )
+            const delegationMembers = members.filter(m => 
+                m.delegation_id === delegationId || 
+                m.delegation_id?.toString() === delegationId?.toString()
+            )
+            
             const max = delegation?.member_count || 0
-            setMemberCountInfo({ current: list.length, max })
+            const current = delegation?.current_members || delegationMembers.length
+            
+            setMemberCountInfo({ current, max })
         } catch (e) {
             setMemberCountInfo({ current: 0, max: 0 })
         }
@@ -229,55 +217,59 @@ const AddMemberToDelegation = () => {
             updateMemberCountInfo()
         }
     }, [open, delegationId])
-
-    // تحميل الوظائف المعادلة من API
-    const loadEquivalentJobs = async () => {
-        try {
-            const jobs = await equivalentJobService.getEquivalentJobs()
-            const jobNames = jobs.map(job => job.name)
+    
+    // تحميل البيانات من Redux
+    useEffect(() => {
+        dispatch(fetchEquivalentJobs())
+        dispatch(fetchDelegations())
+        dispatch(fetchMembers())
+    }, [dispatch])
+    
+    // تحديث القائمة عند تغيير البيانات
+    useEffect(() => {
+        if (equivalentJobs.length > 0) {
+            const jobNames = equivalentJobs.map(job => job.name)
             setAvailablePositions(jobNames)
-        } catch (error) {
-            console.error('خطأ في تحميل الوظائف المعادلة:', error)
+        } else {
             // استخدام البيانات الافتراضية كـ fallback
             setAvailablePositions(militaryPositions)
         }
-    }
+    }, [equivalentJobs])
 
+    // تحديث فوري عند تحميل البيانات من Redux
     useEffect(() => {
-        loadEquivalentJobs()
-    }, [])
+        updateMemberCountInfo()
+    }, [delegations, members, delegationId])
 
     useEffect(() => {
         const handleMemberChange = () => { updateMemberCountInfo() }
         window.addEventListener('delegationUpdated', handleMemberChange)
-        updateMemberCountInfo()
         return () => {
             window.removeEventListener('delegationUpdated', handleMemberChange)
         }
     }, [delegationId])
 
-    useEffect(() => {
-        const interval = setInterval(() => { updateMemberCountInfo() }, 2000)
-        return () => clearInterval(interval)
-    }, [delegationId])
+    // التحقق من امتلاء الوفد
+    const isDelegationFull = memberCountInfo.max > 0 && memberCountInfo.current >= memberCountInfo.max
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button 
-                    className="cursor-pointer" 
-                    disabled={memberCountInfo.max > 0 && memberCountInfo.current >= memberCountInfo.max}
+                    className={isDelegationFull ? "cursor-not-allowed" : "cursor-pointer"}
+                    disabled={isDelegationFull}
+                    title={isDelegationFull ? `الوفد مكتمل (${memberCountInfo.current}/${memberCountInfo.max})` : "إضافة عضو جديد للوفد"}
                 >
-                    <Icon icon="qlementine-icons:plus-16" />
+                    <Icon name={isDelegationFull ? "Ban" : "Plus"} size={20} />
                     <span>
-                        {memberCountInfo.max > 0 && memberCountInfo.current >= memberCountInfo.max 
-                            ? "الوفد مكتمل" 
+                        {isDelegationFull 
+                            ? `الوفد مكتمل (${memberCountInfo.current}/${memberCountInfo.max})` 
                             : "اضافة عضو للوفد"
                         }
                     </span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[725px] maxह-[675px] [&_[data-slot='dialog-close']]:!right-[95%] overflow-auto">
+            <DialogContent className="sm:max-w-[725px] max-h-[675px] [&_[data-slot='dialog-close']]:!right-[95%] overflow-auto">
                 <DialogHeader className="!text-start !py-2">
                     <DialogTitle>إضافة عضو جديد للوفد</DialogTitle>
                     <DialogDescription>
@@ -328,7 +320,7 @@ const AddMemberToDelegation = () => {
                             {errors.role && <span className="text-sm text-rose-400 block">{errors.role.message}</span>}
                         </div>
                         <div className="grid gap-3 w-full">
-                            <div className="flex items-center justify_between">
+                            <div className="flex items-center justify-between">
                                 <Label htmlFor="equivalentRole">المنصب العسكري المعادل</Label>
                                 <Button 
                                     type="button"
@@ -337,7 +329,7 @@ const AddMemberToDelegation = () => {
                                     onClick={() => setShowAddPosition(!showAddPosition)}
                                     className="text-xs"
                                 >
-                                    <Icon icon="qlementine-icons:plus-16" fontSize={14} />
+                                    <Icon name="Plus" size={14} />
                                     <span>إضافة منصب جديد</span>
                                 </Button>
                             </div>
@@ -356,7 +348,7 @@ const AddMemberToDelegation = () => {
                                         onClick={handleAddNewPosition}
                                         disabled={!newPosition.trim()}
                                     >
-                                        <Icon icon="material-symbols:check" fontSize={16} />
+                                        <Icon name="Check" size={16} />
                                     </Button>
                                     <Button 
                                         type="button"
@@ -367,7 +359,7 @@ const AddMemberToDelegation = () => {
                                             setNewPosition("")
                                         }}
                                     >
-                                        <Icon icon="material-symbols:close" fontSize={16} />
+                                        <Icon name="X" size={16} />
                                     </Button>
                                 </div>
                             )}
@@ -382,7 +374,7 @@ const AddMemberToDelegation = () => {
                                             placeholder="ابحث في المناصب العسكرية..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full px-3 py-2 border border-neutral-300 rounded-md text_sm"
+                                            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm"
                                             onClick={(e) => e.stopPropagation()}
                                         />
                                     </div>
@@ -403,7 +395,7 @@ const AddMemberToDelegation = () => {
                                                         className="text-neutral-500 hover:text-neutral-700 p-1 rounded flex-shrink-0"
                                                         title="حذف المنصب العسكري"
                                                     >
-                                                        <Icon icon="material-symbols:close" fontSize={16} />
+                                                        <Icon name="X" size={16} />
                                                     </button>
                                                 </div>
                                             ))
@@ -427,7 +419,7 @@ const AddMemberToDelegation = () => {
                                 loading
                                     ?
                                     <>
-                                        <Icon icon="jam:refresh" className="animate-spin" />
+                                        <Icon name="RefreshCw" size={20} className="animate-spin" />
                                         <span>اضافة ...</span>
                                     </>
                                     :

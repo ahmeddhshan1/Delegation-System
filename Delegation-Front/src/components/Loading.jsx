@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from './ui/Icon';
 
 const Loading = ({ message = "جاري التحميل..." }) => {
     return (

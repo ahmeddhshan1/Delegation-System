@@ -9,13 +9,15 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from './ui/Icon'
 import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
 import { deleteDelegationData, deleteSubEventData, deleteMainEventData } from "../utils/cascadeDelete"
-import { delegationService, memberService, departureSessionService } from "../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { deleteDelegation } from '../store/slices/delegationsSlice'
+import { deleteMember } from '../store/slices/membersSlice'
 
 const DeletePopup = ({item, children, onDelete}) => {
+    const dispatch = useDispatch()
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
 
@@ -31,14 +33,14 @@ const DeletePopup = ({item, children, onDelete}) => {
             if ((item.original && item.original.delegationHead) || item.delegationHead) {
                 // حذف وفد من API - سيحذف تلقائياً الأعضاء وجلسات المغادرة بسبب CASCADE
                 try {
-                    await delegationService.deleteDelegation(itemId)
+                    await dispatch(deleteDelegation(itemId)).unwrap()
                     
                     // إرسال إشعار بالحذف
                     window.dispatchEvent(new CustomEvent('delegationDeleted'))
-                    toast.success('تم حذف الوفد وجميع البيانات المرتبطة به بنجاح')
+                    window.dispatchEvent(new CustomEvent('dataUpdated'))
+                    window.dispatchEvent(new CustomEvent('refreshData'))
                 } catch (error) {
                     console.error('خطأ في حذف الوفد:', error)
-                    toast.error('حدث خطأ أثناء حذف الوفد')
                     setLoading(false)
                     return
                 }
@@ -57,33 +59,30 @@ const DeletePopup = ({item, children, onDelete}) => {
                 if (deleteResult.success) {
                     // استدعاء دالة الحذف الممررة من المكون الأب
                     onDelete && onDelete(itemId)
-                    toast.success('تم حذف الحدث الفرعي وجميع البيانات المرتبطة به بنجاح')
                 } else {
-                    toast.error(deleteResult.message)
                     setLoading(false)
                     return
                 }
             } else if ((item.original && item.original.name) || item.name) {
                 // حذف عضو - استدعاء دالة الحذف الممررة من المكون الأب
                 onDelete && onDelete(itemId)
-                toast.success('تم حذف العضو بنجاح')
+                
+                // إطلاق إشارة لإعادة تحميل البيانات
+                window.dispatchEvent(new CustomEvent('memberDeleted'))
+                window.dispatchEvent(new CustomEvent('dataUpdated'))
+                window.dispatchEvent(new CustomEvent('refreshData'))
+                
             } else if ((item.original && item.original.date) || item.date) {
                 // حذف جلسة مغادرة
-
                 if (onDelete) {
                     onDelete(itemId)
-                    toast.success('تم حذف جلسة المغادرة بنجاح')
-                } else {
-                    toast.error('خطأ: لم يتم العثور على دالة الحذف')
                 }
             } else if (onDelete) {
                 // استخدام دالة الحذف المخصصة
                 onDelete(itemId)
-                toast.success('تم الحذف بنجاح')
             }
         } catch (error) {
             console.error('خطأ في الحذف:', error)
-            toast.error('حدث خطأ أثناء الحذف')
         } finally {
             setLoading(false)
             setOpen(false)
@@ -114,7 +113,7 @@ const DeletePopup = ({item, children, onDelete}) => {
                     <Button disabled={loading} type="submit" variant="destructive" className="cursor-pointer" onClick={onSubmit}>
                         {loading ? (
                             <>
-                                <Icon icon="jam:refresh" className="animate-spin" />
+                                <Icon name="RefreshCw" size={16} className="animate-spin" />
                                 <span>حذف ...</span>
                             </>
                         ) : (

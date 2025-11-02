@@ -4,12 +4,12 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { useDispatch } from "react-redux"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../../components/ui/Icon';
 import { NavLink, useNavigate, useLocation } from "react-router"
 import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/components/Auth/AuthProvider"
-import { authService } from "@/services/auth"
+import { authService } from "@/plugins/auth"
 
 
 const Login = () => {
@@ -125,7 +125,7 @@ const Login = () => {
                             onClick={() => setShowPassword(prev => !prev)}
                             aria-label={showPassword ? 'إخفاء كلمة السر' : 'إظهار كلمة السر'}
                         >
-                            <Icon icon={showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"} fontSize={20} />
+                            <Icon name={showPassword ? "EyeOff" : "Eye"} size={20} />
                         </button>
                     </div>
                     {errors.password && <span className="text-sm text-rose-400 block">{errors.password.message}</span>}
@@ -142,7 +142,7 @@ const Login = () => {
                         loading
                             ?
                             <>
-                                <Icon icon="jam:refresh" className="animate-spin" />
+                                <Icon name="RefreshCw" size={20} className="animate-spin" />
                                 <span>تحميل ...</span>
                             </>
                             :

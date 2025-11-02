@@ -173,7 +173,7 @@ class EquivalentJobViewSet(viewsets.ModelViewSet):
 class DelegationViewSet(viewsets.ModelViewSet):
     queryset = Delegation.objects.all()
     serializer_class = DelegationSerializer
-    permission_classes = [IsUserOrReadOnly]  # USER يمكنه الإضافة، ADMIN/SUPER_ADMIN يمكنهم التعديل/الحذف
+    permission_classes = [IsAdminOrReadOnly]  # ADMIN/SUPER_ADMIN يمكنهم التعديل/الحذف، USER للقراءة فقط
     
     def get_queryset(self):
         queryset = Delegation.objects.all().select_related(
@@ -666,3 +666,42 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             'created_at': user.created_at,
             'last_login': user.last_login,
         })
+    
+
+
+
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.dispatch import receiver
+from django.db.models.signals import post_save, post_delete
+
+channel_layer = get_channel_layer()
+
+def send_update_signal(model_name, action, instance_id=None):
+    """Send update message to all connected WebSocket clients."""
+    async_to_sync(channel_layer.group_send)(
+        "updates",
+        {
+            "type": "stats_update",
+            "message": f"{model_name} {action}",
+            "model": model_name,
+            "action": action,
+            "id": instance_id,
+        },
+    )
+    print(f"Sent update signal")
+
+# ------------------------------
+# Generic signals for all models
+# ------------------------------
+
+@receiver(post_save, sender=MainEvent)
+def main_event_saved(sender, instance, created, **kwargs):
+    action = "created" if created else "updated"
+    print(action)
+    send_update_signal("MainEvent", action, instance.id)
+
+@receiver(post_delete, sender=MainEvent)
+def main_event_deleted(sender, instance, **kwargs):
+    send_update_signal("MainEvent", "deleted", instance.id)

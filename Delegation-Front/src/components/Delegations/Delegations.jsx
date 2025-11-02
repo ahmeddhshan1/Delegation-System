@@ -15,16 +15,19 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useState, useEffect, useCallback } from "react"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { PermissionElement } from "../Permissions/PermissionGuard"
+import Icon from '../ui/Icon';
 import DataTable from "../DataTable"
 import DelegationTableToolbar from "./DelegationTableToolbar"
+import AddDelegation from "./AddDelegation"
 import DeletePopup from "../DeletePopup"
 import EditDelegation from "./EditDelegation"
 // import { dateRangeFilter } from "../../utils"
 // import { delegations } from "../../data" // تم إزالة البيانات الوهمية
 import { usePermissions } from "../../store/hooks"
-import { delegationService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchDelegations } from '../../store/slices/delegationsSlice'
 
 
 export const columns = [
@@ -38,26 +41,26 @@ export const columns = [
             
             switch(status) {
                 case "all_departed":
-                    statusIcon = "material-symbols:check-circle"
+                    statusIcon = "CheckCircle"
                     iconColor = "text-lime-600"
                     break
                 case "partial_departed":
-                    statusIcon = "material-symbols:schedule"
+                    statusIcon = "Clock"
                     iconColor = "text-primary-600"
                     break
                 case "not_departed":
-                    statusIcon = "material-symbols:cancel"
+                    statusIcon = "X"
                     iconColor = "text-red-600"
                     break
                 default:
-                    statusIcon = "material-symbols:cancel"
+                    statusIcon = "X"
                     iconColor = "text-red-600"
             }
             
             return (
                 <div className="flex justify-center">
                     <div className="px-1 py-1 rounded-lg text-lg font-medium text-center bg-gray-200 w-fit">
-                        <Icon icon={statusIcon} fontSize={20} className={iconColor} />
+                        <Icon name={statusIcon} size={20} className={iconColor} />
                     </div>
                 </div>
             )
@@ -349,7 +352,7 @@ export const columns = [
                         {checkPermission('EDIT_DELEGATIONS') && (
                             <EditDelegation delegation={row.original}>
                                 <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                    <Icon icon={'material-symbols:edit-outline-rounded'} />
+                                    <Icon name="Edit" size={20} />
                                     <span>تعديل</span>
                                 </DropdownMenuItem>
                             </EditDelegation>
@@ -357,7 +360,7 @@ export const columns = [
                         {checkPermission('DELETE_DELEGATIONS') && (
                             <DeletePopup item={row}>
                                 <DropdownMenuItem variant="destructive" onSelect={e => e.preventDefault()}>
-                                    <Icon icon={'mynaui:trash'} />
+                                    <Icon name="Trash2" size={20} />
                                     <span>حذف</span>
                                 </DropdownMenuItem>
                             </DeletePopup>
@@ -369,6 +372,9 @@ export const columns = [
     },
 ]
 const Delegations = ({ subEventId }) => {
+    const dispatch = useDispatch()
+    const { delegations = [] } = useSelector(state => state.delegations || {})
+    
     const [sorting, setSorting] = useState([])
     const [columnFilters, setColumnFilters] = useState([])
     const [columnVisibility, setColumnVisibility] = useState({
@@ -376,111 +382,80 @@ const Delegations = ({ subEventId }) => {
     })
     const [rowSelection, setRowSelection] = useState({})
     const [globalFilter, setGlobalFilter] = useState('')
-    const [data, setData] = useState([])
     
-    // تحميل البيانات الحقيقية
-    const loadDelegations = async () => {
-        
-        // إذا تم تمرير subEventId، فلترة الوفود حسب الحدث الفرعي عبر API
-        if (subEventId) {
-            try {
-                const response = await delegationService.getDelegations({ sub_event_id: subEventId })
-                let items = []
-                if (response && response.results && Array.isArray(response.results)) {
-                    items = response.results
-                } else if (Array.isArray(response)) {
-                    items = response
-                }
-                // تحويل بيانات API لشكل الأعمدة الحالية
-                const toHHMM = (timeStr) => {
-                    if (!timeStr) return ''
-                    const s = String(timeStr).replace(/:/g, '')
-                    return s.slice(0, 4)
-                }
-                const mapped = items.map(d => ({
-                    id: d.id,
-                    type: d.type,
-                    delegationType: d.type === 'MILITARY' ? 'military' : d.type === 'CIVILIAN' ? 'civil' : 'unknown',
-                    delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
-                    nationality: d.nationality_name || '',
-                    delegationHead: d.delegation_leader_name || '',
-                    membersCount: d.member_count || 0,
-                    current_members: d.current_members || 0,
-                    arrivalInfo: {
-                        arrivalHall: d.airport_name || '',
-                        arrivalAirline: d.airline_name || '',
-                        arrivalOrigin: d.city_name || '', // قادمة من (المدينة)
-                        arrivalFlightNumber: d.flight_number || '',
-                        arrivalDate: d.arrive_date || '',
-                        arrivalTime: toHHMM(d.arrive_time),
-                        arrivalReceptor: d.receiver_name || '',
-                        arrivalDestination: d.going_to || '', // الوجهة (الفندق)
-                        arrivalShipments: d.goods || '',
-                    },
-                }))
-                setData(mapped)
-            } catch (e) {
-                setData([])
-            }
-            return
-        }
-        
-        // الحالة العادية - تحميل جميع الوفود عبر API
-        try {
-            const response = await delegationService.getDelegations()
-            let items = []
-            if (response && response.results && Array.isArray(response.results)) {
-                items = response.results
-            } else if (Array.isArray(response)) {
-                items = response
-            }
-            const toHHMM = (timeStr) => {
-                if (!timeStr) return ''
-                const s = String(timeStr).replace(/:/g, '')
-                return s.slice(0, 4)
-            }
-            const mapped = items.map(d => ({
-                id: d.id,
-                type: d.type,
-                delegationType: d.type === 'MILITARY' ? 'military' : d.type === 'CIVILIAN' ? 'civil' : 'unknown',
-                delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
-                nationality: d.nationality_name || '',
-                delegationHead: d.delegation_leader_name || '',
-                membersCount: d.member_count || 0,
-                current_members: d.current_members || 0,
-                arrivalInfo: {
-                    arrivalHall: d.airport_name || '',
-                    arrivalAirline: d.airline_name || '',
-                    arrivalOrigin: d.city_name || '', // قادمة من (المدينة)
-                    arrivalFlightNumber: d.flight_number || '',
-                    arrivalDate: d.arrive_date || '',
-                    arrivalTime: toHHMM(d.arrive_time),
-                    arrivalReceptor: d.receiver_name || '',
-                    arrivalDestination: d.going_to || '', // الوجهة (الفندق)
-                    arrivalShipments: d.goods || '',
-                },
-            }))
-            setData(mapped)
-        } catch (e) {
-            setData([])
-        }
-    }
-    
-    // الاستماع لإشارة تحديث عامة لإعادة التحميل
+    // تحميل البيانات من Redux (مرة واحدة فقط)
     useEffect(() => {
-        const reload = () => { loadDelegations() }
+        dispatch(fetchDelegations(subEventId))
+    }, [subEventId, dispatch])
+    
+    // تحويل بيانات Redux لشكل الجدول مع useMemo
+    const data = useMemo(() => {
+        const toHHMM = (timeStr) => {
+            if (!timeStr) return ''
+            const s = String(timeStr).replace(/:/g, '')
+            return s.slice(0, 4)
+        }
+        
+        // Filter delegations by subEventId if needed
+        const filteredDelegations = delegations.filter(d => {
+            const matchesSubEventId = d.sub_event_id?.toString() === subEventId
+            const matchesSubEvent = d.sub_event?.toString() === subEventId
+            const matchesSubEventIdField = d.sub_event_id === subEventId
+            const matchesSubEventField = d.sub_event === subEventId
+            
+            return matchesSubEventId || matchesSubEvent || matchesSubEventIdField || matchesSubEventField
+        })
+        
+        return filteredDelegations.map(d => ({
+            id: d.id,
+            type: d.type,
+            delegationType: d.type === 'MILITARY' ? 'military' : d.type === 'CIVILIAN' ? 'civil' : 'unknown',
+            delegationStatus: d.status === 'FULLY_DEPARTED' ? 'all_departed' : d.status === 'PARTIALLY_DEPARTED' ? 'partial_departed' : 'not_departed',
+            nationality: d.nationality_name || '',
+            delegationHead: d.delegation_leader_name || '',
+            membersCount: d.member_count || 0,
+            current_members: d.current_members || 0,
+            arrivalInfo: {
+                arrivalHall: d.airport_name || '',
+                arrivalAirline: d.airline_name || '',
+                arrivalOrigin: d.city_name || '',
+                arrivalFlightNumber: d.flight_number || '',
+                arrivalDate: d.arrive_date || '',
+                arrivalTime: toHHMM(d.arrive_time),
+                arrivalReceptor: d.receiver_name || '',
+                arrivalDestination: d.going_to || '',
+                arrivalShipments: d.goods || '',
+            },
+        }))
+    }, [delegations, subEventId])
+    
+    // الاستماع لإشارة تحديث عامة لإعادة التحميل من Redux مع debouncing
+    useEffect(() => {
+        let debounceTimeout = null
+        
+        const reload = () => {
+            // Clear previous debounce timeout
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout)
+            }
+            
+            // Debounce the reload to prevent rapid-fire requests
+            debounceTimeout = setTimeout(() => {
+                console.log('🔄 Executing debounced delegation reload...')
+                dispatch(fetchDelegations(subEventId))
+            }, 300) // 300ms debounce
+        }
+        
         window.addEventListener('delegationUpdated', reload)
         window.addEventListener('delegationDeleted', reload)
         return () => { 
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout)
+            }
             window.removeEventListener('delegationUpdated', reload)
             window.removeEventListener('delegationDeleted', reload)
         }
-    }, [])
-    
-    // استدعاء loadDelegations عند التحميل الأول
-    useEffect(() => {
-        loadDelegations()
-    }, [subEventId])
+    }, [subEventId, dispatch])
     
     const table = useReactTable({
         data: data,
@@ -534,6 +509,27 @@ const Delegations = ({ subEventId }) => {
         },
     })
     
+    // Show message if no delegations found
+    if (data.length === 0) {
+        return (
+            <div className='border p-8 mt-8 border-neutral-300 rounded-2xl bg-white text-center'>
+                <div className="flex flex-col items-center justify-center py-12">
+                    <Icon name="Users" size={20} className="text-6xl text-neutral-400 mb-4" />
+                    <h3 className="text-xl font-semibold text-neutral-700 mb-2">لم يتم العثور على الوفود</h3>
+                    <p className="text-neutral-500 mb-4">لا توجد وفود مسجلة لهذا الحدث الفرعي</p>
+                    
+                    {/* زر إضافة وفد */}
+                    <PermissionElement permission="ADD_DELEGATIONS">
+                        <div className="mt-6">
+                            <AddDelegation subEventId={subEventId} />
+                        </div>
+                    </PermissionElement>
+                    
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className='border p-4 mt-8 border-neutral-300 rounded-2xl bg-white'>
             <DelegationTableToolbar table={table} data={data} subEventId={subEventId} />

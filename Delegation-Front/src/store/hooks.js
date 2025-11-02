@@ -110,21 +110,21 @@ export const usePermissions = () => {
         description: 'صلاحيات كاملة على جميع أجزاء النظام',
         color: 'text-red-600',
         bgColor: 'bg-red-50',
-        icon: 'material-symbols:admin-panel-settings'
+        icon: 'Settings'
       },
       'ADMIN': {
         name: 'مدير',
         description: 'صلاحيات كاملة على الفرونت إند (بدون إعدادات النظام)',
         color: 'text-blue-600',
         bgColor: 'bg-blue-50',
-        icon: 'material-symbols:shield-person'
+        icon: 'Shield'
       },
       'USER': {
         name: 'مستخدم',
         description: 'صلاحيات محدودة: إضافة وفود وأعضاء ومغادرات فقط',
         color: 'text-green-600',
         bgColor: 'bg-green-50',
-        icon: 'material-symbols:person'
+        icon: 'User'
       }
     }
     
@@ -133,7 +133,7 @@ export const usePermissions = () => {
       description: 'دور غير معروف',
       color: 'text-gray-600',
       bgColor: 'bg-gray-50',
-      icon: 'material-symbols:help'
+      icon: 'HelpCircle'
     }
   }
 

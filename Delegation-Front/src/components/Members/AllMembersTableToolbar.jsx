@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import AllMembersFilter from "./AllMembersFilter"
 import MembersReportExport from "./MembersReportExport"
 import { toast } from "sonner"

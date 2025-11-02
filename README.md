@@ -1,255 +1,80 @@
-# 🏛️ نظام إدارة الوفود - Delegation Management System
+# Delegation Management System
 
-نظام شامل لإدارة الوفود الرسمية والأحداث العسكرية والمدنية.
+A comprehensive system for managing military and civilian delegations for large events, built with Django REST Framework and React.
 
-## 📋 المحتويات
+## 🚀 Features
 
-- [المتطلبات](#المتطلبات)
-- [التثبيت والتشغيل](#التثبيت-والتشغيل)
-- [البنية العامة](#البنية-العامة)
-- [الميزات](#الميزات)
-- [الـ API](#الـ-api)
-- [استكشاف الأخطاء](#استكشاف-الأخطاء)
+- **Event Management**: Create and manage main events and sub-events
+- **Delegation Management**: Register and manage delegations with member details
+- **Real-time Updates**: WebSocket integration for live data updates
+- **User Management**: Role-based access control (SUPER_ADMIN, ADMIN, USER)
+- **Reporting**: PDF and Excel export functionality
+- **Responsive Design**: Modern UI with Arabic RTL support
 
-## 🛠️ المتطلبات
+## 🛠️ Technology Stack
 
-### متطلبات النظام:
-- **Python 3.8+**
-- **Node.js 16+**
-- **PostgreSQL 12+**
+### Backend
+- Django 5.2.7
+- Django REST Framework
+- Django Channels (WebSocket)
+- PostgreSQL
+- Python 3.8+
 
-### متطلبات Python:
-```
-Django==5.2.7
-djangorestframework==3.15.2
-psycopg2-binary==2.9.9
-django-environ==0.11.2
-python-decouple==3.8
-django-extensions==3.2.3
-Pillow==10.3.0
-whitenoise==6.6.0
-gunicorn==21.2.0
-```
+### Frontend
+- React 19
+- Redux Toolkit
+- Vite 7
+- Tailwind CSS 4
+- Shadcn UI
 
-### متطلبات Node.js:
-```
-React 19+
-Vite 7+
-Tailwind CSS 4+
-Axios
-React Router
-React Hook Form
-```
+## 📦 Installation
 
-## 🚀 التثبيت والتشغيل
+### Prerequisites
+- Python 3.8+
+- Node.js 18+
+- PostgreSQL
 
-### الطريقة الأولى: التشغيل التلقائي (الأسهل)
-
-#### 1. تشغيل Backend:
+### Backend Setup
 ```bash
-# انتقل إلى مجلد Backend
 cd Delegation-Backend
-
-# تشغيل الخادم
+pip install -r requirements.txt
+python manage.py migrate
 python manage.py runserver
 ```
 
-#### 2. تشغيل Frontend:
-```bash
-# انتقل إلى مجلد Frontend
-cd Delegation-Front
-
-# تشغيل الخادم
-npm run dev
-```
-
-### الطريقة الثانية: التشغيل اليدوي
-
-#### تشغيل Backend:
-
-1. **إعداد قاعدة البيانات:**
-```bash
-# إنشاء قاعدة بيانات PostgreSQL
-createdb delegation_system
-```
-
-2. **إعداد Backend:**
-```bash
-cd Delegation-Backend
-
-# إنشاء بيئة افتراضية
-python -m venv venv
-
-# تفعيل البيئة الافتراضية
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# تثبيت المتطلبات
-pip install -r requirements.txt
-
-# تشغيل migrations
-python manage.py makemigrations
-python manage.py migrate
-
-# إنشاء superuser
-python manage.py createsuperuser
-
-# تشغيل الخادم
-python manage.py runserver 127.0.0.1:8000
-```
-
-#### تشغيل Frontend:
-
+### Frontend Setup
 ```bash
 cd Delegation-Front
-
-# تثبيت المتطلبات
 npm install
-
-# تشغيل الخادم
 npm run dev
 ```
 
-## 📁 البنية العامة
+## 🌐 WebSocket Configuration
 
-```
-Delegation-System/
-├── Delegation-Backend/          # Django Backend
-│   ├── delegation_system/       # إعدادات Django
-│   ├── api/                     # API endpoints
-│   ├── accounts/                # نظام المستخدمين
-│   ├── venv/                    # البيئة الافتراضية
-│   └── requirements.txt         # متطلبات Python
-│
-├── Delegation-Front/            # React Frontend
-│   ├── src/
-│   │   ├── components/          # مكونات React
-│   │   ├── pages/               # صفحات التطبيق
-│   │   ├── services/            # خدمات API
-│   │   └── hooks/               # React Hooks
-│   └── package.json             # متطلبات Node.js
-│
-└── delegation_system_schema.sql # قاعدة البيانات
+The system includes real-time WebSocket updates. Configure the WebSocket URL in your environment:
+
+```env
+VITE_WS_URL=ws://localhost:8000/ws/updates/
 ```
 
-## ✨ الميزات
+## 📱 Usage
 
-### 🎯 الميزات الأساسية:
-- **إدارة الأحداث الرئيسية والفرعية**
-- **إدارة الوفود (عسكرية/مدنية)**
-- **إدارة الأعضاء والمناصب**
-- **نظام المصادقة والصلاحيات**
-- **لوحة تحكم شاملة**
-- **تقارير وإحصائيات**
+1. **Login** with your credentials
+2. **Create Events** - Set up main events and sub-events
+3. **Register Delegations** - Add delegations with member details
+4. **Manage Members** - Add, edit, or remove delegation members
+5. **Generate Reports** - Export data in PDF or Excel format
 
-### 🔄 الميزات المتقدمة:
-- **نظام Audit Log شامل**
-- **إدارة جلسات المغادرة**
-- **نظام إشعارات**
-- **تصدير البيانات**
+## 🔧 API Endpoints
 
-## 🌐 الوصول للتطبيق
+- `/api/auth/` - Authentication
+- `/api/main-events/` - Main events management
+- `/api/sub-events/` - Sub events management
+- `/api/delegations/` - Delegations management
+- `/api/members/` - Members management
+- `/api/check-outs/` - Departure sessions
+- `/api/stats/` - System statistics
 
-### بعد التشغيل:
-- **Frontend:** http://localhost:5173 (يعمل منفصل)
-- **Backend API:** http://localhost:8000/api (يعمل منفصل)
-- **Django Admin:** http://localhost:8000/admin
+## 📄 License
 
-### ملاحظة مهمة:
-النظام الآن منفصل - الفرونت إند والباك إند يعملان بشكل مستقل بدون اتصال مباشر.
-
-### نظام التوجيه التلقائي:
-- **المستخدمين العاديين:** يبقون في التطبيق الرئيسي
-- **السوبر أدمن:** يتم توجيههم تلقائياً إلى Django Admin Dashboard
-
-### بيانات تسجيل الدخول الافتراضية:
-```
-الخيار الأول:
-Username: najibe
-Password: 722003
-Full Name: احمد نيجب
-
-الخيار الثاني:
-Username: admin
-Password: admin123
-Full Name: مدير النظام
-```
-
-## 🔌 الـ API
-
-### Endpoints الرئيسية:
-
-#### الأحداث:
-- `GET /api/main-events/` - جلب الأحداث الرئيسية
-- `POST /api/main-events/` - إنشاء حدث رئيسي
-- `GET /api/sub-events/` - جلب الأحداث الفرعية
-
-#### الوفود:
-- `GET /api/delegations/` - جلب الوفود
-- `POST /api/delegations/` - إنشاء وفد
-- `GET /api/members/` - جلب الأعضاء
-
-#### المصادقة:
-- `POST /api/auth/login/` - تسجيل الدخول
-- `POST /api/auth/logout/` - تسجيل الخروج
-- `GET /api/auth/me/` - معلومات المستخدم الحالي
-
-## 🔧 استكشاف الأخطاء
-
-### مشاكل شائعة:
-
-#### 1. خطأ في الاتصال بقاعدة البيانات:
-```bash
-# تحقق من تشغيل PostgreSQL
-# تحقق من بيانات الاتصال في .env
-```
-
-#### 2. خطأ CORS:
-```bash
-# تأكد من إعدادات CORS في settings.py
-# تأكد من صحة المنافذ
-```
-
-#### 3. خطأ في تثبيت المتطلبات:
-```bash
-# تحديث pip
-pip install --upgrade pip
-
-# تثبيت المتطلبات مرة أخرى
-pip install -r requirements.txt
-```
-
-### ملفات السجلات:
-- **Django Logs:** في terminal تشغيل Backend
-- **React Logs:** في terminal تشغيل Frontend
-- **Browser Console:** F12 في المتصفح
-
-## 📞 الدعم الفني
-
-### معلومات الاتصال:
-- **المطور:** أحمد
-- **البريد الإلكتروني:** [البريد الإلكتروني]
-- **التاريخ:** 2024
-
-### إصدارات البرنامج:
-- **الإصدار الحالي:** 1.0.0
-- **آخر تحديث:** ديسمبر 2024
-
----
-
-## 📝 ملاحظات مهمة
-
-1. **تأكد من تشغيل PostgreSQL قبل تشغيل Backend**
-2. **استخدم المتصفحات الحديثة (Chrome, Firefox, Edge)**
-3. **في حالة تغيير المنافذ، حدث ملفات .env**
-4. **احتفظ بنسخة احتياطية من قاعدة البيانات**
-
-## 🎉 تهانينا!
-
-النظام جاهز للاستخدام! يمكنك الآن:
-- إدارة الأحداث والوفود
-- إضافة الأعضاء والمناصب
-- مراقبة الإحصائيات
-- استخدام نظام التقارير الشامل
+This project is proprietary software.

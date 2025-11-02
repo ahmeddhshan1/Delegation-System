@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { userService } from '../../services/api'
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchUserPermissions } from '../../store/slices/usersSlice'
+import { authService } from '../../plugins/auth'
 
 const PermissionCheck = ({ 
     children, 
@@ -24,14 +26,14 @@ const PermissionCheck = ({
 
                 if (permission) {
                     // فحص صلاحية واحدة
-                    const response = await userService.checkPermission(permission)
+                    const response = await authService.checkPermission(permission)
                     if (isMounted) {
                         setHasPermission(response.has_permission)
                     }
                 } else if (permissions.length > 0) {
                     // فحص عدة صلاحيات (OR logic)
                     const checks = await Promise.all(
-                        permissions.map(p => userService.checkPermission(p))
+                        permissions.map(p => authService.checkPermission(p))
                     )
                     if (isMounted) {
                         setHasPermission(checks.some(check => check.has_permission))

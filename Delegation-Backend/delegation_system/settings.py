@@ -26,12 +26,14 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-5gzz2rq(dx!(!d6_91v!!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver,10.10.10.35').split(',')
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -77,8 +79,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'delegation_system.wsgi.application'
+ASGI_APPLICATION = 'delegation_system.asgi.application'
 
-
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -149,7 +156,7 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = None
 CSRF_USE_SESSIONS = False
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://127.0.0.1:8000,http://localhost:8000,http://localhost:3000,http://localhost:5173,http://10.10.10.35:8000,http://10.10.10.35:3000,http://10.10.10.35:5173').split(',')
+# CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://127.0.0.1:8000,http://localhost:8000,http://localhost:3000,http://localhost:5173,http://10.10.10.35:8000,http://10.10.10.35:3000,http://10.10.10.35:5173').split(',')
 
 # Disable CSRF for API endpoints
 CSRF_EXEMPT_URLS = [
@@ -188,7 +195,7 @@ ADMIN_SHOW_USER_PERMISSIONS = True
 ADMIN_SHOW_FULL_RESULT_COUNT = True
 
 # CORS Settings for LAN deployment
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://10.10.10.35:3000,http://10.10.10.35:5173').split(',')
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 

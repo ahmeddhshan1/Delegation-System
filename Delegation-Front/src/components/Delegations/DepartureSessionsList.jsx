@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { Button } from "@/components/ui/button"
 import { formatTime } from "../../utils"
 import DeletePopup from "../DeletePopup"
@@ -47,7 +47,7 @@ const DepartureSessionsList = ({ sessions, delegation, onDelete, onUpdate }) => 
                 <div key={session.id} className="border border-neutral-300 rounded-2xl p-4 bg-neutral-50">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <Icon icon="material-symbols:flight-takeoff" className="text-primary-600" />
+                            <Icon name="PlaneTakeoff" size={20} className="text-primary-600" />
                             <h5 className="font-medium">جلسة مغادرة #{index + 1}</h5>
                         </div>
                         <div className="flex items-center gap-2">
@@ -67,8 +67,8 @@ const DepartureSessionsList = ({ sessions, delegation, onDelete, onUpdate }) => 
                                     item={session}
                                     onDelete={() => onDelete(session.id)}
                                 >
-                                    <Button variant="outline" size="sm" className="!ring-0">
-                                        <Icon icon="mynaui:trash" />
+                                    <Button size="sm" className="!ring-0 text-rose-400 bg-rose-50 hover:bg-rose-100">
+                                        <Icon name="Trash2" size={20} />
                                     </Button>
                                 </DeletePopup>
                             )}

@@ -10,7 +10,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
@@ -25,95 +25,64 @@ import {
 } from "@/components/ui/select"
 import { hallOptions } from "../../constants"
 import { nationalities } from "../../utils/nationalities"
-import { delegationService, nationalityService, airportService, airlineService, citiesService } from "../../services/api"
+import { useSelector, useDispatch } from 'react-redux'
+import { createDelegation } from '../../store/slices/delegationsSlice'
+import { fetchNationalities, createNationality, deleteNationality } from '../../store/slices/nationalitiesSlice'
+import { fetchAirports, createAirport, deleteAirport } from '../../store/slices/airportsSlice'
+import { fetchAirlines, createAirline, deleteAirline } from '../../store/slices/airlinesSlice'
+import { fetchCities, createCity, deleteCity } from '../../store/slices/citiesSlice'
 // import DeleteConfirm from "../ui/delete-confirm"
 
 const AddDelegation = ({ subEventId }) => {
+    const dispatch = useDispatch()
+    
+    // Redux selectors
+    const { nationalities: nationalitiesList } = useSelector(state => state.nationalities)
+    const { airports: airportsList } = useSelector(state => state.airports)
+    const { airlines: airlinesList } = useSelector(state => state.airlines)
+    const { cities: citiesList } = useSelector(state => state.cities)
+    
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false)
     const [selectedNationality, setSelectedNationality] = useState("")
     const [showAddNationality, setShowAddNationality] = useState(false)
     const [newNationality, setNewNationality] = useState("")
-    const [availableNationalities, setAvailableNationalities] = useState([])
     const [searchTerm, setSearchTerm] = useState("")
     
     // مطارات
     const [selectedAirport, setSelectedAirport] = useState("")
     const [showAddAirport, setShowAddAirport] = useState(false)
     const [newAirport, setNewAirport] = useState("")
-    const [availableAirports, setAvailableAirports] = useState([])
     const [airportSearchTerm, setAirportSearchTerm] = useState("")
     
     // شركات الطيران
     const [selectedAirline, setSelectedAirline] = useState("")
     const [showAddAirline, setShowAddAirline] = useState(false)
     const [newAirline, setNewAirline] = useState("")
-    const [availableAirlines, setAvailableAirlines] = useState([])
     const [airlineSearchTerm, setAirlineSearchTerm] = useState("")
 
     // قادمة من
     const [selectedOrigin, setSelectedOrigin] = useState("")
     const [showAddOrigin, setShowAddOrigin] = useState(false)
     const [newOrigin, setNewOrigin] = useState("")
-    const [availableOrigins, setAvailableOrigins] = useState([])
     const [originSearchTerm, setOriginSearchTerm] = useState("")
 
     // حالات حذف العناصر
     const [deleteItem, setDeleteItem] = useState(null)
     
-    // قوائم البيانات الكاملة من API
-    const [nationalitiesList, setNationalitiesList] = useState([])
-    const [airportsList, setAirportsList] = useState([])
-    const [airlinesList, setAirlinesList] = useState([])
-    const [citiesList, setCitiesList] = useState([])
+    // Derived state from Redux
+    const availableNationalities = nationalitiesList.map(n => n.name).filter(Boolean)
+    const availableAirports = airportsList.map(a => a.name).filter(Boolean)
+    const availableAirlines = airlinesList.map(a => a.name).filter(Boolean)
+    const availableOrigins = citiesList.map(c => c.city_name).filter(Boolean)
 
-    // تم إزالة الاستماع لـ localStorage لأننا نستخدم API الآن
-
-    // تحميل القوائم من قاعدة البيانات (API)
+    // تحميل القوائم من Redux store
     useEffect(() => {
-        let mounted = true
-        const loadDropdownsFromAPI = async () => {
-            try {
-                const [nRes, apRes, alRes, cRes] = await Promise.all([
-                    nationalityService.getNationalities(),
-                    airportService.getAirports(),
-                    airlineService.getAirlines(),
-                    citiesService.getCities(),
-                ])
-
-                if (!mounted) return
-
-                const toArray = (res, nameKey) => {
-                    if (res && Array.isArray(res.results)) return res.results.map(r => r[nameKey]).filter(Boolean)
-                    if (Array.isArray(res)) return res.map(r => r[nameKey]).filter(Boolean)
-                    return []
-                }
-
-                const toList = (res) => {
-                    if (res && Array.isArray(res.results)) return res.results
-                    if (Array.isArray(res)) return res
-                    return []
-                }
-
-                // حفظ البيانات الكاملة
-                setNationalitiesList(toList(nRes))
-                setAirportsList(toList(apRes))
-                setAirlinesList(toList(alRes))
-                setCitiesList(toList(cRes))
-
-                // حفظ الأسماء فقط للعرض
-                setAvailableNationalities(toArray(nRes, 'name'))
-                setAvailableAirports(toArray(apRes, 'name'))
-                setAvailableAirlines(toArray(alRes, 'name'))
-                setAvailableOrigins(toArray(cRes, 'city_name'))
-            } catch (e) {
-                // إبقاء القيم الحالية (localStorage / الثوابت) كـ fallback
-            }
-        }
-
-        loadDropdownsFromAPI()
-        return () => { mounted = false }
-    }, [])
+        dispatch(fetchNationalities())
+        dispatch(fetchAirports())
+        dispatch(fetchAirlines())
+        dispatch(fetchCities())
+    }, [dispatch])
 
     const validationSchema = yup.object({
         delegationHead: yup.string().required("هذا الحقل لا يمكن ان يكون فارغا"),
@@ -195,10 +164,9 @@ const AddDelegation = ({ subEventId }) => {
             return
         }
         try {
-            const created = await citiesService.createCity({ city_name: name })
-            const updated = [...availableOrigins, created.city_name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableOrigins(updated)
-            setSelectedOrigin(created.city_name)
+            const result = await dispatch(createCity({ city_name: name })).unwrap()
+            setSelectedOrigin(result.city_name)
+            setValue('arrivalOrigin', result.city_name)
             setNewOrigin("")
             setShowAddOrigin(false)
             setOriginSearchTerm("")
@@ -215,11 +183,9 @@ const AddDelegation = ({ subEventId }) => {
             return
         }
         try {
-            const created = await nationalityService.createNationality({ name })
-            const updated = [...availableNationalities, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableNationalities(updated)
-            setSelectedNationality(created.name)
-            setValue('nationality', created.name)
+            const result = await dispatch(createNationality({ name })).unwrap()
+            setSelectedNationality(result.name)
+            setValue('nationality', result.name)
             setNewNationality("")
             setShowAddNationality(false)
             setSearchTerm("")
@@ -236,11 +202,9 @@ const AddDelegation = ({ subEventId }) => {
             return
         }
         try {
-            const created = await airportService.createAirport({ name })
-            const updated = [...availableAirports, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableAirports(updated)
-            setSelectedAirport(created.name)
-            setValue('arrivalHall', created.name)
+            const result = await dispatch(createAirport({ name })).unwrap()
+            setSelectedAirport(result.name)
+            setValue('arrivalHall', result.name)
             setNewAirport("")
             setShowAddAirport(false)
             setAirportSearchTerm("")
@@ -257,11 +221,9 @@ const AddDelegation = ({ subEventId }) => {
             return
         }
         try {
-            const created = await airlineService.createAirline({ name })
-            const updated = [...availableAirlines, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableAirlines(updated)
-            setSelectedAirline(created.name)
-            setValue('arrivalAirline', created.name)
+            const result = await dispatch(createAirline({ name })).unwrap()
+            setSelectedAirline(result.name)
+            setValue('arrivalAirline', result.name)
             setNewAirline("")
             setShowAddAirline(false)
             setAirlineSearchTerm("")
@@ -278,23 +240,10 @@ const AddDelegation = ({ subEventId }) => {
             name: nationality,
             onDelete: async () => {
                 try {
-                    // البحث عن ID الجنسية
                     const nationalityId = nationalitiesList.find(n => n.name === nationality)?.id
                     if (nationalityId) {
-                        // حذف من قاعدة البيانات
-                        await nationalityService.deleteNationality(nationalityId)
+                        await dispatch(deleteNationality(nationalityId)).unwrap()
                     }
-                    
-                    // حذف من قائمة الجنسيات المحلية
-                    const updatedNationalities = availableNationalities.filter(n => n !== nationality)
-                    setAvailableNationalities(updatedNationalities)
-                    
-                    // تحديث قائمة الجنسيات الكاملة
-                    const updatedNationalitiesList = nationalitiesList.filter(n => n.name !== nationality)
-                    setNationalitiesList(updatedNationalitiesList)
-                    
-                    window.dispatchEvent(new CustomEvent('nationalitiesUpdated'))
-                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
                     
                     if (selectedNationality === nationality) {
                         setSelectedNationality("")
@@ -316,23 +265,10 @@ const AddDelegation = ({ subEventId }) => {
             name: airport,
             onDelete: async () => {
                 try {
-                    // البحث عن ID المطار
                     const airportId = airportsList.find(a => a.name === airport)?.id
                     if (airportId) {
-                        // حذف من قاعدة البيانات
-                        await airportService.deleteAirport(airportId)
+                        await dispatch(deleteAirport(airportId)).unwrap()
                     }
-                    
-                    // حذف من قائمة المطارات المحلية
-                    const updatedAirports = availableAirports.filter(a => a !== airport)
-                    setAvailableAirports(updatedAirports)
-                    
-                    // تحديث قائمة المطارات الكاملة
-                    const updatedAirportsList = airportsList.filter(a => a.name !== airport)
-                    setAirportsList(updatedAirportsList)
-                    
-                    window.dispatchEvent(new CustomEvent('airportsUpdated'))
-                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
                     
                     if (selectedAirport === airport) {
                         setSelectedAirport("")
@@ -354,23 +290,10 @@ const AddDelegation = ({ subEventId }) => {
             name: airline,
             onDelete: async () => {
                 try {
-                    // البحث عن ID شركة الطيران
                     const airlineId = airlinesList.find(a => a.name === airline)?.id
                     if (airlineId) {
-                        // حذف من قاعدة البيانات
-                        await airlineService.deleteAirline(airlineId)
+                        await dispatch(deleteAirline(airlineId)).unwrap()
                     }
-                    
-                    // حذف من قائمة شركات الطيران المحلية
-                    const updatedAirlines = availableAirlines.filter(a => a !== airline)
-                    setAvailableAirlines(updatedAirlines)
-                    
-                    // تحديث قائمة شركات الطيران الكاملة
-                    const updatedAirlinesList = airlinesList.filter(a => a.name !== airline)
-                    setAirlinesList(updatedAirlinesList)
-                    
-                    window.dispatchEvent(new CustomEvent('airlinesUpdated'))
-                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
                     
                     if (selectedAirline === airline) {
                         setSelectedAirline("")
@@ -392,23 +315,10 @@ const AddDelegation = ({ subEventId }) => {
             name: origin,
             onDelete: async () => {
                 try {
-                    // البحث عن ID المدينة
                     const cityId = citiesList.find(c => c.city_name === origin)?.id
                     if (cityId) {
-                        // حذف من قاعدة البيانات
-                        await citiesService.deleteCity(cityId)
+                        await dispatch(deleteCity(cityId)).unwrap()
                     }
-                    
-                    // حذف من قائمة المدن المحلية
-                    const updatedOrigins = availableOrigins.filter(o => o !== origin)
-                    setAvailableOrigins(updatedOrigins)
-                    
-                    // تحديث قائمة المدن الكاملة
-                    const updatedCitiesList = citiesList.filter(c => c.city_name !== origin)
-                    setCitiesList(updatedCitiesList)
-                    
-                    window.dispatchEvent(new CustomEvent('originsUpdated'))
-                    window.dispatchEvent(new CustomEvent('delegationUpdated'))
                     
                     if (selectedOrigin === origin) {
                         setSelectedOrigin("")
@@ -473,17 +383,11 @@ const AddDelegation = ({ subEventId }) => {
         }
         
         try {
-            // تجهيز المعرفات من القوائم
-            const natRes = await nationalityService.getNationalities()
-            const apRes = await airportService.getAirports()
-            const alRes = await airlineService.getAirlines()
-            const ciRes = await citiesService.getCities()
-
-            const toList = (res) => (res && Array.isArray(res.results)) ? res.results : (Array.isArray(res) ? res : [])
-            const nat = toList(natRes).find(x => x.name === selectedNationality)
-            const ap = toList(apRes).find(x => x.name === selectedAirport)
-            const al = toList(alRes).find(x => x.name === selectedAirline)
-            const ci = toList(ciRes).find(x => x.city_name === selectedOrigin)
+            // تجهيز المعرفات من Redux store
+            const nat = nationalitiesList.find(x => x.name === selectedNationality)
+            const ap = airportsList.find(x => x.name === selectedAirport)
+            const al = airlinesList.find(x => x.name === selectedAirline)
+            const ci = citiesList.find(x => x.city_name === selectedOrigin)
 
             // صياغة الوقت HHMM إلى HH:MM
             const timeStr = (data.arrivalTime || '').trim()
@@ -504,12 +408,12 @@ const AddDelegation = ({ subEventId }) => {
                 arrive_date: data.arrivalDate || null,
                 arrive_time: formattedTime,
                 receiver_name: data.arrivalReceptor,
-                going_to: data.arrivalDestination, // الوجهة (الفندق)
+                going_to: data.arrivalDestination,
                 goods: data.arrivalShipments,
             }
 
-            // إرسال البيانات للباك إند
-            const newDelegation = await delegationService.createDelegation(delegationData)
+            // إرسال البيانات عبر Redux
+            const newDelegation = await dispatch(createDelegation(delegationData)).unwrap()
             
             // إرسال حدث لتحديث المكونات الأخرى
             console.log('AddDelegation: Dispatching delegationAdded event')
@@ -530,8 +434,8 @@ const AddDelegation = ({ subEventId }) => {
             
         } catch (error) {
             console.error('Error adding delegation:', error)
-            const errorMessage = error.response?.data?.detail || 
-                                error.response?.data?.error || 
+            const errorMessage = error?.detail || 
+                                error?.error || 
                                 "حدث خطأ أثناء إضافة الوفد"
             toast.error(errorMessage)
             setLoading(false)
@@ -563,7 +467,7 @@ const AddDelegation = ({ subEventId }) => {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button className="cursor-pointer">
-                    <Icon icon="qlementine-icons:plus-16" />
+                    <Icon name="Plus" size={20} />
                     <span>تسجيل وصول وفد</span>
                 </Button>
             </DialogTrigger>
@@ -571,7 +475,7 @@ const AddDelegation = ({ subEventId }) => {
                 <DialogHeader className="!text-start !py-6 border-b border-neutral-200">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center">
-                            <Icon icon="material-symbols:group-add" fontSize={24} className="text-white" />
+                            <Icon name="UserPlus" size={24} className="text-white" />
                         </div>
                         <div>
                             <DialogTitle className="text-2xl font-bold text-primary-600">
@@ -589,14 +493,14 @@ const AddDelegation = ({ subEventId }) => {
                         <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center">
-                                    <Icon icon="material-symbols:person" fontSize={16} className="text-white" />
+                                    <Icon name="User" size={16} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-neutral-800">المعلومات الأساسية</h3>
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="delegationHead" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:person" fontSize={16} className="text-primary-500" />
+                                        <Icon name="User" size={16} className="text-primary-500" />
                                         رئيس الوفد
                                     </Label>
                                     <input 
@@ -608,13 +512,13 @@ const AddDelegation = ({ subEventId }) => {
                                         {...register('delegationHead')} 
                                     />
                                     {errors.delegationHead && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.delegationHead.message}
                                     </span>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:public" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Globe" size={16} className="text-primary-500" />
                                         الجنسية
                                     </Label>
                                 
@@ -634,7 +538,7 @@ const AddDelegation = ({ subEventId }) => {
                                                 disabled={!newNationality.trim()}
                                                 className="bg-primary-600 hover:bg-primary-700 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:check" fontSize={16} />
+                                                <Icon name="Check" size={16} />
                                             </Button>
                                             <Button 
                                                 type="button"
@@ -646,7 +550,7 @@ const AddDelegation = ({ subEventId }) => {
                                                 }}
                                                 className="border-primary-300 text-primary-600 hover:bg-primary-50 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
@@ -696,7 +600,7 @@ const AddDelegation = ({ subEventId }) => {
                                                                         className="text-red-500 hover:text-red-700 p-1 rounded flex-shrink-0"
                                                                         title="حذف الجنسية"
                                                                     >
-                                                                        <Icon icon="material-symbols:close" fontSize={16} />
+                                                                        <Icon name="X" size={16} />
                                                                     </button>
                                                                     <span className="flex-1">{nationality}</span>
                                                                 </div>
@@ -704,7 +608,7 @@ const AddDelegation = ({ subEventId }) => {
                                                         ))}
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة جنسية جديدة
                                                             </div>
                                                         </SelectItem>
@@ -716,7 +620,7 @@ const AddDelegation = ({ subEventId }) => {
                                                         </div>
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة جنسية جديدة
                                                             </div>
                                                         </SelectItem>
@@ -726,7 +630,7 @@ const AddDelegation = ({ subEventId }) => {
                                         </SelectContent>
                                     </Select>
                                     {errors.nationality && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.nationality.message}
                                     </span>}
                             </div>
@@ -736,14 +640,14 @@ const AddDelegation = ({ subEventId }) => {
                         <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center">
-                                    <Icon icon="material-symbols:group" fontSize={16} className="text-white" />
+                                    <Icon name="Users" size={16} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-neutral-800">معلومات الوفد</h3>
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:flight" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Plane" size={16} className="text-primary-500" />
                                         المطار
                                     </Label>
                                     
@@ -763,7 +667,7 @@ const AddDelegation = ({ subEventId }) => {
                                                 disabled={!newAirport.trim()}
                                                 className="bg-primary-600 hover:bg-primary-700 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:check" fontSize={16} />
+                                                <Icon name="Check" size={16} />
                                             </Button>
                                             <Button 
                                                 type="button"
@@ -775,7 +679,7 @@ const AddDelegation = ({ subEventId }) => {
                                                 }}
                                                 className="border-primary-300 text-primary-600 hover:bg-primary-50 rounded-lg"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
@@ -825,7 +729,7 @@ const AddDelegation = ({ subEventId }) => {
                                                                         className="text-red-500 hover:text-red-700 p-1 rounded flex-shrink-0"
                                                                         title="حذف المطار"
                                                                     >
-                                                                        <Icon icon="material-symbols:close" fontSize={16} />
+                                                                        <Icon name="X" size={16} />
                                                                     </button>
                                                                     <span className="flex-1">{airport}</span>
                                                                 </div>
@@ -833,7 +737,7 @@ const AddDelegation = ({ subEventId }) => {
                                                         ))}
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مطار جديد
                                                             </div>
                                                         </SelectItem>
@@ -845,7 +749,7 @@ const AddDelegation = ({ subEventId }) => {
                                                         </div>
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مطار جديد
                                                             </div>
                                                         </SelectItem>
@@ -855,7 +759,7 @@ const AddDelegation = ({ subEventId }) => {
                                         </SelectContent>
                                     </Select>
                                     {errors.arrivalHall && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalHall.message}
                                     </span>}
                                 </div>
@@ -863,7 +767,7 @@ const AddDelegation = ({ subEventId }) => {
                                 <div className="space-y-2">
                                     <div className="h-6 flex items-center">
                                         <Label htmlFor="membersCount" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                            <Icon icon="material-symbols:people" fontSize={16} className="text-primary-500" />
+                                            <Icon name="Users" size={16} className="text-primary-500" />
                                             عدد الأعضاء
                                         </Label>
                                     </div>
@@ -876,7 +780,7 @@ const AddDelegation = ({ subEventId }) => {
                                         {...register('membersCount')} 
                                     />
                                     {errors.membersCount && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.membersCount.message}
                                     </span>}
                                 </div>
@@ -884,7 +788,7 @@ const AddDelegation = ({ subEventId }) => {
                                 <div className="space-y-2">
                                     <div className="h-6 flex items-center">
                                         <Label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                            <Icon icon="material-symbols:badge" fontSize={16} className="text-primary-500" />
+                                            <Icon name="Badge" size={16} className="text-primary-500" />
                                             نوع الوفد
                                         </Label>
                                     </div>
@@ -898,7 +802,7 @@ const AddDelegation = ({ subEventId }) => {
                                     </SelectContent>
                                 </Select>
                                     {errors.delegationType && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.delegationType.message}
                                     </span>}
                             </div>
@@ -908,14 +812,14 @@ const AddDelegation = ({ subEventId }) => {
                         <div className="bg-white rounded-2xl p-4 shadow-sm border border-neutral-100">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center">
-                                    <Icon icon="material-symbols:flight-takeoff" fontSize={16} className="text-white" />
+                                    <Icon name="PlaneTakeoff" size={16} className="text-white" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-neutral-800">معلومات الرحلة</h3>
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalFlightNumber" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:confirmation-number" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Ticket" size={16} className="text-primary-500" />
                                         رقم الرحلة
                                     </Label>
                                     <input 
@@ -927,14 +831,14 @@ const AddDelegation = ({ subEventId }) => {
                                         {...register('arrivalFlightNumber')} 
                                     />
                                     {errors.arrivalFlightNumber && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalFlightNumber.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalAirline" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:airline" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Plane" size={16} className="text-primary-500" />
                                         شركة الطيران
                                     </Label>
                                     <Select value={selectedAirline} onValueChange={handleAirlineChange} onOpenChange={(open) => {
@@ -970,7 +874,7 @@ const AddDelegation = ({ subEventId }) => {
                                                                 className="text-red-500 hover:text-red-700 p-1 rounded flex-shrink-0"
                                                                 title="حذف شركة الطيران"
                                                             >
-                                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                                <Icon name="X" size={16} />
                                                             </button>
                                                             <span className="flex-1">{airline}</span>
                                                         </div>
@@ -978,7 +882,7 @@ const AddDelegation = ({ subEventId }) => {
                                                 ))}
                                                 <SelectItem value="add_new" className="text-primary-600 font-medium text-right">
                                                     <div className="flex items-center gap-2 justify-end">
-                                                        <Icon icon="material-symbols:add" fontSize={16} />
+                                                        <Icon name="Plus" size={16} />
                                                         إضافة شركة طيران جديدة
                                                     </div>
                                                 </SelectItem>
@@ -986,7 +890,7 @@ const AddDelegation = ({ subEventId }) => {
                                         </SelectContent>
                                     </Select>
                                     {errors.arrivalAirline && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalAirline.message}
                                     </span>}
                                     
@@ -1017,7 +921,7 @@ const AddDelegation = ({ subEventId }) => {
                                                 size="sm"
                                                 className="px-4"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
@@ -1025,7 +929,7 @@ const AddDelegation = ({ subEventId }) => {
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalOrigin" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:place" fontSize={16} className="text-primary-500" />
+                                        <Icon name="MapPin" size={16} className="text-primary-500" />
                                         قادمة من
                                     </Label>
                                     <Select value={selectedOrigin} onValueChange={handleOriginChange} onOpenChange={(open) => {
@@ -1073,7 +977,7 @@ const AddDelegation = ({ subEventId }) => {
                                                                         className="text-red-500 hover:text-red-700 p-1 rounded flex-shrink-0"
                                                                         title="حذف المدينة"
                                                                     >
-                                                                        <Icon icon="material-symbols:close" fontSize={16} />
+                                                                        <Icon name="X" size={16} />
                                                                     </button>
                                                                     <span className="flex-1">{origin}</span>
                                                                 </div>
@@ -1081,7 +985,7 @@ const AddDelegation = ({ subEventId }) => {
                                                         ))}
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مدينة جديدة
                                                             </div>
                                                         </SelectItem>
@@ -1093,7 +997,7 @@ const AddDelegation = ({ subEventId }) => {
                                                         </div>
                                                         <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                             <div className="flex items-center gap-2">
-                                                                <Icon icon="material-symbols:add" fontSize={16} />
+                                                                <Icon name="Plus" size={16} />
                                                                 إضافة مدينة جديدة
                                                             </div>
                                                         </SelectItem>
@@ -1129,19 +1033,19 @@ const AddDelegation = ({ subEventId }) => {
                                                 size="sm"
                                                 className="px-4"
                                             >
-                                                <Icon icon="material-symbols:close" fontSize={16} />
+                                                <Icon name="X" size={16} />
                                             </Button>
                                         </div>
                                     )}
                                     {errors.arrivalOrigin && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalOrigin.message}
                                     </span>}
                         </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalTime" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:schedule" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Clock" size={16} className="text-primary-500" />
                                         سعت (HHMM)
                                     </Label>
                                 <input 
@@ -1164,14 +1068,14 @@ const AddDelegation = ({ subEventId }) => {
                                     className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 bg-neutral-50 focus:bg-white"
                                 />
                                     {errors.arrivalTime && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalTime.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalDate" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:calendar-month" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Calendar" size={16} className="text-primary-500" />
                                         التاريخ (يوم/شهر/سنة)
                                     </Label>
                                     <input 
@@ -1183,14 +1087,14 @@ const AddDelegation = ({ subEventId }) => {
                                         {...register('arrivalDate')} 
                                     />
                                     {errors.arrivalDate && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalDate.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalReceptor" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:person-pin" fontSize={16} className="text-primary-500" />
+                                        <Icon name="MapPin" size={16} className="text-primary-500" />
                                         المستقبل
                                     </Label>
                                     <input 
@@ -1202,14 +1106,14 @@ const AddDelegation = ({ subEventId }) => {
                                         {...register('arrivalReceptor')} 
                                     />
                                     {errors.arrivalReceptor && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalReceptor.message}
                                     </span>}
                         </div>
                                 
                                 <div className="space-y-2">
                                     <Label htmlFor="arrivalDestination" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:place" fontSize={16} className="text-primary-500" />
+                                        <Icon name="MapPin" size={16} className="text-primary-500" />
                                         وجهة الرحلة
                                     </Label>
                                     <input 
@@ -1221,14 +1125,14 @@ const AddDelegation = ({ subEventId }) => {
                                         {...register('arrivalDestination')} 
                                     />
                                     {errors.arrivalDestination && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalDestination.message}
                                     </span>}
                             </div>
                                 
                                 <div className="space-y-3 md:col-span-2">
                                     <Label htmlFor="arrivalShipments" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                                        <Icon icon="material-symbols:inventory" fontSize={16} className="text-primary-500" />
+                                        <Icon name="Package" size={16} className="text-primary-500" />
                                         الشحنات
                                     </Label>
                                     <input 
@@ -1240,7 +1144,7 @@ const AddDelegation = ({ subEventId }) => {
                                         {...register('arrivalShipments')} 
                                     />
                                     {errors.arrivalShipments && <span className="text-sm text-red-500 block flex items-center gap-1">
-                                        <Icon icon="material-symbols:error" fontSize={14} />
+                                        <Icon name="AlertCircle" size={14} />
                                         {errors.arrivalShipments.message}
                                     </span>}
                             </div>
@@ -1250,19 +1154,19 @@ const AddDelegation = ({ subEventId }) => {
                     <DialogFooter className="mt-6 pt-4 border-t border-neutral-200 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl">
                         <DialogClose asChild>
                             <Button disabled={loading} variant="outline" className="cursor-pointer min-w-28 h-10 border-neutral-300 text-neutral-600 hover:bg-neutral-50 hover:border-neutral-400">
-                                <Icon icon="material-symbols:close" className="mr-2" />
+                                <Icon name="X" size={20} className="mr-2" />
                                 إلغاء
                             </Button>
                         </DialogClose>
                         <Button disabled={loading} type="button" className="cursor-pointer min-w-28 h-10 bg-primary-500 hover:bg-primary-600 text-white shadow-lg" onClick={onSubmit}>
                             {loading ? (
                                 <>
-                                    <Icon icon="jam:refresh" className="animate-spin mr-2" />
+                                    <Icon name="RefreshCw" size={20} className="animate-spin mr-2" />
                                     <span>جاري الإضافة...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Icon icon="material-symbols:group-add" className="mr-2" />
+                                    <Icon name="UserPlus" size={20} className="mr-2" />
                                     <span>إضافة الوفد</span>
                                 </>
                             )}

@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from './ui/Icon';
 import { NavLink, useNavigate } from 'react-router'
 import {
     DropdownMenu,
@@ -13,11 +13,14 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/components/Auth/AuthProvider"
 import { toast } from "sonner"
-import { authService } from "@/services/auth"
+import { authService } from "@/plugins/auth"
+import { useSelector } from 'react-redux'
 
 const UserProfile = () => {
     const navigate = useNavigate()
     const { user: currentUser, logout } = useAuth()
+    const { userRole, token, isAuthenticated } = useSelector(state => state.auth || {})
+    
     
     const handleLogout = async () => {
         try {
@@ -25,7 +28,6 @@ const UserProfile = () => {
             toast.success("تم تسجيل الخروج بنجاح")
             navigate('/login')
         } catch (error) {
-            console.error('Logout error:', error)
             toast.error("حدث خطأ في تسجيل الخروج")
             // حتى لو فشل الطلب، نوجه المستخدم لصفحة تسجيل الدخول
             navigate('/login')
@@ -34,18 +36,14 @@ const UserProfile = () => {
 
     const handleOpenAdminDashboard = () => {
         try {
-            const adminUrl = localStorage.getItem('adminUrl')
-            if (adminUrl) {
-                // فتح في نفس التبويب
-                const adminBaseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                    ? 'http://localhost:8000' 
-                    : `http://${window.location.hostname}:8000`
-                window.location.href = `${adminBaseUrl}${adminUrl}`
-            } else {
-                toast.error("Admin session not found. Please login again.")
-            }
+            // تحديد URL الإدارة بناءً على البيئة
+            const adminBaseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                ? 'http://localhost:8000/' 
+                : `http://${window.location.hostname}:8000/`
+            
+            const adminUrl = `${adminBaseUrl}admin/`
+            window.location.href = adminUrl
         } catch (error) {
-            console.error('Failed to open admin dashboard:', error)
             toast.error(error.message || "حدث خطأ في فتح لوحة التحكم")
         }
     }
@@ -73,21 +71,22 @@ const UserProfile = () => {
                 <DropdownMenuGroup>
                     <NavLink to='/'>
                         <DropdownMenuItem>
-                            <Icon icon="solar:user-linear" />
+                            <Icon name="User" size={20} />
                             <span>الملف الشخصي</span>
                         </DropdownMenuItem>
                     </NavLink>
-                    {/* زر إعدادات النظام - فقط للـ SUPER_ADMIN */}
-                    {currentUser?.is_super_admin && authService.hasAdminSession() && (
+                    {/* زر إعدادات النظام - للـ ADMIN و SUPER_ADMIN */}
+                    {((currentUser?.is_super_admin && userRole === 'SUPER_ADMIN') || 
+                      (currentUser?.role === 'ADMIN' && userRole === 'ADMIN')) && isAuthenticated && (
                         <DropdownMenuItem onClick={handleOpenAdminDashboard}>
-                            <Icon icon="material-symbols:admin-panel-settings-outline" />
+                            <Icon name="Settings" size={20} />
                             <span>إعدادات النظام</span>
                         </DropdownMenuItem>
                     )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={handleLogout}>
-                    <Icon icon="solar:logout-outline" />
+                    <Icon name="LogOut" size={20} />
                     <span>تسجيل خروج</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>

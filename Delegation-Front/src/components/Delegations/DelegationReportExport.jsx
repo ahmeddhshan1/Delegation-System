@@ -1,5 +1,5 @@
 import { exportToExcel, exportToPDF } from '../../utils'
-import { Icon } from '@iconify/react/dist/iconify.js'
+import Icon from '../ui/Icon';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -10,21 +10,70 @@ import { Button } from "@/components/ui/button"
 import SmartCombinedReportPDF from '../PDF Templates/SmartCombinedReportPDF'
 import { pdf } from '@react-pdf/renderer'
 import { saveAs } from "file-saver"
-import { memberService, departureSessionService } from '../../services/api'
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchAllMembers } from '../../store/slices/membersSlice'
+import { useEffect } from 'react'
 
 const DelegationReportExport = ({data}) => {
+    const dispatch = useDispatch()
     
-
+    // Get data from Redux store
+    const { members = [] } = useSelector(state => state.members)
+    const { departureSessions = [] } = useSelector(state => state.delegations)
+    
+    // Fetch all members when component mounts
+    useEffect(() => {
+        if (members.length === 0) {
+            dispatch(fetchAllMembers())
+        }
+    }, [dispatch, members.length])
 
     const exportCombinedReport = async () => {
         try {
-            // جلب الأعضاء من API
-            const allMembers = await memberService.getMembers()
-            const members = Array.isArray(allMembers?.results) ? allMembers.results : Array.isArray(allMembers) ? allMembers : []
-            
-            // جلب جلسات المغادرة
-            const allDepartureSessions = await departureSessionService.getDepartureSessions()
-            const departureSessions = Array.isArray(allDepartureSessions?.results) ? allDepartureSessions.results : Array.isArray(allDepartureSessions) ? allDepartureSessions : []
+            // Ensure we have all members data
+            if (members.length === 0) {
+                const result = await dispatch(fetchAllMembers()).unwrap()
+                
+                // Use the fetched data directly
+                const allMembers = Array.isArray(result) ? result : (result?.results || [])
+                
+                // فلترة الأعضاء حسب الوفود المفلترة فقط
+                const filteredMembers = allMembers.filter(member => 
+                    data.some(d => d.id === member.delegation_id)
+                );
+                
+                // ربط بيانات جلسات المغادرة بالأعضاء
+                const membersWithDepartureData = filteredMembers.map(member => {
+                    // البحث عن جلسة المغادرة التي تحتوي على هذا العضو
+                    const memberDepartureSession = departureSessions.find(session => 
+                        session.members && session.members.some(m => m.id === member.id)
+                    );
+                    
+                    // إضافة بيانات المغادرة للعضو
+                    if (memberDepartureSession) {
+                        return {
+                            ...member,
+                            delegation_id: member.delegation_id,
+                            departure_destination: memberDepartureSession.city_name || '-',
+                            departure_time: memberDepartureSession.checkout_time ? 
+                                memberDepartureSession.checkout_time.replace(':', '') : '-',
+                            departure_flight_number: memberDepartureSession.flight_number || '-',
+                            departure_airline: memberDepartureSession.airline_name || '-',
+                        };
+                    }
+                    
+                    return {
+                        ...member,
+                        delegation_id: member.delegation_id,
+                    };
+                });
+                
+                // طباعة التقرير الشامل
+                const combinedBlob = await pdf(<SmartCombinedReportPDF delegationData={data} membersData={membersWithDepartureData} showDelegations={true} showMembers={true} />).toBlob();
+                saveAs(combinedBlob, "تقرير شامل.pdf");
+                
+                return; // Exit early since we handled everything
+            }
             
             // فلترة الأعضاء حسب الوفود المفلترة فقط (data هنا هو filteredData من toolbar)
             const filteredMembers = members.filter(member => 
@@ -42,7 +91,7 @@ const DelegationReportExport = ({data}) => {
                 if (memberDepartureSession) {
                     return {
                         ...member,
-                        delegation_id: member.delegation_id, // تأكد من وجود delegation_id
+                        delegation_id: member.delegation_id,
                         departure_destination: memberDepartureSession.city_name || '-',
                         departure_time: memberDepartureSession.checkout_time ? 
                             memberDepartureSession.checkout_time.replace(':', '') : '-',
@@ -53,7 +102,7 @@ const DelegationReportExport = ({data}) => {
                 
                 return {
                     ...member,
-                    delegation_id: member.delegation_id, // تأكد من وجود delegation_id
+                    delegation_id: member.delegation_id,
                 };
             });
             
@@ -72,18 +121,18 @@ const DelegationReportExport = ({data}) => {
         <DropdownMenu dir='rtl'>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="!ring-0">
-                    <Icon icon={'mi:export'} />
+                    <Icon name="Download" size={20} />
                     <span>تصدير تقرير</span>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={e => exportCombinedReport()}>
-                    <Icon icon={'hugeicons:pdf-02'} className="text-[#ef5350]" />
+                    <Icon name="FileText" size={20} className="text-[#ef5350]" />
                     <span>تقرير شامل</span>
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem onSelect={e => exportToExcel(data)}>
-                    <Icon icon={'hugeicons:xls-02'} className="text-[#33c481]" />
+                    <Icon name="FileSpreadsheet" size={20} className="text-[#33c481]" />
                     <span>Excel ملف</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>

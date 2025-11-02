@@ -11,7 +11,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Icon } from "@iconify/react/dist/iconify.js"
+import Icon from '../ui/Icon';
 import { useForm } from "react-hook-form"
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
@@ -24,29 +24,44 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { hallOptions } from "../../constants"
-import { departureSessionService, airportService, airlineService, citiesService } from '../../services/api'
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchAirports, createAirport, deleteAirport } from '../../store/slices/airportsSlice'
+import { fetchAirlines, createAirline, deleteAirline } from '../../store/slices/airlinesSlice'
+import { fetchCities, createCity, deleteCity } from '../../store/slices/citiesSlice'
+import { updateDepartureSession } from '../../store/slices/delegationsSlice'
 import MembersSelector from './MembersSelector'
 
 const EditDepartureSession = ({ session, delegation, onUpdate }) => {
+    const dispatch = useDispatch()
+    
+    // Redux selectors
+    const { airports } = useSelector(state => state.airports)
+    const { airlines } = useSelector(state => state.airlines)
+    const { cities } = useSelector(state => state.cities)
+    
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [selectedMembers, setSelectedMembers] = useState([])
 
-    // إضافة الـ states للـ dropdown lists المشتركة
+    // Local UI state
     const [selectedAirport, setSelectedAirport] = useState("")
-    const [availableAirports, setAvailableAirports] = useState([])
-    const [airportNameToId, setAirportNameToId] = useState({})
     const [airportSearchTerm, setAirportSearchTerm] = useState("")
     
     const [selectedAirline, setSelectedAirline] = useState("")
-    const [availableAirlines, setAvailableAirlines] = useState([])
-    const [airlineNameToId, setAirlineNameToId] = useState({})
     const [airlineSearchTerm, setAirlineSearchTerm] = useState("")
     
     const [selectedDestination, setSelectedDestination] = useState("")
-    const [availableDestinations, setAvailableDestinations] = useState([])
-    const [cityNameToId, setCityNameToId] = useState({})
     const [destinationSearchTerm, setDestinationSearchTerm] = useState("")
+    
+    // Derived state from Redux
+    const availableAirports = airports.map(a => a.name)
+    const airportNameToId = airports.reduce((acc, a) => { acc[a.name] = a.id; return acc }, {})
+    
+    const availableAirlines = airlines.map(a => a.name)
+    const airlineNameToId = airlines.reduce((acc, a) => { acc[a.name] = a.id; return acc }, {})
+    
+    const availableDestinations = cities.map(c => c.city_name)
+    const cityNameToId = cities.reduce((acc, c) => { acc[c.city_name] = c.id; return acc }, {})
 
     // إضافة الـ states للإضافة والحذف
     const [showAddAirport, setShowAddAirport] = useState(false)
@@ -98,16 +113,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         }
         
         try {
-            const created = await airportService.createAirport({ name })
-            const updatedAirports = [...availableAirports, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableAirports(updatedAirports)
-            
-            // تحديث dictionary
-            setAirportNameToId(prev => ({
-                ...prev,
-                [created.name]: created.id
-            }))
-            
+            const created = await dispatch(createAirport({ name })).unwrap()
             setSelectedAirport(created.name)
             setValue('hall', created.name)
             setNewAirport("")
@@ -131,16 +137,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         }
         
         try {
-            const created = await airlineService.createAirline({ name })
-            const updatedAirlines = [...availableAirlines, created.name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableAirlines(updatedAirlines)
-            
-            // تحديث dictionary
-            setAirlineNameToId(prev => ({
-                ...prev,
-                [created.name]: created.id
-            }))
-            
+            const created = await dispatch(createAirline({ name })).unwrap()
             setSelectedAirline(created.name)
             setValue('airline', created.name)
             setNewAirline("")
@@ -164,16 +161,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         }
         
         try {
-            const created = await citiesService.createCity({ city_name: name })
-            const updatedDestinations = [...availableDestinations, created.city_name].sort((a, b) => a.localeCompare(b, 'ar'))
-            setAvailableDestinations(updatedDestinations)
-            
-            // تحديث dictionary
-            setCityNameToId(prev => ({
-                ...prev,
-                [created.city_name]: created.id
-            }))
-            
+            const created = await dispatch(createCity({ city_name: name })).unwrap()
             setSelectedDestination(created.city_name)
             setValue('destination', created.city_name)
             setNewDestination("")
@@ -192,25 +180,18 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
             name: airport,
             onDelete: async () => {
                 try {
-                    // البحث عن ID المطار
                     const airportId = airportNameToId[airport]
                     if (airportId) {
-                        // حذف من قاعدة البيانات
-                        await airportService.deleteAirport(airportId)
+                        await dispatch(deleteAirport(airportId)).unwrap()
                     }
                     
-                    // حذف من قائمة المطارات المحلية
-                const updatedAirports = availableAirports.filter(a => a !== airport)
-                setAvailableAirports(updatedAirports)
+                    if (selectedAirport === airport) {
+                        setSelectedAirport("")
+                        setValue('hall', "")
+                    }
                     
-                    // مسح المطار المختار إذا كان نفس المطار المحذوف
-                if (selectedAirport === airport) {
-                    setSelectedAirport("")
-                    setValue('hall', "")
-                }
-                    
-                toast.success("تم حذف المطار بنجاح")
-                setDeleteItem(null)
+                    toast.success("تم حذف المطار بنجاح")
+                    setDeleteItem(null)
                 } catch (error) {
                     toast.error("حدث خطأ في حذف المطار")
                     setDeleteItem(null)
@@ -225,25 +206,18 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
             name: airline,
             onDelete: async () => {
                 try {
-                    // البحث عن ID شركة الطيران
                     const airlineId = airlineNameToId[airline]
                     if (airlineId) {
-                        // حذف من قاعدة البيانات
-                        await airlineService.deleteAirline(airlineId)
+                        await dispatch(deleteAirline(airlineId)).unwrap()
                     }
                     
-                    // حذف من قائمة شركات الطيران المحلية
-                const updatedAirlines = availableAirlines.filter(a => a !== airline)
-                setAvailableAirlines(updatedAirlines)
+                    if (selectedAirline === airline) {
+                        setSelectedAirline("")
+                        setValue('airline', "")
+                    }
                     
-                    // مسح شركة الطيران المختارة إذا كانت نفس الشركة المحذوفة
-                if (selectedAirline === airline) {
-                    setSelectedAirline("")
-                    setValue('airline', "")
-                }
-                    
-                toast.success("تم حذف شركة الطيران بنجاح")
-                setDeleteItem(null)
+                    toast.success("تم حذف شركة الطيران بنجاح")
+                    setDeleteItem(null)
                 } catch (error) {
                     toast.error("حدث خطأ في حذف شركة الطيران")
                     setDeleteItem(null)
@@ -258,25 +232,18 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
             name: destination,
             onDelete: async () => {
                 try {
-                    // البحث عن ID المدينة
                     const cityId = cityNameToId[destination]
                     if (cityId) {
-                        // حذف من قاعدة البيانات
-                        await citiesService.deleteCity(cityId)
+                        await dispatch(deleteCity(cityId)).unwrap()
                     }
                     
-                    // حذف من قائمة المدن المحلية
-                const updatedDestinations = availableDestinations.filter(d => d !== destination)
-                setAvailableDestinations(updatedDestinations)
+                    if (selectedDestination === destination) {
+                        setSelectedDestination("")
+                        setValue('destination', "")
+                    }
                     
-                    // مسح المدينة المختارة إذا كانت نفس المدينة المحذوفة
-                if (selectedDestination === destination) {
-                    setSelectedDestination("")
-                    setValue('destination', "")
-                }
-                    
-                toast.success("تم حذف الوجهة بنجاح")
-                setDeleteItem(null)
+                    toast.success("تم حذف الوجهة بنجاح")
+                    setDeleteItem(null)
                 } catch (error) {
                     toast.error("حدث خطأ في حذف الوجهة")
                     setDeleteItem(null)
@@ -298,56 +265,6 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         destination.toLowerCase().includes(destinationSearchTerm.toLowerCase())
     )
 
-    // تم إزالة الاستماع لـ localStorage لأننا نستخدم API الآن
-
-    // تحميل القوائم من الـ API عند فتح النموذج (مرة واحدة فقط)
-    useEffect(() => {
-        let mounted = true
-        const loadOptions = async () => {
-            try {
-                const [apRes, alRes, cRes] = await Promise.all([
-                    airportService.getAirports(),
-                    airlineService.getAirlines(),
-                    citiesService.getCities(),
-                ])
-                if (!mounted) return
-                const toList = (res) => (res && Array.isArray(res.results)) ? res.results : (Array.isArray(res) ? res : [])
-                const ap = toList(apRes)
-                const al = toList(alRes)
-                const ci = toList(cRes)
-                setAvailableAirports(ap.map(x => x.name))
-                setAvailableAirlines(al.map(x => x.name))
-                setAvailableDestinations(ci.map(x => x.city_name))
-            } catch {}
-        }
-        if (open) loadOptions()
-        return () => { mounted = false }
-    }, [open]) // فقط open، مش delegation.id
-
-    // إضافة event listener عام للـ localStorage changes
-    useEffect(() => {
-        const handleStorageEvent = (e) => {
-            if (e.key === 'airports') {
-                const airports = JSON.parse(e.newValue || '[]')
-                setAvailableAirports(airports)
-                setAirportSearchTerm("")
-            } else if (e.key === 'airlines') {
-                const airlines = JSON.parse(e.newValue || '[]')
-                setAvailableAirlines(airlines)
-                setAirlineSearchTerm("")
-            } else if (e.key === 'origins') {
-                const origins = JSON.parse(e.newValue || '[]')
-                setAvailableDestinations(origins)
-                setDestinationSearchTerm("")
-            }
-        }
-
-        window.addEventListener('storage', handleStorageEvent)
-        
-        return () => {
-            window.removeEventListener('storage', handleStorageEvent)
-        }
-    }, [])
 
     
 
@@ -379,52 +296,14 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         }
     })
 
-    // تحميل البيانات من API عند فتح النموذج
+    // تحميل البيانات من Redux عند فتح النموذج
     useEffect(() => {
         if (open) {
-            const loadData = async () => {
-                try {
-                    const [airportsData, airlinesData, citiesData] = await Promise.all([
-                        airportService.getAirports(),
-                        airlineService.getAirlines(),
-                        citiesService.getCities()
-                    ])
-                    
-                    // تحديث قوائم البيانات
-                    const airportNames = airportsData.map(airport => airport.name)
-                    const airlineNames = airlinesData.map(airline => airline.name)
-                    const cityNames = citiesData.map(city => city.city_name)
-                    
-                    setAvailableAirports(airportNames)
-                    setAvailableAirlines(airlineNames)
-                    setAvailableDestinations(cityNames)
-                    
-                    // إنشاء dictionaries للربط بين الأسماء والـ IDs
-                    const airportDict = {}
-                    airportsData.forEach(airport => {
-                        airportDict[airport.name] = airport.id
-                    })
-                    setAirportNameToId(airportDict)
-                    
-                    const airlineDict = {}
-                    airlinesData.forEach(airline => {
-                        airlineDict[airline.name] = airline.id
-                    })
-                    setAirlineNameToId(airlineDict)
-                    
-                    const cityDict = {}
-                    citiesData.forEach(city => {
-                        cityDict[city.city_name] = city.id
-                    })
-                    setCityNameToId(cityDict)
-                } catch (error) {
-                    console.error('خطأ في تحميل البيانات:', error)
-                }
-            }
-            
-            loadData()
+            dispatch(fetchAirports())
+            dispatch(fetchAirlines())
+            dispatch(fetchCities())
         }
-    }, [open])
+    }, [open, dispatch])
 
     useEffect(() => {
         if (open && session) {
@@ -488,24 +367,12 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         let airlineId = null
         let cityId = null
 
+        // الحصول على IDs من Redux store
+        airportId = airportNameToId[data.hall] || null
+        airlineId = airlineNameToId[data.airline] || null
+        cityId = cityNameToId[data.destination] || null
+        
         try {
-            if (data.hall && availableAirports.includes(data.hall)) {
-                const airportsRes = await airportService.getAirports()
-                const airports = Array.isArray(airportsRes?.results) ? airportsRes.results : (Array.isArray(airportsRes) ? airportsRes : [])
-                airportId = airports.find(a => a.name === data.hall)?.id
-            }
-            
-            if (data.airline && availableAirlines.includes(data.airline)) {
-                const airlinesRes = await airlineService.getAirlines()
-                const airlines = Array.isArray(airlinesRes?.results) ? airlinesRes.results : (Array.isArray(airlinesRes) ? airlinesRes : [])
-                airlineId = airlines.find(a => a.name === data.airline)?.id
-            }
-            
-            if (data.destination && availableDestinations.includes(data.destination)) {
-                const citiesRes = await citiesService.getCities()
-                const cities = Array.isArray(citiesRes?.results) ? citiesRes.results : (Array.isArray(citiesRes) ? citiesRes : [])
-                cityId = cities.find(c => c.city_name === data.destination)?.id
-            }
         } catch (error) {
             // خطأ في الحصول على معرفات القوائم - نكمل بدونها
         }
@@ -526,12 +393,16 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
 
         setLoading(true)
         try {
-            const result = await departureSessionService.updateDepartureSession(session.id, payload)
-            toast.success("تم تحديث جلسة المغادرة بنجاح")
+            if (!session.id) {
+                throw new Error('Session ID is missing')
+            }
+            
+            await dispatch(updateDepartureSession({ sessionId: session.id, sessionData: payload })).unwrap()
             if (onUpdate) { onUpdate() }
             setOpen(false)
         } catch (error) {
-            toast.error(`فشل تحديث جلسة المغادرة: ${error.response?.data?.detail || error.message}`)
+            console.error('Error updating departure session:', error)
+            toast.error("حدث خطأ في تحديث جلسة المغادرة")
         } finally {
             setLoading(false)
         }
@@ -542,19 +413,18 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="!ring-0">
-                    <Icon icon="material-symbols:edit-outline-rounded" />
-                    <span>تعديل</span>
+                    <Icon name="Edit" size={20} />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] max-h-[80vh] [&_[data-slot='dialog-close']]:!right-[95%] overflow-auto">
-                <DialogHeader className="!text-start !py-2">
-                    <DialogTitle>تعديل جلسة المغادرة</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="sm:max-w-[900px] max-h-[85vh] [&_[data-slot='dialog-close']]:!right-[95%] overflow-auto mx-4 my-8">
+                <DialogHeader className="!text-start !py-4 !px-2">
+                    <DialogTitle className="text-xl font-bold">تحديث جلسة المغادرة</DialogTitle>
+                    <DialogDescription className="text-sm text-muted-foreground mt-2">
                         يمكنك تعديل تفاصيل جلسة المغادرة للوفد {delegation.nationality}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={(e) => e.preventDefault()}>
-                    <div className="grid gap-4">
+                    <div className="grid gap-6 px-2 py-2">
                         {/* تفاصيل الرحلة */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-3 w-full">
@@ -616,7 +486,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             disabled={!newAirport.trim()}
                                             className="bg-primary-600 hover:bg-primary-700 rounded-lg"
                                         >
-                                            <Icon icon="material-symbols:check" fontSize={16} />
+                                            <Icon name="Check" size={16} />
                                         </Button>
                                         <Button 
                                             type="button"
@@ -628,7 +498,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             }}
                                             className="border-primary-300 text-primary-600 hover:bg-primary-50 rounded-lg"
                                         >
-                                            <Icon icon="material-symbols:close" fontSize={16} />
+                                            <Icon name="X" size={16} />
                                         </Button>
                                     </div>
                                 )}
@@ -669,7 +539,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                                             className="text-red-500 hover:text-red-700 p-1 rounded flex-shrink-0"
                                                             title="حذف المطار"
                                                         >
-                                                            <Icon icon="material-symbols:close" fontSize={16} />
+                                                            <Icon name="X" size={16} />
                                                         </button>
                                                         <span className="flex-1">{airport}</span>
                                                     </div>
@@ -682,7 +552,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             )}
                                             <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                 <div className="flex items-center gap-2">
-                                                    <Icon icon="material-symbols:add" fontSize={16} />
+                                                    <Icon name="Plus" size={16} />
                                                     <span>إضافة مطار جديد</span>
                                                 </div>
                                             </SelectItem>
@@ -719,7 +589,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             disabled={!newAirline.trim()}
                                             className="bg-primary-600 hover:bg-primary-700 rounded-lg"
                                         >
-                                            <Icon icon="material-symbols:check" fontSize={16} />
+                                            <Icon name="Check" size={16} />
                                         </Button>
                                         <Button 
                                             type="button"
@@ -731,7 +601,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             }}
                                             className="border-primary-300 text-primary-600 hover:bg-primary-50 rounded-lg"
                                         >
-                                            <Icon icon="material-symbols:close" fontSize={16} />
+                                            <Icon name="X" size={16} />
                                         </Button>
                                     </div>
                                 )}
@@ -772,7 +642,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                                             className="text-red-500 hover:text-red-700 p-1 rounded flex-shrink-0"
                                                             title="حذف شركة الطيران"
                                                         >
-                                                            <Icon icon="material-symbols:close" fontSize={16} />
+                                                            <Icon name="X" size={16} />
                                                         </button>
                                                         <span className="flex-1">{airline}</span>
                                                     </div>
@@ -785,7 +655,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             )}
                                             <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                 <div className="flex items-center gap-2">
-                                                    <Icon icon="material-symbols:add" fontSize={16} />
+                                                    <Icon name="Plus" size={16} />
                                                     <span>إضافة شركة طيران جديدة</span>
                                                 </div>
                                             </SelectItem>
@@ -830,7 +700,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             disabled={!newDestination.trim()}
                                             className="bg-primary-600 hover:bg-primary-700 rounded-lg"
                                         >
-                                            <Icon icon="material-symbols:check" fontSize={16} />
+                                            <Icon name="Check" size={16} />
                                         </Button>
                                         <Button 
                                             type="button"
@@ -842,7 +712,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             }}
                                             className="border-primary-300 text-primary-600 hover:bg-primary-50 rounded-lg"
                                         >
-                                            <Icon icon="material-symbols:close" fontSize={16} />
+                                            <Icon name="X" size={16} />
                                         </Button>
                                     </div>
                                 )}
@@ -883,7 +753,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                                             className="text-red-500 hover:text-red-700 p-1 rounded flex-shrink-0"
                                                             title="حذف الوجهة"
                                                         >
-                                                            <Icon icon="material-symbols:close" fontSize={16} />
+                                                            <Icon name="X" size={16} />
                                                         </button>
                                                         <span className="flex-1">{destination}</span>
                                                     </div>
@@ -896,7 +766,7 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                             )}
                                             <SelectItem value="add_new" className="text-primary-600 font-medium hover:bg-primary-50 border-t">
                                                 <div className="flex items-center gap-2">
-                                                    <Icon icon="material-symbols:add" fontSize={16} />
+                                                    <Icon name="Plus" size={16} />
                                                     <span>إضافة وجهة جديدة</span>
                                                 </div>
                                             </SelectItem>
@@ -938,17 +808,19 @@ const EditDepartureSession = ({ session, delegation, onUpdate }) => {
                                 delegation={delegation}
                                 selected={selectedMembers}
                                 onChange={setSelectedMembers}
+                                isEditing={true}
+                                currentSessionId={session.id}
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="!px-2 !py-4 !mt-6 !gap-3">
                         <DialogClose asChild>
                             <Button disabled={loading} variant="outline" className="cursor-pointer">الغاء</Button>
                         </DialogClose>
                         <Button disabled={loading} type="button" className="cursor-pointer" onClick={onSubmit}>
                             {loading ? (
                                 <>
-                                    <Icon icon="jam:refresh" className="animate-spin" />
+                                    <Icon name="RefreshCw" size={20} className="animate-spin" />
                                     <span>تحديث ...</span>
                                 </>
                             ) : (

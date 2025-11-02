@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { userService } from '../../services/api'
+import { useSelector, useDispatch } from 'react-redux'
+import { fetchUsers } from '../../store/slices/usersSlice'
 
 const UserSelector = ({ 
     value, 
@@ -10,29 +11,15 @@ const UserSelector = ({
     className = "",
     showRole = false 
 }) => {
-    const [users, setUsers] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
+    const dispatch = useDispatch()
+    const { users: allUsers, loading, error } = useSelector(state => state.users)
+    
+    // Filter active users only
+    const users = allUsers.filter(user => user.is_active)
 
     useEffect(() => {
-        const loadUsers = async () => {
-            try {
-                setLoading(true)
-                setError(null)
-                const response = await userService.getUsers()
-                const usersList = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : []
-                setUsers(usersList.filter(user => user.is_active))
-            } catch (err) {
-                console.error('خطأ في جلب المستخدمين:', err)
-                setError('فشل في جلب المستخدمين')
-                setUsers([])
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        loadUsers()
-    }, [])
+        dispatch(fetchUsers())
+    }, [dispatch])
 
     if (loading) {
         return (
