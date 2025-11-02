@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { memberService } from '../../services/api'
+import api from '../../plugins/axios'
 
 // Async thunks
 export const fetchMembers = createAsyncThunk(
   'members/fetchMembers',
   async (delegationId, { rejectWithValue }) => {
     try {
-      const response = await memberService.getMembers(delegationId)
+      const params = delegationId ? { delegation_id: delegationId } : {}
+      const response = await api.get('/members/', { params })
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'خطأ في جلب الأعضاء')
@@ -18,10 +19,22 @@ export const fetchAllMembers = createAsyncThunk(
   'members/fetchAllMembers',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await memberService.getAllMembers()
+      const response = await api.get('/members/')
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'خطأ في جلب جميع الأعضاء')
+    }
+  }
+)
+
+export const fetchAllDepartureSessions = createAsyncThunk(
+  'members/fetchAllDepartureSessions',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get('/check-outs/')
+      return response.data
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'خطأ في جلب جلسات المغادرة')
     }
   }
 )
@@ -30,7 +43,7 @@ export const createMember = createAsyncThunk(
   'members/createMember',
   async (memberData, { rejectWithValue }) => {
     try {
-      const response = await memberService.createMember(memberData)
+      const response = await api.post('/members/', memberData)
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'خطأ في إنشاء العضو')
@@ -42,7 +55,7 @@ export const updateMember = createAsyncThunk(
   'members/updateMember',
   async ({ memberId, memberData }, { rejectWithValue }) => {
     try {
-      const response = await memberService.updateMember(memberId, memberData)
+      const response = await api.patch(`/members/${memberId}/`, memberData)
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'خطأ في تحديث العضو')
@@ -54,7 +67,7 @@ export const deleteMember = createAsyncThunk(
   'members/deleteMember',
   async (memberId, { rejectWithValue }) => {
     try {
-      await memberService.deleteMember(memberId)
+      await api.delete(`/members/${memberId}/`)
       return memberId
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'خطأ في حذف العضو')
@@ -66,7 +79,7 @@ export const fetchNationalities = createAsyncThunk(
   'members/fetchNationalities',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await memberService.getNationalities()
+      const response = await api.get('/nationalities/')
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'خطأ في جلب الجنسيات')
@@ -78,7 +91,7 @@ export const fetchMilitaryPositions = createAsyncThunk(
   'members/fetchMilitaryPositions',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await memberService.getMilitaryPositions()
+      const response = await api.get('/military-positions/')
       return response.data
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'خطأ في جلب الرتب العسكرية')
@@ -89,6 +102,7 @@ export const fetchMilitaryPositions = createAsyncThunk(
 const initialState = {
   members: [],
   allMembers: [],
+  departureSessions: [],
   nationalities: [],
   militaryPositions: [],
   currentMember: null,
@@ -159,7 +173,10 @@ const membersSlice = createSlice({
       })
       .addCase(fetchMembers.fulfilled, (state, action) => {
         state.isLoading = false
-        state.members = action.payload
+        // Handle both array and paginated response formats
+        state.members = Array.isArray(action.payload) 
+          ? action.payload 
+          : (action.payload?.results || [])
         state.error = null
       })
       .addCase(fetchMembers.rejected, (state, action) => {
@@ -174,10 +191,26 @@ const membersSlice = createSlice({
       })
       .addCase(fetchAllMembers.fulfilled, (state, action) => {
         state.isLoading = false
-        state.allMembers = action.payload
+        state.members = action.payload.results || action.payload
+        state.allMembers = action.payload.results || action.payload
         state.error = null
       })
       .addCase(fetchAllMembers.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      
+      // Fetch All Departure Sessions
+      .addCase(fetchAllDepartureSessions.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchAllDepartureSessions.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.departureSessions = action.payload.results || action.payload
+        state.error = null
+      })
+      .addCase(fetchAllDepartureSessions.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload
       })

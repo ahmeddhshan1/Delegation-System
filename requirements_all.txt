@@ -1,0 +1,165 @@
+# ================================================================
+# 🏛️ نظام إدارة الوفود - Delegation Management System
+# ================================================================
+# ملف المتطلبات الشامل - جميع الحزم المطلوبة (Frontend + Backend)
+# Complete Requirements File - All Packages (Frontend + Backend)
+# ================================================================
+#
+# هذا الملف يحتوي على جميع المتطلبات للنظام:
+# - Backend: حزم Python (يتم تثبيتها بـ pip)
+# - Frontend: حزم Node.js (يتم تثبيتها بـ npm)
+#
+# ================================================================
+# 📦 BACKEND REQUIREMENTS - Python Packages
+# ================================================================
+# يتم تثبيتها باستخدام: pip install -r requirements_all.txt
+# (ملاحظة: حزم Python فقط - حزم Node.js تحتاج npm)
+# ================================================================
+
+# Django Core Framework
+Django==5.2.7
+djangorestframework==3.15.2
+
+# Database Drivers
+psycopg2-binary==2.9.9
+
+# WebSocket & Real-time Communication
+channels==4.0.0
+channels-redis==4.0.0
+daphne==4.1.0
+
+# Configuration & Environment
+python-decouple==3.8
+django-environ==0.11.2
+
+# CORS & Security
+django-cors-headers==4.3.1
+
+# Static Files & Media
+whitenoise==6.6.0
+Pillow==10.0.0
+
+# Development Tools
+django-extensions==3.2.3
+
+# Production Server
+gunicorn==21.2.0
+
+# ================================================================
+# 🎨 FRONTEND REQUIREMENTS - Node.js Packages
+# ================================================================
+# هذه الحزم يتم تثبيتها باستخدام npm (وليست pip)
+# These packages are installed using npm (not pip)
+# ================================================================
+#
+# للحصول على قائمة كاملة بحزم Frontend:
+# - راجع ملف: Delegation-Front/package.json
+# - أو استخدم: npm install (في مجلد Delegation-Front)
+#
+# قائمة حزم Frontend الأساسية:
+#
+# React & Core:
+# - react==^19.1.1
+# - react-dom==^19.1.1
+# - react-router==^7.8.2
+#
+# State Management:
+# - @reduxjs/toolkit==^2.9.0
+# - react-redux==^9.2.0
+# - redux-persist==^6.0.0
+#
+# UI Components:
+# - @radix-ui/react-* (Multiple UI components)
+# - tailwindcss==^4.1.13
+# - @tailwindcss/vite==^4.1.13
+# - lucide-react==^0.542.0
+#
+# Forms & Validation:
+# - react-hook-form==^7.62.0
+# - @hookform/resolvers==^5.2.1
+# - yup==^1.7.0
+#
+# HTTP Client:
+# - axios==^1.11.0
+#
+# PDF & Excel:
+# - @react-pdf/renderer==^4.3.0
+# - xlsx==^0.18.5
+# - file-saver==^2.0.5
+#
+# Utilities:
+# - clsx==^2.1.1
+# - tailwind-merge==^3.3.1
+# - date-fns==^4.1.0
+# - js-cookie==^3.0.5
+# - buffer==^6.0.3
+# - process==^0.11.10
+#
+# Charts:
+# - recharts==^3.3.0
+#
+# Notifications:
+# - sonner==^2.0.7
+#
+# Tables:
+# - @tanstack/react-table==^8.21.3
+#
+# Build Tool:
+# - vite==^7.1.2
+# - @vitejs/plugin-react==^5.0.0
+#
+# Development Tools:
+# - eslint==^9.33.0
+# - @eslint/js==^9.33.0
+# - @types/react==^19.1.10
+# - @types/react-dom==^19.1.7
+# - eslint-plugin-react-hooks==^5.2.0
+# - eslint-plugin-react-refresh==^0.4.20
+# - globals==^16.3.0
+# - tw-animate-css==^1.3.8
+# - gh-pages==^6.3.0
+#
+# Icons:
+# - @iconify/json==^2.2.386
+#
+# ================================================================
+# 📋 SUMMARY - الملخص
+# ================================================================
+#
+# Backend (Python):
+#   - عدد الحزم: 13 حزمة أساسية
+#   - طريقة التثبيت: pip install -r requirements_all.txt
+#
+# Frontend (Node.js):
+#   - عدد الحزم: ~50 حزمة (dependencies + devDependencies)
+#   - طريقة التثبيت: npm install (في مجلد Delegation-Front)
+#
+# ================================================================
+# 🚀 طريقة التثبيت السريعة
+# ================================================================
+#
+# للتثبيت السريع، استخدم ملف install_all.bat:
+#   install_all.bat
+#
+# أو قم بالتثبيت يدوياً:
+#
+# 1. Backend:
+#    cd Delegation-Backend
+#    python -m venv venv
+#    venv\Scripts\activate.bat
+#    pip install -r ../requirements_all.txt
+#
+# 2. Frontend:
+#    cd Delegation-Front
+#    npm install
+#
+# ================================================================
+# 📝 ملاحظات مهمة
+# ================================================================
+#
+# ⚠️ هذا الملف يحتوي على حزم Python فقط
+# ⚠️ حزم Node.js يجب تثبيتها باستخدام npm
+# ⚠️ استخدم install_all.bat للتثبيت الشامل والأوتوماتيكي
+#
+# ================================================================
+

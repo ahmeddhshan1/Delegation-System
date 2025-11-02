@@ -46,8 +46,8 @@ const permissionsSlice = createSlice({
                role === USER_ROLES.ADMIN ? 'text-blue-600' : 'text-green-600',
         bgColor: role === USER_ROLES.SUPER_ADMIN ? 'bg-red-50' :
                  role === USER_ROLES.ADMIN ? 'bg-blue-50' : 'bg-green-50',
-        icon: role === USER_ROLES.SUPER_ADMIN ? 'material-symbols:admin-panel-settings' :
-              role === USER_ROLES.ADMIN ? 'material-symbols:shield-person' : 'material-symbols:person'
+        icon: role === USER_ROLES.SUPER_ADMIN ? 'Settings' :
+              role === USER_ROLES.ADMIN ? 'Shield' : 'User'
       }
     },
     

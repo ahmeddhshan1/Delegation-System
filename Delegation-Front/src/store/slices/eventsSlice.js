@@ -1,301 +1,231 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { eventService } from '../../services/api'
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../plugins/axios';
 
 // Async thunks
 export const fetchMainEvents = createAsyncThunk(
   'events/fetchMainEvents',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await eventService.getMainEvents()
-      return response.data
+      const response = await api.get('/main-events/');
+      return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في جلب الأحداث الرئيسية')
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
-)
-
-export const fetchSubEvents = createAsyncThunk(
-  'events/fetchSubEvents',
-  async (mainEventId, { rejectWithValue }) => {
-    try {
-      const response = await eventService.getSubEvents(mainEventId)
-      return response.data
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في جلب الأحداث الفرعية')
-    }
-  }
-)
+);
 
 export const createMainEvent = createAsyncThunk(
   'events/createMainEvent',
   async (eventData, { rejectWithValue }) => {
     try {
-      const response = await eventService.createMainEvent(eventData)
-      return response.data
+      const response = await api.post('/main-events/', eventData);
+      return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في إنشاء الحدث الرئيسي')
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
-)
-
-export const createSubEvent = createAsyncThunk(
-  'events/createSubEvent',
-  async ({ mainEventId, eventData }, { rejectWithValue }) => {
-    try {
-      const response = await eventService.createSubEvent(mainEventId, eventData)
-      return response.data
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في إنشاء الحدث الفرعي')
-    }
-  }
-)
+);
 
 export const updateMainEvent = createAsyncThunk(
   'events/updateMainEvent',
-  async ({ eventId, eventData }, { rejectWithValue }) => {
+  async ({ id, eventData }, { rejectWithValue }) => {
     try {
-      const response = await eventService.updateMainEvent(eventId, eventData)
-      return response.data
+      const response = await api.patch(`/main-events/${id}/`, eventData);
+      return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في تحديث الحدث الرئيسي')
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
-)
-
-export const updateSubEvent = createAsyncThunk(
-  'events/updateSubEvent',
-  async ({ subEventId, eventData }, { rejectWithValue }) => {
-    try {
-      const response = await eventService.updateSubEvent(subEventId, eventData)
-      return response.data
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في تحديث الحدث الفرعي')
-    }
-  }
-)
+);
 
 export const deleteMainEvent = createAsyncThunk(
   'events/deleteMainEvent',
-  async (eventId, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      await eventService.deleteMainEvent(eventId)
-      return eventId
+      await api.delete(`/main-events/${id}/`);
+      return id;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في حذف الحدث الرئيسي')
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
-)
+);
+
+export const fetchSubEvents = createAsyncThunk(
+  'events/fetchSubEvents',
+  async (mainEventId, { rejectWithValue }) => {
+    try {
+      const params = mainEventId ? { main_event_id: mainEventId } : {};
+      const response = await api.get('/sub-events/', { params });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const createSubEvent = createAsyncThunk(
+  'events/createSubEvent',
+  async (subEventData, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/sub-events/', subEventData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const updateSubEvent = createAsyncThunk(
+  'events/updateSubEvent',
+  async ({ id, subEventData }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`/sub-events/${id}/`, subEventData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
 
 export const deleteSubEvent = createAsyncThunk(
   'events/deleteSubEvent',
-  async (subEventId, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      await eventService.deleteSubEvent(subEventId)
-      return subEventId
+      await api.delete(`/sub-events/${id}/`);
+      return id;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'خطأ في حذف الحدث الفرعي')
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
-)
+);
 
 const initialState = {
   mainEvents: [],
   subEvents: [],
-  currentMainEvent: null,
-  currentSubEvent: null,
-  isLoading: false,
+  loading: false,
   error: null,
-  selectedMainEvent: null,
-  selectedSubEvent: null
-}
+  lastUpdate: null
+};
 
 const eventsSlice = createSlice({
   name: 'events',
   initialState,
   reducers: {
     clearError: (state) => {
-      state.error = null
+      state.error = null;
     },
-    setCurrentMainEvent: (state, action) => {
-      state.currentMainEvent = action.payload
-      state.selectedMainEvent = action.payload
-    },
-    setCurrentSubEvent: (state, action) => {
-      state.currentSubEvent = action.payload
-      state.selectedSubEvent = action.payload
-    },
-    clearCurrentEvents: (state) => {
-      state.currentMainEvent = null
-      state.currentSubEvent = null
-      state.selectedMainEvent = null
-      state.selectedSubEvent = null
-    },
-    updateMainEventLocal: (state, action) => {
-      const index = state.mainEvents.findIndex(event => event.id === action.payload.id)
-      if (index !== -1) {
-        state.mainEvents[index] = { ...state.mainEvents[index], ...action.payload }
-      }
-    },
-    updateSubEventLocal: (state, action) => {
-      const index = state.subEvents.findIndex(event => event.id === action.payload.id)
-      if (index !== -1) {
-        state.subEvents[index] = { ...state.subEvents[index], ...action.payload }
-      }
-    },
-    removeMainEventLocal: (state, action) => {
-      state.mainEvents = state.mainEvents.filter(event => event.id !== action.payload)
-    },
-    removeSubEventLocal: (state, action) => {
-      state.subEvents = state.subEvents.filter(event => event.id !== action.payload)
-    },
-    addMainEventLocal: (state, action) => {
-      state.mainEvents.push(action.payload)
-    },
-    addSubEventLocal: (state, action) => {
-      state.subEvents.push(action.payload)
+    setLastUpdate: (state, action) => {
+      state.lastUpdate = action.payload;
     }
   },
   extraReducers: (builder) => {
+    // Main Events
     builder
-      // Fetch Main Events
       .addCase(fetchMainEvents.pending, (state) => {
-        state.isLoading = true
-        state.error = null
+        state.loading = true;
+        state.error = null;
       })
       .addCase(fetchMainEvents.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.mainEvents = action.payload
-        state.error = null
+        state.loading = false;
+        state.mainEvents = action.payload.results || action.payload;
       })
       .addCase(fetchMainEvents.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
+        state.loading = false;
+        state.error = action.payload;
       })
-      
-      // Fetch Sub Events
-      .addCase(fetchSubEvents.pending, (state) => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(fetchSubEvents.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.subEvents = action.payload
-        state.error = null
-      })
-      .addCase(fetchSubEvents.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-      
-      // Create Main Event
       .addCase(createMainEvent.pending, (state) => {
-        state.isLoading = true
-        state.error = null
+        state.loading = true;
+        state.error = null;
       })
       .addCase(createMainEvent.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.mainEvents.push(action.payload)
-        state.error = null
+        state.loading = false;
+        state.mainEvents.unshift(action.payload);
       })
       .addCase(createMainEvent.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
+        state.loading = false;
+        state.error = action.payload;
       })
-      
-      // Create Sub Event
-      .addCase(createSubEvent.pending, (state) => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(createSubEvent.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.subEvents.push(action.payload)
-        state.error = null
-      })
-      .addCase(createSubEvent.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-      
-      // Update Main Event
       .addCase(updateMainEvent.pending, (state) => {
-        state.isLoading = true
-        state.error = null
+        state.loading = true;
+        state.error = null;
       })
       .addCase(updateMainEvent.fulfilled, (state, action) => {
-        state.isLoading = false
-        const index = state.mainEvents.findIndex(event => event.id === action.payload.id)
+        state.loading = false;
+        const index = state.mainEvents.findIndex(event => event.id === action.payload.id);
         if (index !== -1) {
-          state.mainEvents[index] = action.payload
+          state.mainEvents[index] = action.payload;
         }
-        state.error = null
       })
       .addCase(updateMainEvent.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
+        state.loading = false;
+        state.error = action.payload;
       })
-      
-      // Update Sub Event
-      .addCase(updateSubEvent.pending, (state) => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(updateSubEvent.fulfilled, (state, action) => {
-        state.isLoading = false
-        const index = state.subEvents.findIndex(event => event.id === action.payload.id)
-        if (index !== -1) {
-          state.subEvents[index] = action.payload
-        }
-        state.error = null
-      })
-      .addCase(updateSubEvent.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-      
-      // Delete Main Event
       .addCase(deleteMainEvent.pending, (state) => {
-        state.isLoading = true
-        state.error = null
+        state.loading = true;
+        state.error = null;
       })
       .addCase(deleteMainEvent.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.mainEvents = state.mainEvents.filter(event => event.id !== action.payload)
-        state.error = null
+        state.loading = false;
+        state.mainEvents = state.mainEvents.filter(event => event.id !== action.payload);
       })
       .addCase(deleteMainEvent.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
+        state.loading = false;
+        state.error = action.payload;
       })
-      
-      // Delete Sub Event
+      // Sub Events
+      .addCase(fetchSubEvents.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchSubEvents.fulfilled, (state, action) => {
+        state.loading = false;
+        state.subEvents = action.payload.results || action.payload;
+      })
+      .addCase(fetchSubEvents.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(createSubEvent.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createSubEvent.fulfilled, (state, action) => {
+        state.loading = false;
+        state.subEvents.unshift(action.payload);
+      })
+      .addCase(createSubEvent.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateSubEvent.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateSubEvent.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.subEvents.findIndex(event => event.id === action.payload.id);
+        if (index !== -1) {
+          state.subEvents[index] = action.payload;
+        }
+      })
+      .addCase(updateSubEvent.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
       .addCase(deleteSubEvent.pending, (state) => {
-        state.isLoading = true
-        state.error = null
+        state.loading = true;
+        state.error = null;
       })
       .addCase(deleteSubEvent.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.subEvents = state.subEvents.filter(event => event.id !== action.payload)
-        state.error = null
+        state.loading = false;
+        state.subEvents = state.subEvents.filter(event => event.id !== action.payload);
       })
       .addCase(deleteSubEvent.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
+        state.loading = false;
+        state.error = action.payload;
+      });
   }
-})
+});
 
-export const {
-  clearError,
-  setCurrentMainEvent,
-  setCurrentSubEvent,
-  clearCurrentEvents,
-  updateMainEventLocal,
-  updateSubEventLocal,
-  removeMainEventLocal,
-  removeSubEventLocal,
-  addMainEventLocal,
-  addSubEventLocal
-} = eventsSlice.actions
-
-export default eventsSlice.reducer
+export const { clearError, setLastUpdate } = eventsSlice.actions;
+export default eventsSlice.reducer;
